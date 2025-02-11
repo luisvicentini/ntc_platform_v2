@@ -1,0 +1,134 @@
+"use client"
+
+import { useState } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Users, Building, Ticket, TrendingUp } from "lucide-react"
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { subDays } from "date-fns"
+
+const data = [
+  { name: "Jan", vouchers: 4000, checkins: 2400 },
+  { name: "Feb", vouchers: 3000, checkins: 1398 },
+  { name: "Mar", vouchers: 2000, checkins: 9800 },
+  { name: "Apr", vouchers: 2780, checkins: 3908 },
+  { name: "May", vouchers: 1890, checkins: 4800 },
+  { name: "Jun", vouchers: 2390, checkins: 3800 },
+]
+
+const predefinedRanges = [
+  { label: "Hoje", value: [new Date(), new Date()] },
+  { label: "Ontem", value: [subDays(new Date(), 1), subDays(new Date(), 1)] },
+  { label: "Última semana", value: [subDays(new Date(), 7), new Date()] },
+  { label: "Último mês", value: [subDays(new Date(), 30), new Date()] },
+  { label: "Últimos 60 dias", value: [subDays(new Date(), 60), new Date()] },
+  { label: "Último ano", value: [subDays(new Date(), 365), new Date()] },
+]
+
+export default function DashboardPage() {
+  const [dateRange, setDateRange] = useState({ from: subDays(new Date(), 30), to: new Date() })
+
+  return (
+    <div className="container mx-auto py-6 px-4">
+      <h2 className="text-3xl font-bold tracking-tight text-[#e5e2e9] mb-6">Dashboard</h2>
+
+      <div className="mb-6">
+        <DateRangePicker
+          dateRange={dateRange}
+          onDateRangeChange={(newRange) => {
+            setDateRange(newRange)
+            // Here you would typically fetch new data based on the date range
+            console.log("New date range:", newRange)
+          }}
+        />
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        <Card className="bg-[#131320] border-[#1a1b2d]">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-[#7a7b9f]">Total de Usuários</CardTitle>
+            <Users className="h-4 w-4 text-[#7a7b9f]" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-[#e5e2e9]">10,234</div>
+            <p className="text-xs text-[#7a7b9f]">+5% em relação ao mês passado</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-[#131320] border-[#1a1b2d]">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-[#7a7b9f]">Parceiros Ativos</CardTitle>
+            <Building className="h-4 w-4 text-[#7a7b9f]" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-[#e5e2e9]">123</div>
+            <p className="text-xs text-[#7a7b9f]">3 novos esta semana</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-[#131320] border-[#1a1b2d]">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-[#7a7b9f]">Total de Vouchers</CardTitle>
+            <Ticket className="h-4 w-4 text-[#7a7b9f]" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-[#e5e2e9]">45,678</div>
+            <p className="text-xs text-[#7a7b9f]">+15% em relação ao mês passado</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-[#131320] border-[#1a1b2d]">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-[#7a7b9f]">Crescimento Mensal</CardTitle>
+            <TrendingUp className="h-4 w-4 text-[#7a7b9f]" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-[#e5e2e9]">8.5%</div>
+            <p className="text-xs text-[#7a7b9f]">+2.5% em relação ao mês anterior</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2">
+        <Card className="bg-[#131320] border-[#1a1b2d]">
+          <CardHeader>
+            <CardTitle className="text-[#e5e2e9]">Vouchers Gerados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1a1b2d" />
+                <XAxis dataKey="name" stroke="#7a7b9f" />
+                <YAxis stroke="#7a7b9f" />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#131320", border: "1px solid #1a1b2d" }}
+                  labelStyle={{ color: "#e5e2e9" }}
+                />
+                <Legend wrapperStyle={{ color: "#7a7b9f" }} />
+                <Bar dataKey="vouchers" fill="#7435db" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+        <Card className="bg-[#131320] border-[#1a1b2d]">
+          <CardHeader>
+            <CardTitle className="text-[#e5e2e9]">Check-ins Realizados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={data}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#1a1b2d" />
+                <XAxis dataKey="name" stroke="#7a7b9f" />
+                <YAxis stroke="#7a7b9f" />
+                <Tooltip
+                  contentStyle={{ backgroundColor: "#131320", border: "1px solid #1a1b2d" }}
+                  labelStyle={{ color: "#e5e2e9" }}
+                />
+                <Legend wrapperStyle={{ color: "#7a7b9f" }} />
+                <Bar dataKey="checkins" fill="#a85fdd" />
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  )
+}
+

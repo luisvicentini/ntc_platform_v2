@@ -1,0 +1,41 @@
+"use client"
+
+import { RouteGuard } from "@/components/auth/route-guard"
+import { EstablishmentProvider } from "@/contexts/EstablishmentContext"
+import { Header } from "@/components/header"
+import { useAuth } from "@/contexts/auth-context"
+import { Home, User, Ticket } from "lucide-react"
+
+export default function MemberLayout({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
+
+  const menuItems = [
+    {
+      href: "/member/feed",
+      icon: <Home className="h-4 w-4" />,
+      label: "Feed"
+    },
+    {
+      href: "/member/profile",
+      icon: <User className="h-4 w-4" />,
+      label: "Perfil"
+    },
+    {
+      href: "/member/coupons",
+      icon: <Ticket className="h-4 w-4" />,
+      label: "Cupons"
+    }
+  ]
+  return (
+    <RouteGuard allowedUserType="member">
+      <EstablishmentProvider>
+        <div className="min-h-screen">
+          <Header menuItems={menuItems} />
+          <main className="container mx-auto px-4 py-8">
+            {children}
+          </main>
+        </div>
+      </EstablishmentProvider>
+    </RouteGuard>
+  )
+}
