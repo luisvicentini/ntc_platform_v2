@@ -9,7 +9,19 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Plus, X } from "lucide-react"
-import { useEstablishment, type Establishment } from "@/contexts/EstablishmentContext"
+import { useEstablishment } from "@/contexts/EstablishmentContext"
+import { AddressForm } from "@/components/address-form"
+import type { Address } from "@/types/establishment"
+import { PhoneInput } from "@/components/phone-input"
+import { BusinessHours } from "@/components/business-hours"
+import { DiscountInput } from "@/components/discount-input"
+import { EstablishmentTypeSelect } from "@/components/establishment-type-select"
+import type { Establishment } from "@/types/establishment"
+
+type EstablishmentFormData = Omit<
+  Establishment,
+  "id" | "partnerId" | "status" | "createdAt" | "updatedAt" | "rating" | "totalRatings" | "isFeatured"
+>
 
 interface EstablishmentModalProps {
   isOpen: boolean
@@ -19,11 +31,10 @@ interface EstablishmentModalProps {
 
 export function EstablishmentModal({ isOpen, onClose, establishment }: EstablishmentModalProps) {
   const { addEstablishment, updateEstablishment } = useEstablishment()
-  const [formData, setFormData] = useState<Omit<Establishment, "id">>({
+  const [formData, setFormData] = useState<EstablishmentFormData>({
     name: "",
-    address: "",
     description: "",
-    phone: "",
+    phone: { phone: "", ddi: "55" },
     openingHours: "",
     voucherDescription: "",
     discountValue: "",
@@ -31,39 +42,29 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
     usageLimit: "",
     voucherAvailability: "unlimited",
     voucherQuantity: 0,
-    voucherCooldown: 24, // default 24 hours
+    voucherCooldown: 24,
     images: [],
-    type: "",
-    location: "",
-    rating: 0,
-    totalRatings: 0,
-    voucherExpiration: 48, // default 48 hours
+    type: { type: "", category: "" },
+    address: {
+      cep: "",
+      street: "",
+      number: "",
+      complement: "",
+      neighborhood: "",
+      city: "",
+      state: ""
+    },
+    voucherExpiration: 48,
+    lastVoucherGenerated: {}
   })
 
   useEffect(() => {
     if (establishment) {
-      setFormData(establishment)
-    } else {
-      setFormData({
-        name: "",
-        address: "",
-        description: "",
-        phone: "",
-        openingHours: "",
-        voucherDescription: "",
-        discountValue: "",
-        discountRules: "",
-        usageLimit: "",
-        voucherAvailability: "unlimited",
-        voucherQuantity: 0,
-        voucherCooldown: 24,
-        images: [],
-        type: "",
-        location: "",
-        rating: 0,
-        totalRatings: 0,
-        voucherExpiration: 48,
-      })
+      const { 
+        id, partnerId, status, createdAt, updatedAt, rating, totalRatings, isFeatured,
+        ...rest 
+      } = establishment
+      setFormData(rest)
     }
   }, [establishment])
 
@@ -87,7 +88,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
   const removeImage = (index: number) => {
     setFormData((prev) => ({
       ...prev,
-      images: prev.images.filter((_, i) => i !== index),
+      images: prev.images.filter((_, i: number) => i !== index),
     }))
   }
 
@@ -116,7 +117,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
               <TabsTrigger value="availability">Disponibilidade</TabsTrigger>
             </TabsList>
             <TabsContent value="details">
-              <div className="grid gap-4 py-4">
+              <div className="grid gap-6">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="name" className="text-right">
                     Nome
@@ -129,18 +130,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                     className="col-span-3 bg-[#1a1b2d] border-[#131320]"
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="address" className="text-right">
-                    Endereço
-                  </Label>
-                  <Input
-                    id="address"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
-                  />
-                </div>
+
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="description" className="text-right">
                     Descrição
@@ -153,58 +143,31 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                     className="col-span-3 bg-[#1a1b2d] border-[#131320]"
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="phone" className="text-right">
-                    Telefone
-                  </Label>
-                  <Input
-                    id="phone"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="openingHours" className="text-right">
-                    Horário
-                  </Label>
-                  <Input
-                    id="openingHours"
-                    name="openingHours"
-                    value={formData.openingHours}
-                    onChange={handleChange}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="type" className="text-right">
-                    Tipo
-                  </Label>
-                  <Input
-                    id="type"
-                    name="type"
-                    value={formData.type}
-                    onChange={handleChange}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="location" className="text-right">
-                    Localização
-                  </Label>
-                  <Input
-                    id="location"
-                    name="location"
-                    value={formData.location}
-                    onChange={handleChange}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
-                  />
-                </div>
+
+                <AddressForm
+                  onChange={(address: Address) => setFormData(prev => ({ ...prev, address }))}
+                  defaultValues={formData.address}
+                />
+
+                <PhoneInput
+                  value={formData.phone.phone}
+                  onChange={(value) => setFormData(prev => ({ ...prev, phone: value }))}
+                  defaultDDI={formData.phone.ddi}
+                />
+
+                <BusinessHours
+                  value={formData.openingHours}
+                  onChange={(value) => setFormData(prev => ({ ...prev, openingHours: value }))}
+                />
+
+                <EstablishmentTypeSelect
+                  value={formData.type}
+                  onChange={(value) => setFormData(prev => ({ ...prev, type: value }))}
+                />
               </div>
             </TabsContent>
             <TabsContent value="discount">
-              <div className="grid gap-4 py-4">
+              <div className="grid gap-6">
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="voucherDescription" className="text-right">
                     Descrição do Voucher
@@ -217,18 +180,12 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                     className="col-span-3 bg-[#1a1b2d] border-[#131320]"
                   />
                 </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="discountValue" className="text-right">
-                    Valor do Desconto
-                  </Label>
-                  <Input
-                    id="discountValue"
-                    name="discountValue"
-                    value={formData.discountValue}
-                    onChange={handleChange}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
-                  />
-                </div>
+
+                <DiscountInput
+                  value={formData.discountValue}
+                  onChange={(value) => setFormData(prev => ({ ...prev, discountValue: value }))}
+                />
+
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="discountRules" className="text-right">
                     Regras do Desconto
@@ -241,6 +198,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                     className="col-span-3 bg-[#1a1b2d] border-[#131320]"
                   />
                 </div>
+
                 <div className="grid grid-cols-4 items-center gap-4">
                   <Label htmlFor="usageLimit" className="text-right">
                     Limite de Uso
@@ -258,7 +216,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
             <TabsContent value="photos">
               <div className="grid gap-4 py-4">
                 <div className="grid grid-cols-5 gap-4">
-                  {formData.images.map((image, index) => (
+                  {formData.images.map((image: string, index: number) => (
                     <div key={index} className="relative">
                       <img
                         src={image || "/placeholder.svg"}
@@ -364,4 +322,3 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
     </Dialog>
   )
 }
-

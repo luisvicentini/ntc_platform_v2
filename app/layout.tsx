@@ -1,6 +1,7 @@
 import { ThemeProvider } from "@/components/providers/theme-provider"
 import { NotificationProvider } from "@/contexts/NotificationContext"
 import { EstablishmentProvider } from "@/contexts/EstablishmentContext"
+import { AuthProvider } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import "@/styles/globals.css"
 import type { Metadata } from "next"
@@ -26,11 +27,13 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={cn("min-h-screen bg-background font-sans antialiased", poppins.variable)}>
+      <body className={cn("min-h-screen bg-[#0F0F1A] font-sans antialiased", poppins.variable)}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} storageKey="ntc-theme">
-          <NotificationProvider>
-            <EstablishmentProvider>{children}</EstablishmentProvider>
-          </NotificationProvider>
+          <AuthProvider>
+            <NotificationProvider>
+              <EstablishmentProvider>{children}</EstablishmentProvider>
+            </NotificationProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

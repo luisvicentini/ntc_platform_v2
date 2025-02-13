@@ -61,7 +61,7 @@ export default function FeedPage() {
               alt={establishment.name}
               className="object-cover w-full h-full"
             />
-            <div className="absolute top-2 right-2 bg-black/75 text-white px-2 py-1 rounded-full text-sm flex items-center space-x-1">
+            <div className="absolute top-2 right-2 bg-black/75 text-white pl-2 pr-1 py-1 rounded-full text-sm flex items-center space-x-2">
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
@@ -75,8 +75,10 @@ export default function FeedPage() {
                 />
               </svg>
               <span>{establishment.rating.toFixed(1)}</span>
+              <span>{establishment.isFeatured && <FeaturedBadge />}</span>
             </div>
-            {establishment.isFeatured && <FeaturedBadge />}
+            
+            
           </div>
           <div className="p-4 space-y-2">
             <h3 className="font-semibold text-[#e5e2e9] group-hover:text-[#7435db]">{establishment.name}</h3>
@@ -92,7 +94,7 @@ export default function FeedPage() {
   return (
     <div className="container py-6">
       <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#e5e2e9]">Selo: Não Tem Chef 👆</h1>
+        <h1 className="text-2xl font-bold text-[#e5e2e9]">Cupons disponíveis</h1>
 
         <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
           <div className="relative w-full sm:w-[400px]">
@@ -221,7 +223,7 @@ export default function FeedPage() {
       </div>
 
       <Tabs defaultValue="explore" className="mb-6">
-        <TabsList>
+        <TabsList className="bg-[#1a1b2d] text-[#e5e2e9]">
           <TabsTrigger value="explore" onClick={() => setActiveTab("explore")}>
             Explorar
           </TabsTrigger>

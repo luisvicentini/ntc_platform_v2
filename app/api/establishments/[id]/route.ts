@@ -1,107 +1,122 @@
-import { NextRequest, NextResponse } from "next/server"
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore"
+import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { revalidateTag } from "next/cache"
-import { UpdateEstablishmentData } from "@/types/establishment"
+import { doc, getDoc, updateDoc } from "firebase/firestore"
+import { jwtDecode } from "jwt-decode"
 
-// GET /api/establishments/[id] - Obtém um estabelecimento específico
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { id: string } }
-) {
-  try {
-    const docRef = doc(db, "establishments", params.id)
-    const docSnap = await getDoc(docRef)
+import type { SessionToken } from "@/types/session"
 
-    if (!docSnap.exists()) {
-      return NextResponse.json(
-        { error: "Establishment not found" },
-        { status: 404 }
-      )
-    }
-
-    return NextResponse.json({
-      id: docSnap.id,
-      ...docSnap.data()
-    })
-  } catch (error) {
-    console.error("Error fetching establishment:", error)
-    return NextResponse.json(
-      { error: "Failed to fetch establishment" },
-      { status: 500 }
-    )
-  }
-}
-
-// PATCH /api/establishments/[id] - Atualiza um estabelecimento
 export async function PATCH(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const data: UpdateEstablishmentData = await request.json()
-    const docRef = doc(db, "establishments", params.id)
-    const docSnap = await getDoc(docRef)
-
-    if (!docSnap.exists()) {
+    const body = await request.json()
+    const sessionToken = request.headers.get("x-session-token")
+    
+    if (!sessionToken) {
       return NextResponse.json(
-        { error: "Establishment not found" },
+        { error: "Sessão inválida" },
+        { status: 403 }
+      )
+    }
+
+    // Decodificar o token
+    const session = jwtDecode<SessionToken>(sessionToken)
+
+    // Verificar se o estabelecimento existe
+    const establishmentRef = doc(db, "establishments", params.id)
+    const establishmentSnap = await getDoc(establishmentRef)
+
+    if (!establishmentSnap.exists()) {
+      return NextResponse.json(
+        { error: "Estabelecimento não encontrado" },
         { status: 404 }
       )
     }
 
-    // Atualizar no Firestore
-    await updateDoc(docRef, {
-      ...data,
-      updatedAt: new Date().toISOString()
-    })
+    const establishmentData = establishmentSnap.data()
 
-    // Revalidar os dados
-    revalidateTag("establishments")
-    revalidateTag(`establishment-${params.id}`)
+    // Verificar se o usuário é o dono do estabelecimento ou é master
+    if (session.userType !== "master" && establishmentData.partnerId !== session.uid) {
+      return NextResponse.json(
+        { error: "Sem permissão para editar este estabelecimento" },
+        { status: 403 }
+      )
+    }
+
+    // Atualizar estabelecimento
+    const updateData = {
+      ...body,
+      updatedAt: new Date().toISOString()
+    }
+
+    await updateDoc(establishmentRef, updateData)
 
     return NextResponse.json({
       id: params.id,
-      ...docSnap.data(),
-      ...data
+      ...establishmentData,
+      ...updateData
     })
+
   } catch (error) {
-    console.error("Error updating establishment:", error)
+    console.error("Erro ao atualizar estabelecimento:", error)
     return NextResponse.json(
-      { error: "Failed to update establishment" },
+      { error: "Erro ao atualizar estabelecimento" },
       { status: 500 }
     )
   }
 }
 
-// DELETE /api/establishments/[id] - Remove um estabelecimento
 export async function DELETE(
-  request: NextRequest,
+  request: Request,
   { params }: { params: { id: string } }
 ) {
   try {
-    const docRef = doc(db, "establishments", params.id)
-    const docSnap = await getDoc(docRef)
-
-    if (!docSnap.exists()) {
+    const sessionToken = request.headers.get("x-session-token")
+    
+    if (!sessionToken) {
       return NextResponse.json(
-        { error: "Establishment not found" },
+        { error: "Sessão inválida" },
+        { status: 403 }
+      )
+    }
+
+    // Decodificar o token
+    const session = jwtDecode<SessionToken>(sessionToken)
+
+    // Verificar se o estabelecimento existe
+    const establishmentRef = doc(db, "establishments", params.id)
+    const establishmentSnap = await getDoc(establishmentRef)
+
+    if (!establishmentSnap.exists()) {
+      return NextResponse.json(
+        { error: "Estabelecimento não encontrado" },
         { status: 404 }
       )
     }
 
-    // Remover do Firestore
-    await deleteDoc(docRef)
+    const establishmentData = establishmentSnap.data()
 
-    // Revalidar os dados
-    revalidateTag("establishments")
-    revalidateTag(`establishment-${params.id}`)
+    // Verificar se o usuário é o dono do estabelecimento ou é master
+    if (session.userType !== "master" && establishmentData.partnerId !== session.uid) {
+      return NextResponse.json(
+        { error: "Sem permissão para excluir este estabelecimento" },
+        { status: 403 }
+      )
+    }
 
-    return NextResponse.json({ success: true })
+    // Em vez de excluir, marcar como inativo
+    await updateDoc(establishmentRef, {
+      status: "inactive",
+      updatedAt: new Date().toISOString()
+    })
+
+    return NextResponse.json({ message: "Estabelecimento excluído com sucesso" })
+
   } catch (error) {
-    console.error("Error deleting establishment:", error)
+    console.error("Erro ao excluir estabelecimento:", error)
     return NextResponse.json(
-      { error: "Failed to delete establishment" },
+      { error: "Erro ao excluir estabelecimento" },
       { status: 500 }
     )
   }

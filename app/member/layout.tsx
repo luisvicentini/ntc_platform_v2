@@ -16,14 +16,14 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
       label: "Feed"
     },
     {
+      href: "/member/coupons",
+      icon: <Ticket className="h-4 w-4" />,
+      label: "Meus Cupons"
+    },
+    {
       href: "/member/profile",
       icon: <User className="h-4 w-4" />,
       label: "Perfil"
-    },
-    {
-      href: "/member/coupons",
-      icon: <Ticket className="h-4 w-4" />,
-      label: "Cupons"
     }
   ]
   return (

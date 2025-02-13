@@ -62,6 +62,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const parsedUser = JSON.parse(storedUser)
           console.log('Usuário recuperado do localStorage:', parsedUser)
+
+          // Criar cookie de sessão
+          const response = await fetch("/api/auth/session", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ user: parsedUser }),
+          })
+
+          if (!response.ok) {
+            throw new Error("Erro ao criar sessão")
+          }
+
           setUser(parsedUser as CustomUser)
           setLoading(false)
         } catch (error) {
@@ -105,6 +119,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             
             console.log('Atualizando estado do usuário:', customUser)
             if (mounted) {
+              // Criar cookie de sessão
+              const response = await fetch("/api/auth/session", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ user: customUser }),
+              })
+
+              if (!response.ok) {
+                throw new Error("Erro ao criar sessão")
+              }
+
               setUser(customUser)
               // Salva o usuário no localStorage
               localStorage.setItem('authUser', JSON.stringify(customUser))
@@ -197,6 +224,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailVerified: firebaseUser.emailVerified,
         phoneNumber: firebaseUser.phoneNumber || updatedUserData.phoneNumber || "",
       } as CustomUser
+
+      // Criar cookie de sessão
+      const response = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ user: customUser }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao criar sessão")
+      }
       
       setUser(customUser)
     } catch (error) {
@@ -244,6 +284,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailVerified: firebaseUser.emailVerified,
         phoneNumber: firebaseUser.phoneNumber || updatedUserData.phoneNumber || "",
       } as CustomUser
+
+      // Criar cookie de sessão
+      const response = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ user: customUser }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao criar sessão")
+      }
       
       console.log('Atualizando estado do usuário:', customUser)
       setUser(customUser)
@@ -292,6 +345,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailVerified: firebaseUser.emailVerified,
         phoneNumber: firebaseUser.phoneNumber || updatedUserData.phoneNumber || "",
       } as CustomUser
+
+      // Criar cookie de sessão
+      const response = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ user: customUser }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao criar sessão")
+      }
       
       setUser(customUser)
     } catch (error) {
@@ -338,6 +404,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         emailVerified: firebaseUser.emailVerified,
         phoneNumber: firebaseUser.phoneNumber || updatedUserData.phoneNumber || "",
       } as CustomUser
+
+      // Criar cookie de sessão
+      const response = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ user: customUser }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao criar sessão")
+      }
       
       setUser(customUser)
     } catch (error) {
@@ -352,8 +431,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Limpa o estado do usuário e localStorage
       setUser(null)
       localStorage.removeItem('authUser')
-      // Redireciona para a página inicial
-      window.location.href = '/'
+
+      // Remover cookie de sessão
+      const response = await fetch("/api/auth/session/delete", {
+        method: "POST",
+        credentials: "include"
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao remover sessão")
+      }
+
+      // Pequeno delay para garantir que o Firebase processe o logout
+      await new Promise(resolve => setTimeout(resolve, 500))
+      // Redireciona para a página inicial usando window.location para garantir um refresh completo
+      window.location.href = '/auth/member'
     } catch (error) {
       console.error("Error signing out:", error)
       throw error

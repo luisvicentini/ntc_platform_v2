@@ -126,7 +126,7 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70"
+              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/70"
               onClick={prevImage}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -134,13 +134,13 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70"
+              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/70"
               onClick={nextImage}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <div className="absolute top-2 left-2 flex flex-col space-y-2">
-              <div className="bg-black/75 text-white px-2 py-1 rounded-full text-sm flex items-center space-x-1">
+            <div className="absolute top-2 left-2 flex flex-col space-y-2 items-start">
+              <div className="bg-black/75 text-white pl-2 pr-1 py-1 rounded-full text-sm flex items-center space-x-2">
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   viewBox="0 0 24 24"
@@ -154,8 +154,9 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
                   />
                 </svg>
                 <span>{establishment.rating.toFixed(1)}</span>
+                <span>{establishment.isFeatured && <FeaturedBadge />}</span>
               </div>
-              {establishment.isFeatured && <FeaturedBadge />}
+              
             </div>
           </div>
 

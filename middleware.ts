@@ -21,17 +21,56 @@ const userTypeRoutes = {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Permite acesso a recursos estáticos e API
+  // Permite acesso a recursos estáticos
   if (
     pathname.startsWith('/_next') ||
-    pathname.startsWith('/api') ||
     pathname.includes('.') ||
     pathname === '/'
   ) {
     return NextResponse.next()
   }
 
-  // Permite acesso a todas as rotas da aplicação
+  // Proteger rotas de API
+  if (pathname.startsWith('/api')) {
+    // Permitir rotas públicas de API
+    const publicApiRoutes = [
+      '/api/users/activate',
+      '/api/auth/forgot-password',
+      '/api/auth/reset-password'
+    ]
+
+    // Verificar se é uma rota pública
+    if (publicApiRoutes.some(route => pathname.startsWith(route))) {
+      return NextResponse.next()
+    }
+
+    // Verificar se é uma rota de autenticação
+    if (pathname.startsWith('/api/auth/')) {
+      return NextResponse.next()
+    }
+
+    const session = request.cookies.get('__session')
+    
+    // Se não houver sessão, retornar erro
+    if (!session?.value) {
+      return NextResponse.json(
+        { error: "Usuário não autenticado" },
+        { status: 401 }
+      )
+    }
+
+    // Adicionar o token da sessão no header para as rotas de API
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-session-token', session.value)
+
+    return NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    })
+  }
+
+  // Permite acesso a todas as outras rotas da aplicação
   // O RouteGuard cuidará da proteção no client-side
   return NextResponse.next()
 }
@@ -40,12 +79,12 @@ export const config = {
   matcher: [
     /*
      * Match all request paths except for the ones starting with:
-     * - api (API routes)
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public files
      */
-    '/((?!api|_next/static|_next/image|favicon.ico|.*\\..*|_next).*)'
+    '/((?!_next/static|_next/image|favicon.ico|.*\\..*|_next).*)',
+    '/api/:path*'
   ]
 }

@@ -21,7 +21,9 @@ export default function EstablishmentsPage() {
   const filteredEstablishments = establishments.filter(
     (establishment) =>
       establishment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      establishment.address.toLowerCase().includes(searchTerm.toLowerCase()),
+      establishment.address.street.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      establishment.address.neighborhood.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      establishment.address.city.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
   const handleSearch = (term: string) => {
@@ -97,8 +99,9 @@ export default function EstablishmentsPage() {
                 >
                   <Edit className="h-4 w-4 text-white" />
                 </Button>
-                <div className="absolute top-2 left-2 flex flex-col space-y-2">
-                  <div className="bg-black/75 text-white px-2 py-1 rounded-full text-sm flex items-center space-x-1">
+                <div className="absolute bottom-2 left-2 flex flex-col space-y-2 items-start">
+                  
+                  <div className="bg-black/75 text-white pl-2 pr-1 py-1 rounded-full text-sm flex items-center space-x-2">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       viewBox="0 0 24 24"
@@ -112,15 +115,16 @@ export default function EstablishmentsPage() {
                       />
                     </svg>
                     <span>{establishment.rating.toFixed(1)}</span>
+                    <span>{establishment.isFeatured && <FeaturedBadge />}</span>
                   </div>
-                  {establishment.isFeatured && <FeaturedBadge />}
+                  
                 </div>
-                <div className="absolute top-2 right-12 transition-opacity duration-200 ease-in-out">
+                <div className="absolute top-2 left-2 transition-opacity duration-200 ease-in-out">
                   <Checkbox
                     id={`select-${establishment.id}`}
                     checked={selectedEstablishments.includes(establishment.id)}
                     onCheckedChange={() => handleSelectEstablishment(establishment.id)}
-                    className={`h-6 w-6 border-2 border-[#7435db] rounded-md ${
+                    className={`h-6 w-6 border-2 border-white rounded-md ${
                       selectedEstablishments.includes(establishment.id) ? "bg-[#7435db]" : "bg-transparent"
                     }`}
                   />
@@ -128,8 +132,12 @@ export default function EstablishmentsPage() {
               </div>
               <div className="p-4">
                 <h3 className="font-semibold text-lg mb-2 text-[#e5e2e9]">{establishment.name}</h3>
-                <p className="text-sm text-[#7a7b9f] mb-2">{establishment.address}</p>
-                <p className="text-sm text-[#7a7b9f]">{establishment.phone}</p>
+                <p className="text-sm text-[#7a7b9f] mb-2">
+                  {`${establishment.address.street}, ${establishment.address.number}${
+                    establishment.address.complement ? ` - ${establishment.address.complement}` : ""
+                  } - ${establishment.address.neighborhood}, ${establishment.address.city}`}
+                </p>
+                <p className="text-sm text-[#7a7b9f]">{establishment.phone.phone}</p>
               </div>
             </CardContent>
           </Card>
@@ -143,4 +151,3 @@ export default function EstablishmentsPage() {
     </div>
   )
 }
-

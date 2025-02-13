@@ -1,50 +1,22 @@
 "use client"
 
-import React, { createContext, useContext, useState, useCallback } from "react"
-
-interface GeneratedVoucher {
-  code: string
-  establishmentId: string
-  userId: string
-  generatedAt: number
-  expiresAt: number
-  status: "pending" | "expired"
-}
-
-export interface Establishment {
-  id: string
-  name: string
-  address: string
-  description: string
-  phone: string
-  openingHours: string
-  voucherDescription: string
-  discountValue: string
-  discountRules: string
-  usageLimit: string
-  voucherAvailability: "unlimited" | "limited"
-  voucherQuantity: number
-  voucherCooldown: number
-  voucherExpiration: number // in hours
-  lastVoucherGenerated?: { [userId: string]: number }
-  images: string[]
-  type: string
-  location: string
-  rating: number
-  totalRatings: number
-  isFeatured: boolean // New property
-}
+import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
+import { useAuth } from "@/contexts/auth-context"
+import { toast } from "sonner"
+import type { Establishment, GeneratedVoucher } from "@/types/establishment"
 
 interface EstablishmentContextType {
   establishments: Establishment[]
   generatedVouchers: GeneratedVoucher[]
-  addEstablishment: (establishment: Omit<Establishment, "id">) => void
-  updateEstablishment: (id: string, establishment: Partial<Establishment>) => void
-  generateVoucher: (establishmentId: string, userId: string) => string | null
+  loading: boolean
+  addEstablishment: (establishment: Omit<Establishment, "id" | "partnerId" | "status" | "createdAt" | "updatedAt" | "rating" | "totalRatings" | "isFeatured">) => Promise<void>
+  updateEstablishment: (id: string, establishment: Partial<Establishment>) => Promise<void>
+  generateVoucher: (establishmentId: string, userId: string) => Promise<string | null>
   canGenerateVoucher: (establishmentId: string, userId: string) => boolean
   getNextVoucherTime: (establishmentId: string, userId: string) => number | null
   getUserVouchers: (userId: string) => GeneratedVoucher[]
-  toggleFeatured: (id: string) => void // New function
+  toggleFeatured: (id: string) => Promise<void>
+  refreshEstablishments: () => Promise<void>
 }
 
 const EstablishmentContext = createContext<EstablishmentContextType | undefined>(undefined)
@@ -57,92 +29,49 @@ export const useEstablishment = () => {
   return context
 }
 
-// Update test establishments to include isFeatured
-const testEstablishments: Establishment[] = [
-  {
-    id: "1",
-    name: "Niva's Lanches",
-    address: "Rua A, 123 - Centro",
-    description: "Dizem que temos o melhor Bauru de Limeira. Venha experimentar e comprove você mesmo!",
-    phone: "(19) 3441-2504",
-    openingHours: "Segunda a Sábado das 18h às 23h",
-    voucherDescription: "10% de desconto em qualquer lanche",
-    discountValue: "10%",
-    discountRules: "Válido apenas para lanches, não inclui bebidas",
-    usageLimit: "1 voucher por pessoa por dia",
-    voucherAvailability: "unlimited",
-    voucherQuantity: 0,
-    voucherCooldown: 24,
-    voucherExpiration: 48, // 48 hours
-    images: [
-      "https://www.minhareceita.com.br/app/uploads/2022/06/pernil650.jpg",
-      "https://f.i.uol.com.br/fotografia/2022/03/23/1648057448623b5c68a161b_1648057448_3x2_md.jpg",
-      "https://guiadacozinha.com.br/wp-content/uploads/2005/01/sanduichebauru.jpg",
-    ],
-    type: "Lanchonete",
-    location: "Limeira/SP",
-    rating: 4.5,
-    totalRatings: 100,
-    isFeatured: false,
-  },
-  {
-    id: "2",
-    name: "Pizzaria Bella",
-    address: "Av. B, 456 - Jardim Glória",
-    description: "As melhores pizzas da cidade, com ingredientes frescos e de qualidade.",
-    phone: "(19) 3441-3333",
-    openingHours: "Terça a Domingo das 18h às 23h",
-    voucherDescription: "Pizza grande por preço de média",
-    discountValue: "20%",
-    discountRules: "Válido apenas para pizzas grandes, não inclui bebidas",
-    usageLimit: "1 voucher por mesa",
-    voucherAvailability: "limited",
-    voucherQuantity: 50,
-    voucherCooldown: 12,
-    voucherExpiration: 24, // 24 hours
-    images: [
-      "https://www.receitas-sem-fronteiras.com/media/59de0b6a55d6d_crop.jpeg/rh/sanduiche-de-pernil-especial.jpg",
-      "https://i0.statig.com.br/bancodeimagens/2r/5g/l7/2r5gl73lyxqlpxwoodysu86q5.jpg",
-    ],
-    type: "Pizzaria",
-    location: "Limeira/SP",
-    rating: 4.7,
-    totalRatings: 150,
-    isFeatured: true,
-  },
-  {
-    id: "3",
-    name: "Café Central",
-    address: "Rua C, 789 - Centro",
-    description: "O melhor café da região, com grãos selecionados e torrados artesanalmente.",
-    phone: "(19) 3441-4444",
-    openingHours: "Segunda a Sábado das 7h às 20h",
-    voucherDescription: "Café expresso grátis na compra de qualquer bolo",
-    discountValue: "100% no café expresso",
-    discountRules: "Válido apenas para café expresso, limite de um por pessoa",
-    usageLimit: "1 voucher por dia",
-    voucherAvailability: "unlimited",
-    voucherQuantity: 0,
-    voucherCooldown: 24,
-    voucherExpiration: 24, // 24 hours
-    images: [
-      "https://f.i.uol.com.br/fotografia/2022/03/23/1648057448623b5c68a161b_1648057448_3x2_md.jpg",
-      "https://www.minhareceita.com.br/app/uploads/2022/06/pernil650.jpg",
-    ],
-    type: "Cafeteria",
-    location: "Limeira/SP",
-    rating: 4.8,
-    totalRatings: 200,
-    isFeatured: false,
-  },
-]
-
 export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [establishments, setEstablishments] = useState<Establishment[]>(testEstablishments)
+  const [establishments, setEstablishments] = useState<Establishment[]>([])
   const [generatedVouchers, setGeneratedVouchers] = useState<GeneratedVoucher[]>([])
+  const [loading, setLoading] = useState(true)
+  const { user } = useAuth()
+
+  const refreshEstablishments = useCallback(async () => {
+    try {
+      setLoading(true)
+      let url = "/api/establishments"
+
+      // Adicionar parâmetros baseado no tipo de usuário
+      if (user) {
+        if (user.userType === "partner") {
+          url += `?partnerId=${user.uid}`
+        } else if (user.userType === "member") {
+          url += `?memberId=${user.uid}`
+        }
+      }
+
+      const response = await fetch(url, {
+        credentials: "include"
+      })
+      
+      if (!response.ok) {
+        throw new Error("Erro ao carregar estabelecimentos")
+      }
+
+      const data = await response.json()
+      setEstablishments(data)
+    } catch (error: any) {
+      toast.error(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    refreshEstablishments()
+  }, [refreshEstablishments])
 
   // Check for expired vouchers every minute
-  React.useEffect(() => {
+  useEffect(() => {
     const interval = setInterval(() => {
       setGeneratedVouchers((prev) =>
         prev.map((voucher) => ({
@@ -155,25 +84,60 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
     return () => clearInterval(interval)
   }, [])
 
-  const addEstablishment = useCallback((establishment: Omit<Establishment, "id">) => {
-    setEstablishments((prev) => [
-      ...prev,
-      {
-        ...establishment,
-        id: Date.now().toString(),
-        lastVoucherGenerated: {},
-        totalRatings: 0,
-        isFeatured: false,
-      },
-    ])
+  const addEstablishment = useCallback(async (establishment: Omit<Establishment, "id" | "partnerId" | "status" | "createdAt" | "updatedAt" | "rating" | "totalRatings" | "isFeatured">) => {
+    try {
+      const response = await fetch("/api/establishments", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(establishment),
+        credentials: "include"
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Erro ao criar estabelecimento")
+      }
+
+      const newEstablishment = await response.json()
+      setEstablishments((prev) => [...prev, newEstablishment])
+      toast.success("Estabelecimento criado com sucesso!")
+    } catch (error: any) {
+      toast.error(error.message)
+      throw error
+    }
   }, [])
 
-  const updateEstablishment = useCallback((id: string, updatedFields: Partial<Establishment>) => {
-    setEstablishments((prev) => prev.map((est) => (est.id === id ? { ...est, ...updatedFields } : est)))
+  const updateEstablishment = useCallback(async (id: string, updatedFields: Partial<Establishment>) => {
+    try {
+      const response = await fetch(`/api/establishments/${id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedFields),
+        credentials: "include"
+      })
+
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Erro ao atualizar estabelecimento")
+      }
+
+      const updatedEstablishment = await response.json()
+      setEstablishments((prev) => 
+        prev.map((est) => (est.id === id ? updatedEstablishment : est))
+      )
+      toast.success("Estabelecimento atualizado com sucesso!")
+    } catch (error: any) {
+      toast.error(error.message)
+      throw error
+    }
   }, [])
 
   const generateVoucher = useCallback(
-    (establishmentId: string, userId: string): string | null => {
+    async (establishmentId: string, userId: string): Promise<string | null> => {
       const establishment = establishments.find((e) => e.id === establishmentId)
       if (!establishment || !canGenerateVoucher(establishmentId, userId)) return null
 
@@ -249,26 +213,49 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
     [generatedVouchers],
   )
 
-  const toggleFeatured = useCallback((id: string) => {
-    setEstablishments((prev) => prev.map((est) => (est.id === id ? { ...est, isFeatured: !est.isFeatured } : est)))
-  }, [])
+  const toggleFeatured = useCallback(async (id: string) => {
+    try {
+      const establishment = establishments.find(e => e.id === id)
+      if (!establishment) return
+
+      const response = await fetch(`/api/establishments/${id}/featured`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ isFeatured: !establishment.isFeatured }),
+        credentials: "include"
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao atualizar destaque")
+      }
+
+      setEstablishments((prev) => 
+        prev.map((est) => (est.id === id ? { ...est, isFeatured: !est.isFeatured } : est))
+      )
+    } catch (error: any) {
+      toast.error(error.message)
+    }
+  }, [establishments])
 
   return (
     <EstablishmentContext.Provider
       value={{
         establishments,
         generatedVouchers,
+        loading,
         addEstablishment,
         updateEstablishment,
         generateVoucher,
         canGenerateVoucher,
         getNextVoucherTime,
         getUserVouchers,
-        toggleFeatured, // Add this new function to the context
+        toggleFeatured,
+        refreshEstablishments,
       }}
     >
       {children}
     </EstablishmentContext.Provider>
   )
 }
-

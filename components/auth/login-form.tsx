@@ -9,6 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Logo } from "@/components/ui/logo"
 import { FcGoogle } from "react-icons/fc"
 import { FaFacebook } from "react-icons/fa"
+import { Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { UserType } from "@/contexts/auth-context"
 
@@ -30,6 +31,7 @@ export function LoginForm({
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const { signIn, signInWithGoogle, signInWithFacebook } = useAuth()
@@ -49,12 +51,17 @@ export function LoginForm({
       // Aguarda um momento para garantir que o estado foi atualizado
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      // Verifica se o usuário foi salvo corretamente
-      const storedUser = localStorage.getItem('authUser')
-      if (!storedUser) {
+      // Verificar se o usuário tem o userType correto
+      const storedUserData = localStorage.getItem('authUser')
+      if (!storedUserData) {
         throw new Error('Erro ao salvar dados do usuário')
       }
       
+      const userData = JSON.parse(storedUserData) as { userType: UserType }
+      if (userData.userType !== userType) {
+        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userData.userType}.`)
+      }
+
       const redirectPath = userType === "member" ? "/member/feed" : `/${userType}/dashboard`
       console.log('Redirecionando para:', redirectPath)
       window.location.href = redirectPath
@@ -80,12 +87,17 @@ export function LoginForm({
       // Aguarda um momento para garantir que o estado foi atualizado
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      // Verifica se o usuário foi salvo corretamente
-      const storedUser = localStorage.getItem('authUser')
-      if (!storedUser) {
+      // Verificar se o usuário tem o userType correto
+      const storedUserData = localStorage.getItem('authUser')
+      if (!storedUserData) {
         throw new Error('Erro ao salvar dados do usuário')
       }
       
+      const userData = JSON.parse(storedUserData) as { userType: UserType }
+      if (userData.userType !== userType) {
+        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userData.userType}.`)
+      }
+
       const redirectPath = userType === "member" ? "/member/feed" : `/${userType}/dashboard`
       console.log('Redirecionando para:', redirectPath)
       window.location.href = redirectPath
@@ -111,12 +123,17 @@ export function LoginForm({
       // Aguarda um momento para garantir que o estado foi atualizado
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      // Verifica se o usuário foi salvo corretamente
-      const storedUser = localStorage.getItem('authUser')
-      if (!storedUser) {
+      // Verificar se o usuário tem o userType correto
+      const storedUserData = localStorage.getItem('authUser')
+      if (!storedUserData) {
         throw new Error('Erro ao salvar dados do usuário')
       }
       
+      const userData = JSON.parse(storedUserData) as { userType: UserType }
+      if (userData.userType !== userType) {
+        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userData.userType}.`)
+      }
+
       const redirectPath = userType === "member" ? "/member/feed" : `/${userType}/dashboard`
       console.log('Redirecionando para:', redirectPath)
       window.location.href = redirectPath
@@ -130,8 +147,13 @@ export function LoginForm({
 
   return (
     <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
+      <div className="flex flex-col items-center justify-center py-6">
+        <div className="mb-8">
+          <Logo />
+        </div>
+      </div>
       <div className="flex flex-col space-y-2 text-center">
-        <Logo />
+        
         <h1 className="text-2xl font-semibold tracking-tight text-ntc-purple">{title}</h1>
         <p className="text-sm text-ntc-gray">{subtitle}</p>
       </div>
@@ -162,10 +184,10 @@ export function LoginForm({
             </div>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-ntc-gray-light" />
+                <span className="w-full border-t border-ntc-gray-light/10" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-background px-2 text-ntc-gray">Ou continue com</span>
+                <span className="bg-[#0F0F1A] px-2 text-ntc-gray">Ou continue com</span>
               </div>
             </div>
           </>
@@ -192,18 +214,29 @@ export function LoginForm({
           <Label htmlFor="password" className="text-ntc-gray">
             Senha
           </Label>
-          <Input
-            id="password"
-            placeholder="********"
-            type="password"
-            autoCapitalize="none"
-            autoComplete="current-password"
-            className="border-ntc-gray-light"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-            required
-          />
+          <div className="relative">
+            <Input
+              id="password"
+              placeholder="********"
+              type={showPassword ? "text" : "password"}
+              autoCapitalize="none"
+              autoComplete="current-password"
+              className="border-ntc-gray-light"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              required
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-ntc-gray hover:text-ntc-purple"
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
         {error && (
           <div className="text-sm text-red-500">
@@ -220,7 +253,7 @@ export function LoginForm({
               Manter conectado
             </label>
           </div>
-          <a href="/forgot-password" className="text-sm font-medium text-ntc-purple hover:text-ntc-purple-dark">
+          <a href="/auth/forgot-password" className="text-sm font-medium text-ntc-purple hover:text-ntc-purple-dark">
             Esqueceu a senha?
           </a>
         </div>
