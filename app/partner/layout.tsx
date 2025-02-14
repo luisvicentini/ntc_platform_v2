@@ -5,7 +5,7 @@ import { EstablishmentProvider } from "@/contexts/EstablishmentContext"
 import { Header } from "@/components/header"
 
 import { useAuth } from "@/contexts/auth-context"
-import { FileText, LayoutDashboard, MapPinHouse, TicketCheck } from "lucide-react"
+import { FileText, LayoutDashboard, MapPinHouse, TicketCheck, Users } from "lucide-react"
 
 
 export default function PartnerLayout({ children }: { children: React.ReactNode }) {
@@ -21,6 +21,11 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
       href: "/partner/establishments",
       icon: <MapPinHouse className="h-4 w-4" />,
       label: "Estabelecimentos"
+    },
+    {
+      href: "/partner/members",
+      icon: <Users className="h-4 w-4" />,
+      label: "Members"
     },
     {
       href: "/partner/reports",

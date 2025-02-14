@@ -1,413 +1,532 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { toast } from "sonner"
+import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search, MoreHorizontal, Plus, Link as LinkIcon } from "lucide-react"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { Label } from "@/components/ui/label"
-import { toast } from "sonner"
-import { SubscriptionModal } from "@/components/subscription-modal"
+import { SubscriptionManagementModal } from "@/components/subscription-management-modal"
 import { SubscriptionProvider } from "@/contexts/subscription-context"
+import { EstablishmentLinkModal } from "@/components/establishment-link-modal"
+import { AddUserModal } from "@/components/add-user-modal"
+import { DeleteUserModal } from "@/components/delete-user-modal"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Pagination } from "@/components/ui/pagination"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Building2, User, Users, Crown, MoreVertical, Grid, List, Check, X } from "lucide-react"
+import type { UserProfile, UserListResponse } from "@/types/user"
 
-interface User {
-  id: string
-  displayName: string
-  email: string
-  userType: "master" | "partner" | "member" | "business"
-  status: "pending" | "active" | "blocked"
-  createdAt: string
-  updatedAt: string
+const ITEMS_PER_PAGE = 10
+
+export default function UsersPage() {
+  return (
+    <SubscriptionProvider>
+      <UsersContent />
+    </SubscriptionProvider>
+  )
 }
 
-const api = {
-  getUsers: async (): Promise<User[]> => {
-    const response = await fetch("/api/users")
-    if (!response.ok) {
-      throw new Error("Erro ao buscar usuários")
+function UsersContent() {
+  const [allUsers, setAllUsers] = useState<UserProfile[]>([])
+  const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([])
+  const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState<string>("all")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [viewMode, setViewMode] = useState<"card" | "table">("card")
+  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null)
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
+  const [showEstablishmentModal, setShowEstablishmentModal] = useState(false)
+  const [showAddUserModal, setShowAddUserModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null)
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  useEffect(() => {
+    filterUsers()
+  }, [activeTab, searchTerm, allUsers])
+
+  useEffect(() => {
+    const total = filteredUsers.length
+    setTotalPages(Math.ceil(total / ITEMS_PER_PAGE))
+  }, [filteredUsers])
+
+  const fetchUsers = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch("/api/users/list", { credentials: "include" })
+
+      if (!response.ok) {
+        throw new Error("Erro ao carregar usuários")
+      }
+
+      const data = await response.json()
+      setAllUsers(data.users)
+      filterUsers()
+    } catch (error) {
+      console.error("Erro ao carregar usuários:", error)
+    } finally {
+      setLoading(false)
     }
-    return response.json()
-  },
-  addUser: async (user: { name: string, email: string, role: string }): Promise<User> => {
-    const response = await fetch("/api/users", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(user),
-    })
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || "Erro ao adicionar usuário")
+  }
+
+  const filterUsers = () => {
+    let filtered = [...allUsers]
+
+    // Filtrar por tipo
+    if (activeTab !== "all") {
+      filtered = filtered.filter(user => user.userType === activeTab)
     }
-    return response.json()
-  },
-  updateUser: async (id: string, user: Partial<User>): Promise<User> => {
-    const response = await fetch(`/api/users/${id}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(user),
-    })
-    if (!response.ok) {
-      throw new Error("Erro ao atualizar usuário")
+
+    // Filtrar por termo de busca
+    if (searchTerm) {
+      const term = searchTerm.toLowerCase()
+      filtered = filtered.filter(user => 
+        user.displayName.toLowerCase().includes(term) ||
+        user.email.toLowerCase().includes(term)
+      )
     }
-    return response.json()
-  },
-  deleteUser: async (id: string): Promise<void> => {
-    const response = await fetch(`/api/users/${id}`, {
+
+    setFilteredUsers(filtered)
+    setCurrentPage(1)
+  }
+
+  const getPaginatedUsers = () => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE
+    const end = start + ITEMS_PER_PAGE
+    return filteredUsers.slice(start, end)
+  }
+
+  const getUserTypeIcon = (userType: string) => {
+    switch (userType) {
+      case "business":
+        return <Building2 className="h-4 w-4" />
+      case "member":
+        return <User className="h-4 w-4" />
+      case "partner":
+        return <Users className="h-4 w-4" />
+      case "master":
+        return <Crown className="h-4 w-4" />
+      default:
+        return <User className="h-4 w-4" />
+    }
+  }
+
+  const getUserTypeColor = (userType: string) => {
+    switch (userType) {
+      case "business":
+        return "bg-blue-500"
+      case "member":
+        return "bg-green-500"
+      case "partner":
+        return "bg-purple-500"
+      case "master":
+        return "bg-yellow-500"
+      default:
+        return "bg-gray-500"
+    }
+  }
+
+  const getUserTypeText = (userType: string) => {
+    switch (userType) {
+      case "business":
+        return "Estabelecimento"
+      case "member":
+        return "Membro"
+      case "partner":
+        return "Parceiro"
+      case "master":
+        return "Master"
+      default:
+        return userType
+    }
+  }
+
+  const handleEdit = async (user: UserProfile) => {
+    setSelectedUser(user)
+    setShowAddUserModal(true)
+  }
+
+  const handleResendActivation = async (user: UserProfile) => {
+    try {
+      const response = await fetch("/api/users/resend-activation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ userId: user.id }),
+        credentials: "include"
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao reenviar email de ativação")
+      }
+
+      toast.success("Email de ativação reenviado com sucesso")
+      fetchUsers() // Atualizar lista para mostrar novo status
+    } catch (error) {
+      console.error("Erro ao reenviar email:", error)
+      toast.error("Erro ao reenviar email de ativação")
+    }
+  }
+
+  const handleDeleteClick = (user: UserProfile) => {
+    setUserToDelete(user)
+    setShowDeleteModal(true)
+  }
+
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return
+
+    const response = await fetch(`/api/users/${userToDelete.id}`, {
       method: "DELETE",
+      credentials: "include"
     })
+
     if (!response.ok) {
       throw new Error("Erro ao excluir usuário")
     }
-  },
-  resendAccess: async (id: string): Promise<void> => {
-    const response = await fetch(`/api/users/${id}/resend-access`, {
-      method: "POST",
-    })
-    if (!response.ok) {
-      throw new Error("Erro ao reenviar acesso")
-    }
-  },
-  blockUser: async (id: string): Promise<void> => {
-    const response = await fetch(`/api/users/${id}/block`, {
-      method: "POST",
-    })
-    if (!response.ok) {
-      throw new Error("Erro ao alterar status do usuário")
-    }
-  },
-}
 
-export default function UsersPage() {
-  const [isSubscriptionModalOpen, setIsSubscriptionModalOpen] = useState(false)
-  const [selectedMember, setSelectedMember] = useState<{ id: string; name: string } | null>(null)
-  const [users, setUsers] = useState<User[]>([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isAddUserOpen, setIsAddUserOpen] = useState(false)
-  const [isEditUserOpen, setIsEditUserOpen] = useState(false)
-  const [newUser, setNewUser] = useState({
-    displayName: "",
-    email: "",
-    userType: "master" as "master" | "partner" | "member",
-  })
-  const [editingUser, setEditingUser] = useState<User | null>(null)
-
-  useEffect(() => {
-    const loadUsers = async () => {
-      try {
-        const data = await api.getUsers()
-        setUsers(data)
-      } catch (error: any) {
-        toast.error(error.message)
-      }
-    }
-    loadUsers()
-  }, [])
-
-  const filteredUsers = users.filter(
-    (user) =>
-      user.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
-
-  const handleAddUser = async () => {
-    try {
-      const addedUser = await api.addUser({
-        name: newUser.displayName,
-        email: newUser.email,
-        role: newUser.userType,
-      })
-      setUsers([...users, addedUser])
-      setIsAddUserOpen(false)
-      setNewUser({
-        displayName: "",
-        email: "",
-        userType: "master",
-      })
-      toast.success("Usuário adicionado com sucesso! Um email de ativação foi enviado.")
-    } catch (error: any) {
-      toast.error(error.message)
-    }
+    // Atualizar lista após exclusão
+    fetchUsers()
   }
 
-  const handleUpdateUser = async (id: string, updatedFields: Partial<User>) => {
-    try {
-      const updatedUser = await api.updateUser(id, updatedFields)
-      setUsers(users.map((user) => (user.id === id ? updatedUser : user)))
-      setIsEditUserOpen(false)
-      setEditingUser(null)
-      toast.success("Usuário atualizado com sucesso!")
-    } catch (error: any) {
-      toast.error(error.message)
-    }
+  const handleDeleteModalClose = () => {
+    setShowDeleteModal(false)
+    setUserToDelete(null)
   }
 
-  const handleDeleteUser = async (id: string) => {
-    try {
-      await api.deleteUser(id)
-      setUsers(users.filter((user) => user.id !== id))
-      toast.success("Usuário excluído com sucesso!")
-    } catch (error: any) {
-      toast.error(error.message)
-    }
+  const handleLinkSubscription = (user: UserProfile) => {
+    setSelectedUser(user)
+    setShowSubscriptionModal(true)
   }
 
-  const handleResendAccess = async (id: string) => {
-    try {
-      await api.resendAccess(id)
-      toast.success("Email de acesso reenviado com sucesso!")
-    } catch (error: any) {
-      toast.error(error.message)
-    }
+  const handleCloseSubscriptionModal = () => {
+    setSelectedUser(null)
+    setShowSubscriptionModal(false)
+    fetchUsers()
   }
 
-  const handleBlockUser = async (id: string) => {
-    try {
-      await api.blockUser(id)
-      const user = users.find((u) => u.id === id)
-      if (user) {
-        const newStatus = user.status === "active" ? "blocked" : "active"
-        setUsers(users.map((u) => 
-          u.id === id ? { ...u, status: newStatus } : u
-        ))
-        toast.success(`Usuário ${newStatus === "active" ? "desbloqueado" : "bloqueado"} com sucesso!`)
-      }
-    } catch (error: any) {
-      toast.error(error.message)
-    }
+  const handleLinkEstablishment = (user: UserProfile) => {
+    setSelectedUser(user)
+    setShowEstablishmentModal(true)
   }
 
-  const handleResetPassword = async (id: string) => {
-    try {
-      await api.resendAccess(id)
-      toast.success("Email de redefinição de senha enviado com sucesso!")
-    } catch (error: any) {
-      toast.error(error.message)
-    }
+  const handleCloseEstablishmentModal = () => {
+    setSelectedUser(null)
+    setShowEstablishmentModal(false)
+    fetchUsers()
   }
 
-  const openEditUserModal = (user: User) => {
-    setEditingUser(user)
-    setIsEditUserOpen(true)
+  const handleCloseAddUserModal = () => {
+    setSelectedUser(null)
+    setShowAddUserModal(false)
+    fetchUsers()
   }
 
-  const openSubscriptionModal = (user: User) => {
-    setSelectedMember({ id: user.id, name: user.displayName })
-    setIsSubscriptionModalOpen(true)
+  if (loading) {
+    return (
+      <div className="container py-6">
+        <h1 className="text-2xl font-bold text-[#e5e2e9] mb-6">Usuários</h1>
+        <div className="text-[#7a7b9f]">Carregando...</div>
+      </div>
+    )
   }
 
   return (
-    <SubscriptionProvider>
-      <div className="container py-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#e5e2e9]">Usuários e Parceiros</h1>
+    <div className="container py-6">
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold text-[#e5e2e9]">Usuários</h1>
+        <Button onClick={() => setShowAddUserModal(true)}>Adicionar Usuário</Button>
+      </div>
 
-        <div className="flex items-center space-x-4">
-          <div className="relative w-[400px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7a7b9f]" />
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <TabsList className="bg-[#1a1b2d] text-[#e5e2e9]">
+              <TabsTrigger value="all">Todos</TabsTrigger>
+              <TabsTrigger value="business">Estabelecimentos</TabsTrigger>
+              <TabsTrigger value="member">Membros</TabsTrigger>
+              <TabsTrigger value="partner">Parceiros</TabsTrigger>
+              <TabsTrigger value="master">Master</TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          <div className="flex items-center space-x-4">
             <Input
-              placeholder="Pesquisar usuário ou parceiro"
+              placeholder="Buscar usuários..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
+              className="w-64 bg-[#1a1b2d] border-[#131320]"
             />
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setViewMode(viewMode === "card" ? "table" : "card")}
+              className="bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
+            >
+              {viewMode === "card" ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
+            </Button>
           </div>
-          <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-[#7435db] hover:bg-[#7435db]/80">
-                <Plus className="mr-2 h-4 w-4" /> Adicionar
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="bg-[#131320] text-[#e5e2e9]">
-              <DialogHeader>
-                <DialogTitle>Adicionar Novo Usuário/Parceiro</DialogTitle>
-              </DialogHeader>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">
-                    Nome
-                  </Label>
-                  <Input
-                    id="name"
-                    value={newUser.displayName}
-                    onChange={(e) => setNewUser({ ...newUser, displayName: e.target.value })}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="email" className="text-right">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    value={newUser.email}
-                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="role" className="text-right">
-                    Função
-                  </Label>
-                  <select
-                    id="role"
-                    value={newUser.userType}
-                    onChange={(e) => setNewUser({ ...newUser, userType: e.target.value as "master" | "partner" | "member" })}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320] text-[#e5e2e9] rounded-md"
-                  >
-                    <option value="master">Master</option>
-                    <option value="partner">Parceiro</option>
-                    <option value="member">Membro</option>
-                    <option value="business">Business</option>
-                  </select>
-                </div>
-              </div>
-              <Button onClick={handleAddUser} className="bg-[#7435db] hover:bg-[#7435db]/80">
-                Adicionar
-              </Button>
-            </DialogContent>
-          </Dialog>
+        </div>
+
+        <div className="mt-6">
+          {viewMode === "card" ? renderUserCards(getPaginatedUsers()) : renderUserTable(getPaginatedUsers())}
         </div>
       </div>
 
-      <div className="rounded-md border border-[#1a1b2d] bg-[#131320]">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-[#1a1b2d] hover:bg-[#1a1b2d]">
-              <TableHead className="text-[#7a7b9f]">Nome</TableHead>
-              <TableHead className="text-[#7a7b9f]">Email</TableHead>
-              <TableHead className="text-[#7a7b9f]">Função</TableHead>
-              <TableHead className="text-[#7a7b9f]">Status</TableHead>
-              <TableHead className="w-[100px]"></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredUsers.map((user) => (
-              <TableRow key={user.id} className="border-[#1a1b2d] hover:bg-[#1a1b2d]">
-                <TableCell className="font-medium text-[#e5e2e9]">{user.displayName}</TableCell>
-                <TableCell className="text-[#7a7b9f]">{user.email}</TableCell>
-                <TableCell className="text-[#7a7b9f]">
-                  {user.userType === "master" ? "Usuário" : user.userType === "partner" ? "Parceiro" : "Membro"}
-                </TableCell>
-                <TableCell className="text-[#7a7b9f]">
-                  <span
-                    className={`px-2 py-1 rounded-full text-xs ${
-                      user.status === "active" ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
-                    }`}
-                  >
-                    {user.status === "active" ? "Ativo" : "Bloqueado"}
-                  </span>
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0 text-[#7a7b9f] hover:text-[#e5e2e9]">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]">
-                      <DropdownMenuItem onClick={() => openEditUserModal(user)} className="hover:bg-[#1a1b2d]">
-                        Editar usuário
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="hover:bg-[#1a1b2d] text-red-500"
-                      >
-                        Excluir usuário
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleResendAccess(user.id)} className="hover:bg-[#1a1b2d]">
-                        Reenviar acesso
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleBlockUser(user.id)} className="hover:bg-[#1a1b2d]">
-                        {user.status === "active" ? "Bloquear acesso" : "Desbloquear acesso"}
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleResetPassword(user.id)} className="hover:bg-[#1a1b2d]">
-                        Resetar senha
-                      </DropdownMenuItem>
-                      {user.userType === "member" && (
-                        <DropdownMenuItem onClick={() => openSubscriptionModal(user)} className="hover:bg-[#1a1b2d]">
-                          <LinkIcon className="mr-2 h-4 w-4" />
-                          Vincular a Parceiro
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-
-        {selectedMember && (
-          <SubscriptionModal
-            isOpen={isSubscriptionModalOpen}
-            onClose={() => setIsSubscriptionModalOpen(false)}
-            memberId={selectedMember.id}
-            memberName={selectedMember.name}
+      {totalPages > 1 && (
+        <div className="flex justify-center mt-6">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
           />
-        )}
+        </div>
+      )}
 
-        <Dialog open={isEditUserOpen} onOpenChange={setIsEditUserOpen}>
-        <DialogContent className="bg-[#131320] text-[#e5e2e9]">
-          <DialogHeader>
-            <DialogTitle>Editar Usuário</DialogTitle>
-          </DialogHeader>
-          {editingUser && (
-            <div className="grid gap-4 py-4">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-name" className="text-right">
-                  Nome
-                </Label>
-                <Input
-                  id="edit-name"
-                  value={editingUser.displayName}
-                  onChange={(e) => setEditingUser({ ...editingUser, displayName: e.target.value })}
-                  className="col-span-3 bg-[#1a1b2d] border-[#131320]"
-                />
+      {showSubscriptionModal && selectedUser && (
+        <SubscriptionManagementModal
+          isOpen={showSubscriptionModal}
+          onClose={handleCloseSubscriptionModal}
+          memberId={selectedUser.id}
+          memberName={selectedUser.displayName}
+        />
+      )}
+
+      {showEstablishmentModal && selectedUser && (
+        <EstablishmentLinkModal
+          isOpen={showEstablishmentModal}
+          onClose={handleCloseEstablishmentModal}
+          userId={selectedUser.id}
+          userName={selectedUser.displayName}
+        />
+      )}
+
+      <AddUserModal
+        isOpen={showAddUserModal}
+        onClose={handleCloseAddUserModal}
+        user={selectedUser}
+      />
+
+      {showDeleteModal && userToDelete && (
+        <DeleteUserModal
+          isOpen={showDeleteModal}
+          onClose={handleDeleteModalClose}
+          user={userToDelete}
+          onConfirm={handleDeleteConfirm}
+        />
+      )}
+    </div>
+  )
+
+  function renderUserCards(users: UserProfile[]) {
+    if (users.length === 0) {
+      return (
+        <div className="text-[#7a7b9f]">Nenhum usuário encontrado.</div>
+      )
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {users.map((user) => (
+          <Card key={user.id} className="bg-[#131320] border-[#1a1b2d] p-6">
+            <div className="flex items-start justify-between">
+              <div className="flex items-end space-x-4">
+                <Avatar className="h-12 w-12">
+                  <AvatarImage src={user.photoURL || ""} alt={user.displayName} />
+                  <AvatarFallback>{user.displayName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                </Avatar>
+                <Badge className={getUserTypeColor(user.userType)}>
+                  <span className="flex items-center space-x-1">
+                    {getUserTypeIcon(user.userType)}
+                    <span>{getUserTypeText(user.userType)}</span>
+                  </span>
+                </Badge>
               </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-email" className="text-right">
-                  Email
-                </Label>
-                <Input
-                  id="edit-email"
-                  value={editingUser.email}
-                  onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
-                  className="col-span-3 bg-[#1a1b2d] border-[#131320]"
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="edit-role" className="text-right">
-                  Função
-                </Label>
-                <select
-                  id="edit-role"
-                  value={editingUser.userType}
-                  onChange={(e) => setEditingUser({ ...editingUser, userType: e.target.value as "master" | "partner" | "member" })}
-                  className="col-span-3 bg-[#1a1b2d] border-[#131320] text-[#e5e2e9] rounded-md"
-                >
-                  <option value="master">Usuário</option>
-                  <option value="partner">Parceiro</option>
-                  <option value="member">Membro</option>
-                </select>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-[#1a1b2d] border-[#131320]">
+                  <DropdownMenuItem onClick={() => handleEdit(user)} className="text-[#e5e2e9]">
+                    Editar
+                  </DropdownMenuItem>
+                  {(user.status === "inactive" || user.status === "expired") && (
+                    <DropdownMenuItem onClick={() => handleResendActivation(user)} className="text-[#e5e2e9]">
+                      Reenviar Email de Ativação
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem onClick={() => handleDeleteClick(user)} className="text-red-500">
+                    Excluir
+                  </DropdownMenuItem>
+                  {user.userType === "member" && (
+                    <DropdownMenuItem onClick={() => handleLinkSubscription(user)} className="text-[#e5e2e9]">
+                      Vincular Assinatura
+                    </DropdownMenuItem>
+                  )}
+                  {user.userType === "business" && (
+                    <DropdownMenuItem onClick={() => handleLinkEstablishment(user)} className="text-[#e5e2e9]">
+                      Vincular Estabelecimento
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <div className="mt-4">
+              <h3 className="text-[#e5e2e9] font-semibold truncate">{user.displayName}</h3>
+              <p className="text-[#7a7b9f] text-sm truncate">{user.email}</p>
+              <div className="flex items-center space-x-2 mt-2">
+                <Badge variant="outline" className="border-[#1a1b2d]">
+                  {user.status === "active" ? (
+                    <Check className="h-3 w-3 text-green-500 mr-1" />
+                  ) : (
+                    <X className="h-3 w-3 text-red-500 mr-1" />
+                  )}
+                  {user.status === "active" ? "Ativo" : "Inativo"}
+                </Badge>
               </div>
             </div>
-          )}
-          <Button
-            onClick={() => editingUser && handleUpdateUser(editingUser.id, editingUser)}
-            className="bg-[#7435db] hover:bg-[#7435db]/80"
-          >
-            Salvar Alterações
-          </Button>
-        </DialogContent>
-      </Dialog>
+            
+            {user.userType === "business" && "establishment" in user && (
+              <p className="text-[#7a7b9f] text-sm mt-2">
+                Estabelecimento: {(user as any).establishment?.name || "Não vinculado"}
+                {(user as any).establishments?.length > 1 && (
+                  <span className="ml-1 text-sm text-[#7435db]">
+                    +{(user as any).establishments.length - 1}
+                  </span>
+                )}
+              </p>
+            )}
+
+            {user.userType === "member" && "partner" in user && (
+              <p className="text-[#7a7b9f] text-sm mt-2">
+                Parceiro: {(user as any).partner?.name || "Não vinculado"}
+              </p>
+            )}
+          </Card>
+        ))}
       </div>
-    </SubscriptionProvider>
-  )
+    )
+  }
+
+  function renderUserTable(users: UserProfile[]) {
+    if (users.length === 0) {
+      return (
+        <div className="text-[#7a7b9f]">Nenhum usuário encontrado.</div>
+      )
+    }
+
+    return (
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Nome</TableHead>
+            <TableHead>Email</TableHead>
+            <TableHead>Função</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead>Vínculo</TableHead>
+            <TableHead className="text-right">Ações</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {users.map((user) => (
+            <TableRow key={user.id}>
+              <TableCell className="font-medium text-[#e5e2e9]">
+                <div className="flex items-center space-x-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={user.photoURL || ""} alt={user.displayName} />
+                    <AvatarFallback>{user.displayName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                  </Avatar>
+                  <span>{user.displayName}</span>
+                </div>
+              </TableCell>
+              <TableCell className="text-[#7a7b9f]">{user.email}</TableCell>
+              <TableCell>
+                <Badge className={getUserTypeColor(user.userType)}>
+                  <span className="flex items-center space-x-1">
+                    {getUserTypeIcon(user.userType)}
+                    <span>{getUserTypeText(user.userType)}</span>
+                  </span>
+                </Badge>
+              </TableCell>
+              <TableCell>
+                <Badge variant="outline" className="border-[#1a1b2d]">
+                  {user.status === "active" ? (
+                    <Check className="h-3 w-3 text-green-500 mr-1" />
+                  ) : (
+                    <X className="h-3 w-3 text-red-500 mr-1" />
+                  )}
+                  {user.status === "active" ? "Ativo" : "Inativo"}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-[#7a7b9f]">
+                {user.userType === "business" && (
+                  <>
+                    {(user as any).establishment?.name || "Não vinculado"}
+                    {(user as any).establishments?.length > 1 && (
+                      <span className="ml-1 text-sm text-[#7435db]">
+                        +{(user as any).establishments.length - 1}
+                      </span>
+                    )}
+                  </>
+                )}
+                {user.userType === "member" && (
+                  <>
+                    {(user as any).partner?.name || "Não vinculado"}
+                    {(user as any).partners?.length > 1 && (
+                      <span className="ml-1 text-sm text-[#7435db]">
+                        +{(user as any).partners.length - 1}
+                      </span>
+                    )}
+                  </>
+                )}
+              </TableCell>
+              <TableCell className="text-right">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-[#1a1b2d] border-[#131320]">
+                    <DropdownMenuItem onClick={() => handleEdit(user)} className="text-[#e5e2e9]">
+                      Editar
+                    </DropdownMenuItem>
+                    {(user.status === "inactive" || user.status === "expired") && (
+                      <DropdownMenuItem onClick={() => handleResendActivation(user)} className="text-[#e5e2e9]">
+                        Reenviar Email de Ativação
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem onClick={() => handleDeleteClick(user)} className="text-red-500">
+                      Excluir
+                    </DropdownMenuItem>
+                    {user.userType === "member" && (
+                      <DropdownMenuItem onClick={() => handleLinkSubscription(user)} className="text-[#e5e2e9]">
+                        Vincular Assinatura
+                      </DropdownMenuItem>
+                    )}
+                    {user.userType === "business" && (
+                      <DropdownMenuItem onClick={() => handleLinkEstablishment(user)} className="text-[#e5e2e9]">
+                        Vincular Estabelecimento
+                      </DropdownMenuItem>
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    )
+  }
 }

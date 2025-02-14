@@ -11,6 +11,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Plus, X } from "lucide-react"
 import { useEstablishment } from "@/contexts/EstablishmentContext"
 import { AddressForm } from "@/components/address-form"
+import { BusinessUserSelect } from "@/components/business-user-select"
 import type { Address } from "@/types/establishment"
 import { PhoneInput } from "@/components/phone-input"
 import { BusinessHours } from "@/components/business-hours"
@@ -21,7 +22,9 @@ import type { Establishment } from "@/types/establishment"
 type EstablishmentFormData = Omit<
   Establishment,
   "id" | "partnerId" | "status" | "createdAt" | "updatedAt" | "rating" | "totalRatings" | "isFeatured"
->
+> & {
+  businessUserId: string
+}
 
 interface EstablishmentModalProps {
   isOpen: boolean
@@ -55,7 +58,8 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
       state: ""
     },
     voucherExpiration: 48,
-    lastVoucherGenerated: {}
+    lastVoucherGenerated: {},
+    businessUserId: ""
   })
 
   useEffect(() => {
@@ -64,7 +68,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
         id, partnerId, status, createdAt, updatedAt, rating, totalRatings, isFeatured,
         ...rest 
       } = establishment
-      setFormData(rest)
+      setFormData({ ...rest, businessUserId: "" })
     }
   }, [establishment])
 
@@ -92,12 +96,39 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
     }))
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Atualizar usuário business com o ID do estabelecimento
+    if (formData.businessUserId) {
+      try {
+        const response = await fetch(`/api/users/${formData.businessUserId}`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            establishmentId: establishment?.id
+          }),
+          credentials: "include"
+        })
+
+        if (!response.ok) {
+          throw new Error("Erro ao vincular usuário ao estabelecimento")
+        }
+      } catch (error) {
+        console.error("Erro ao vincular usuário:", error)
+        return
+      }
+    }
+
+    // Remover businessUserId antes de salvar o estabelecimento
+    const { businessUserId, ...establishmentData } = formData
+
     if (establishment) {
-      updateEstablishment(establishment.id, formData)
+      updateEstablishment(establishment.id, establishmentData)
     } else {
-      addEstablishment(formData)
+      addEstablishment(establishmentData)
     }
     onClose()
   }
@@ -110,11 +141,12 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <Tabs defaultValue="details" className="w-full">
-            <TabsList className="grid w-full grid-cols-4">
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="details">Detalhes</TabsTrigger>
               <TabsTrigger value="discount">Desconto</TabsTrigger>
               <TabsTrigger value="photos">Fotos</TabsTrigger>
               <TabsTrigger value="availability">Disponibilidade</TabsTrigger>
+              <TabsTrigger value="user">Usuário</TabsTrigger>
             </TabsList>
             <TabsContent value="details">
               <div className="grid gap-6">
@@ -309,6 +341,14 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                     className="col-span-3 bg-[#1a1b2d] border-[#131320]"
                   />
                 </div>
+              </div>
+            </TabsContent>
+            <TabsContent value="user">
+              <div className="grid gap-4 py-4">
+                <BusinessUserSelect
+                  value={formData.businessUserId}
+                  onChange={(value) => setFormData(prev => ({ ...prev, businessUserId: value }))}
+                />
               </div>
             </TabsContent>
           </Tabs>

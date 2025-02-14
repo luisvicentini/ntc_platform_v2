@@ -188,41 +188,81 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = async (email: string, password: string, userType: UserType) => {
     try {
+      console.log('Tentando autenticar com email:', email, 'e tipo:', userType)
       const { user: firebaseUser } = await signInWithEmailAndPassword(auth, email, password)
+      console.log('Usuário autenticado no Firebase:', firebaseUser.uid)
       
-      // Salvar dados do usuário no Firestore
-      const userData = {
-        userType,
-        displayName: firebaseUser.displayName || "",
-        email: firebaseUser.email || "",
-        photoURL: firebaseUser.photoURL || "",
-        createdAt: new Date().toISOString(),
-        emailVerified: firebaseUser.emailVerified,
-        phoneNumber: firebaseUser.phoneNumber || "",
-      }
-      
-      console.log('Salvando dados do usuário no Firestore:', userData)
-      await saveUserData(firebaseUser.uid, userData)
-      
-      // Buscar dados atualizados do Firestore
+      // Buscar dados do usuário no Firestore
       const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
-      const updatedUserData = userDoc.data() as UserData | undefined
+      console.log('Documento do usuário existe?', userDoc.exists())
       
-      if (!updatedUserData) {
-        console.error('Dados do usuário não encontrados após salvar')
-        throw new Error('Erro ao salvar dados do usuário')
+      if (!userDoc.exists()) {
+        // Se o documento não existe, criar com o tipo de usuário fornecido
+        const userData = {
+          userType,
+          displayName: firebaseUser.displayName || "",
+          email: firebaseUser.email || "",
+          photoURL: firebaseUser.photoURL || "",
+          createdAt: new Date().toISOString(),
+          emailVerified: firebaseUser.emailVerified,
+          phoneNumber: firebaseUser.phoneNumber || "",
+        }
+        
+        console.log('Criando documento do usuário:', userData)
+        await setDoc(doc(db, "users", firebaseUser.uid), userData)
+        
+        // Buscar o documento recém-criado
+        const newUserDoc = await getDoc(doc(db, "users", firebaseUser.uid))
+        const newUserData = newUserDoc.data() as UserData
+        
+        // Criar objeto do usuário
+        const customUser = {
+          ...firebaseUser,
+          ...newUserData,
+          userType,
+          displayName: firebaseUser.displayName || newUserData.displayName || "",
+          photoURL: firebaseUser.photoURL || newUserData.photoURL || "",
+          email: firebaseUser.email || newUserData.email || "",
+          emailVerified: firebaseUser.emailVerified,
+          phoneNumber: firebaseUser.phoneNumber || newUserData.phoneNumber || "",
+        } as CustomUser
+
+        // Criar cookie de sessão
+        const response = await fetch("/api/auth/session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ user: customUser }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Erro ao criar sessão")
+        }
+        
+        setUser(customUser)
+        localStorage.setItem('authUser', JSON.stringify(customUser))
+        return
+      }
+
+      // Se o documento existe, verificar o tipo de usuário
+      const userData = userDoc.data() as UserData
+      console.log('Dados do usuário:', userData)
+      
+      if (userData.userType !== userType) {
+        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userData.userType}.`)
       }
       
-      // Atualizar o estado do usuário com os dados do Firestore
+      // Criar objeto do usuário com os dados existentes
       const customUser = {
         ...firebaseUser,
-        ...updatedUserData,
+        ...userData,
         userType,
-        displayName: firebaseUser.displayName || updatedUserData.displayName || "",
-        photoURL: firebaseUser.photoURL || updatedUserData.photoURL || "",
-        email: firebaseUser.email || updatedUserData.email || "",
+        displayName: firebaseUser.displayName || userData.displayName || "",
+        photoURL: firebaseUser.photoURL || userData.photoURL || "",
+        email: firebaseUser.email || userData.email || "",
         emailVerified: firebaseUser.emailVerified,
-        phoneNumber: firebaseUser.phoneNumber || updatedUserData.phoneNumber || "",
+        phoneNumber: firebaseUser.phoneNumber || userData.phoneNumber || "",
       } as CustomUser
 
       // Criar cookie de sessão

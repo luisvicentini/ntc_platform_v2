@@ -18,6 +18,11 @@ export interface EstablishmentType {
   category: string
 }
 
+export interface Subscription {
+  expiresAt?: string
+  partnerId: string
+}
+
 export interface Establishment {
   id: string
   partnerId: string
@@ -43,6 +48,10 @@ export interface Establishment {
   status: "active" | "inactive"
   createdAt: string
   updatedAt: string
+}
+
+export interface AvailableEstablishment extends Establishment {
+  subscription: Subscription
 }
 
 export interface GeneratedVoucher {

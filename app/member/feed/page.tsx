@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { EstablishmentSheet } from "@/components/establishment-sheet"
 import { useEstablishment } from "@/contexts/EstablishmentContext"
 import { FeaturedBadge } from "@/components/ui/featured-badge"
-import type { Establishment } from "@/types/Establishment"
+import type { AvailableEstablishment } from "@/types/establishment"
 
 export default function FeedPage() {
   const { establishments } = useEstablishment()
@@ -25,21 +25,21 @@ export default function FeedPage() {
     partners: [] as string[],
     minRating: 0,
   })
-  const [selectedEstablishment, setSelectedEstablishment] = useState<Establishment | null>(null)
+  const [selectedEstablishment, setSelectedEstablishment] = useState<AvailableEstablishment | null>(null)
   const [activeTab, setActiveTab] = useState("explore")
 
   const filteredEstablishments = establishments.filter((establishment) => {
     const matchesSearch =
       establishment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      establishment.type.toLowerCase().includes(searchTerm.toLowerCase())
+      establishment.type.type.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesFilters =
-      (filters.cities.length === 0 || filters.cities.includes(establishment.location)) &&
-      (filters.types.length === 0 || filters.types.includes(establishment.type)) &&
+      (filters.cities.length === 0 || filters.cities.includes(establishment.address.city)) &&
+      (filters.types.length === 0 || filters.types.includes(establishment.type.type)) &&
       establishment.rating >= filters.minRating
 
     return matchesSearch && matchesFilters
-  })
+  }) as AvailableEstablishment[]
 
   const featuredEstablishments = filteredEstablishments.filter((establishment) => establishment.isFeatured)
 
@@ -47,7 +47,7 @@ export default function FeedPage() {
     setSearchTerm(term)
   }
 
-  const renderEstablishmentCards = (establishments: Establishment[]) => (
+  const renderEstablishmentCards = (establishments: AvailableEstablishment[]) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {establishments.map((establishment) => (
         <Card
@@ -78,12 +78,11 @@ export default function FeedPage() {
               <span>{establishment.isFeatured && <FeaturedBadge />}</span>
             </div>
             
-            
           </div>
           <div className="p-4 space-y-2">
             <h3 className="font-semibold text-[#e5e2e9] group-hover:text-[#7435db]">{establishment.name}</h3>
             <p className="text-sm text-[#7a7b9f]">
-              {establishment.type} • {establishment.location}
+              {establishment.type.type} • {establishment.address.city}
             </p>
           </div>
         </Card>
@@ -248,4 +247,3 @@ const cities = ["Limeira/SP", "Campinas/SP", "Piracicaba/SP"]
 const establishmentTypes = ["Restaurante", "Lanchonete", "Bar", "Cafeteria"]
 const foodTypes = ["Lanches", "Porções", "Pizza", "Japonês", "Brasileira"]
 const partners = ["Rede Food", "Best Foods", "Food Express"]
-

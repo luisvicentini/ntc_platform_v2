@@ -2,8 +2,8 @@
 
 import { RouteGuard } from "@/components/auth/route-guard"
 import { EstablishmentProvider } from "@/contexts/EstablishmentContext"
+import { SubscriptionProvider } from "@/contexts/subscription-context"
 import { Header } from "@/components/header"
-
 import { useAuth } from "@/contexts/auth-context"
 import { Handshake, LayoutDashboard, Users } from "lucide-react"
 
@@ -30,12 +30,14 @@ export default function MasterLayout({ children }: { children: React.ReactNode }
   return (
     <RouteGuard allowedUserType="master">
       <EstablishmentProvider>
-        <div className="min-h-screen">
-          <Header menuItems={menuItems} />
-          <main className="container mx-auto px-4 py-8">
-            {children}
-          </main>
-        </div>
+        <SubscriptionProvider>
+          <div className="min-h-screen">
+            <Header menuItems={menuItems} />
+            <main className="container mx-auto px-4 py-8">
+              {children}
+            </main>
+          </div>
+        </SubscriptionProvider>
       </EstablishmentProvider>
     </RouteGuard>
   )

@@ -3,18 +3,16 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
-import type { Establishment, GeneratedVoucher } from "@/types/establishment"
+import type { Establishment, AvailableEstablishment } from "@/types/establishment"
 
 interface EstablishmentContextType {
-  establishments: Establishment[]
-  generatedVouchers: GeneratedVoucher[]
+  establishments: (Establishment | AvailableEstablishment)[]
   loading: boolean
   addEstablishment: (establishment: Omit<Establishment, "id" | "partnerId" | "status" | "createdAt" | "updatedAt" | "rating" | "totalRatings" | "isFeatured">) => Promise<void>
   updateEstablishment: (id: string, establishment: Partial<Establishment>) => Promise<void>
-  generateVoucher: (establishmentId: string, userId: string) => Promise<string | null>
-  canGenerateVoucher: (establishmentId: string, userId: string) => boolean
-  getNextVoucherTime: (establishmentId: string, userId: string) => number | null
-  getUserVouchers: (userId: string) => GeneratedVoucher[]
+  generateVoucher: (establishmentId: string) => Promise<string | null>
+  canGenerateVoucher: (establishmentId: string, userId: string) => Promise<boolean>
+  getNextVoucherTime: (establishmentId: string, userId: string) => Promise<Date | null>
   toggleFeatured: (id: string) => Promise<void>
   refreshEstablishments: () => Promise<void>
 }
@@ -30,8 +28,7 @@ export const useEstablishment = () => {
 }
 
 export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [establishments, setEstablishments] = useState<Establishment[]>([])
-  const [generatedVouchers, setGeneratedVouchers] = useState<GeneratedVoucher[]>([])
+  const [establishments, setEstablishments] = useState<(Establishment | AvailableEstablishment)[]>([])
   const [loading, setLoading] = useState(true)
   const { user } = useAuth()
 
@@ -40,12 +37,14 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
       setLoading(true)
       let url = "/api/establishments"
 
-      // Adicionar parâmetros baseado no tipo de usuário
+      // Buscar estabelecimentos baseado no tipo de usuário
       if (user) {
         if (user.userType === "partner") {
           url += `?partnerId=${user.uid}`
         } else if (user.userType === "member") {
-          url += `?memberId=${user.uid}`
+          url = "/api/establishments/member"
+        } else if (user.userType === "master") {
+          url = "/api/establishments/available"
         }
       }
 
@@ -69,20 +68,6 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
   useEffect(() => {
     refreshEstablishments()
   }, [refreshEstablishments])
-
-  // Check for expired vouchers every minute
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setGeneratedVouchers((prev) =>
-        prev.map((voucher) => ({
-          ...voucher,
-          status: Date.now() >= voucher.expiresAt ? "expired" : voucher.status,
-        })),
-      )
-    }, 60000)
-
-    return () => clearInterval(interval)
-  }, [])
 
   const addEstablishment = useCallback(async (establishment: Omit<Establishment, "id" | "partnerId" | "status" | "createdAt" | "updatedAt" | "rating" | "totalRatings" | "isFeatured">) => {
     try {
@@ -137,80 +122,73 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [])
 
   const generateVoucher = useCallback(
-    async (establishmentId: string, userId: string): Promise<string | null> => {
-      const establishment = establishments.find((e) => e.id === establishmentId)
-      if (!establishment || !canGenerateVoucher(establishmentId, userId)) return null
+    async (establishmentId: string): Promise<string | null> => {
+      try {
+        const response = await fetch("/api/vouchers/generate", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ establishmentId }),
+          credentials: "include"
+        })
 
-      const code = Math.random().toString(36).substring(2, 8).toUpperCase()
-      const now = Date.now()
+        if (!response.ok) {
+          const error = await response.json()
+          throw new Error(error.error || "Erro ao gerar voucher")
+        }
 
-      // Add to generated vouchers
-      const newVoucher: GeneratedVoucher = {
-        code,
-        establishmentId,
-        userId,
-        generatedAt: now,
-        expiresAt: now + establishment.voucherExpiration * 60 * 60 * 1000,
-        status: "pending",
+        const data = await response.json()
+        return data.code
+
+      } catch (error: any) {
+        toast.error(error.message)
+        return null
       }
-
-      setGeneratedVouchers((prev) => [...prev, newVoucher])
-
-      // Update last generated timestamp
-      setEstablishments((prev) =>
-        prev.map((est) => {
-          if (est.id === establishmentId) {
-            return {
-              ...est,
-              lastVoucherGenerated: {
-                ...est.lastVoucherGenerated,
-                [userId]: now,
-              },
-            }
-          }
-          return est
-        }),
-      )
-
-      return code
     },
-    [establishments],
+    [],
   )
 
   const canGenerateVoucher = useCallback(
-    (establishmentId: string, userId: string): boolean => {
-      const establishment = establishments.find((e) => e.id === establishmentId)
-      if (!establishment) return false
+    async (establishmentId: string, userId: string): Promise<boolean> => {
+      try {
+        const response = await fetch(`/api/vouchers/cooldown?establishmentId=${establishmentId}`, {
+          credentials: "include"
+        })
 
-      const lastGenerated = establishment.lastVoucherGenerated?.[userId]
-      if (!lastGenerated) return true
+        if (!response.ok) {
+          return false
+        }
 
-      const cooldownMs = establishment.voucherCooldown * 60 * 60 * 1000
-      return Date.now() - lastGenerated >= cooldownMs
+        const data = await response.json()
+        return data.canGenerate
+      } catch (error) {
+        console.error("Erro ao verificar cooldown:", error)
+        return false
+      }
     },
-    [establishments],
+    [],
   )
 
   const getNextVoucherTime = useCallback(
-    (establishmentId: string, userId: string): number | null => {
-      const establishment = establishments.find((e) => e.id === establishmentId)
-      if (!establishment) return null
+    async (establishmentId: string, userId: string): Promise<Date | null> => {
+      try {
+        const response = await fetch(`/api/vouchers/cooldown?establishmentId=${establishmentId}`, {
+          credentials: "include"
+        })
 
-      const lastGenerated = establishment.lastVoucherGenerated?.[userId]
-      if (!lastGenerated) return null
+        if (!response.ok) {
+          return null
+        }
 
-      const cooldownMs = establishment.voucherCooldown * 60 * 60 * 1000
-      const nextAvailable = lastGenerated + cooldownMs
-      return nextAvailable
+        const data = await response.json()
+        return data.nextAvailable ? new Date(data.nextAvailable) : null
+      } catch (error) {
+        console.error("Erro ao buscar próximo horário disponível:", error)
+        return null
+      }
     },
-    [establishments],
-  )
-
-  const getUserVouchers = useCallback(
-    (userId: string): GeneratedVoucher[] => {
-      return generatedVouchers.filter((v) => v.userId === userId)
-    },
-    [generatedVouchers],
+    [],
   )
 
   const toggleFeatured = useCallback(async (id: string) => {
@@ -243,14 +221,12 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
     <EstablishmentContext.Provider
       value={{
         establishments,
-        generatedVouchers,
         loading,
         addEstablishment,
         updateEstablishment,
         generateVoucher,
         canGenerateVoucher,
         getNextVoucherTime,
-        getUserVouchers,
         toggleFeatured,
         refreshEstablishments,
       }}

@@ -7,12 +7,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Search, MoreHorizontal } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Badge } from "@/components/ui/badge"
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { toast } from "sonner"
 
 interface Partner {
   id: string
   displayName: string
   email: string
+  photoURL?: string
   establishments: number
   members: number
   status: "active" | "pending" | "blocked"
@@ -63,6 +65,15 @@ export default function PartnersPage() {
     }
   }
 
+  // Função para gerar as iniciais do nome
+  const getInitials = (name: string) => {
+    const names = name.split(" ")
+    if (names.length >= 2) {
+      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
+    }
+    return name.substring(0, 2).toUpperCase()
+  }
+
   return (
     <div className="container py-6">
       <div className="flex items-center justify-between mb-6">
@@ -83,6 +94,7 @@ export default function PartnersPage() {
         <Table>
           <TableHeader>
             <TableRow className="border-[#1a1b2d] hover:bg-[#1a1b2d]">
+              <TableHead className="text-[#7a7b9f] w-[50px]"></TableHead>
               <TableHead className="text-[#7a7b9f]">Nome</TableHead>
               <TableHead className="text-[#7a7b9f]">Email</TableHead>
               <TableHead className="text-[#7a7b9f]">Estabelecimentos</TableHead>
@@ -94,19 +106,28 @@ export default function PartnersPage() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-[#7a7b9f] py-4">
+                <TableCell colSpan={7} className="text-center text-[#7a7b9f] py-4">
                   Carregando...
                 </TableCell>
               </TableRow>
             ) : filteredPartners.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-[#7a7b9f] py-4">
+                <TableCell colSpan={7} className="text-center text-[#7a7b9f] py-4">
                   Nenhum parceiro encontrado
                 </TableCell>
               </TableRow>
             ) : (
               filteredPartners.map((partner) => (
                 <TableRow key={partner.id} className="border-[#1a1b2d] hover:bg-[#1a1b2d]">
+                  <TableCell>
+                    <Avatar>
+                      {partner.photoURL ? (
+                        <AvatarImage src={partner.photoURL} alt={partner.displayName} />
+                      ) : (
+                        <AvatarFallback>{getInitials(partner.displayName)}</AvatarFallback>
+                      )}
+                    </Avatar>
+                  </TableCell>
                   <TableCell className="font-medium text-[#e5e2e9]">{partner.displayName}</TableCell>
                   <TableCell className="text-[#7a7b9f]">{partner.email}</TableCell>
                   <TableCell className="text-[#7a7b9f]">{partner.establishments}</TableCell>

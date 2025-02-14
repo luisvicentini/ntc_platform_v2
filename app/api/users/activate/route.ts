@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore"
+import { collection, query, where, getDocs, updateDoc, doc, setDoc, deleteDoc } from "firebase/firestore"
 import { getAuth, createUserWithEmailAndPassword, signOut } from "firebase/auth"
+import jwt from "jsonwebtoken"
+import { sendActivationEmail } from "@/lib/email"
 
 export async function POST(request: Request) {
   try {
@@ -24,8 +26,41 @@ export async function POST(request: Request) {
 
     // Verificar se o token expirou
     if (new Date(userData.activationTokenExpiresAt) < new Date()) {
+      // Atualizar status para expirado
+      await updateDoc(doc(db, "users", userDoc.id), {
+        status: "expired",
+        updatedAt: new Date().toISOString()
+      })
+
+      // Gerar novo token e enviar novo email
+      const newToken = jwt.sign(
+        { userId: userDoc.id, email: userData.email },
+        process.env.NEXTAUTH_SECRET!,
+        { expiresIn: "24h" }
+      )
+
+      const newExpiresAt = new Date()
+      newExpiresAt.setHours(newExpiresAt.getHours() + 24)
+
+      await updateDoc(doc(db, "users", userDoc.id), {
+        activationToken: newToken,
+        activationTokenExpiresAt: newExpiresAt.toISOString()
+      })
+
+      // Enviar novo email de ativação
+      const activationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/activate?token=${newToken}`
+      await sendActivationEmail({
+        to: userData.email,
+        name: userData.displayName,
+        activationUrl,
+        userType: userData.userType
+      })
+
       return NextResponse.json(
-        { error: "Token expirado" },
+        { 
+          error: "Token expirado. Um novo email de ativação foi enviado.",
+          newEmailSent: true 
+        },
         { status: 400 }
       )
     }
@@ -34,14 +69,19 @@ export async function POST(request: Request) {
     const auth = getAuth()
     const userCredential = await createUserWithEmailAndPassword(auth, userData.email, password)
 
-    // Atualizar o documento existente com o UID do Firebase Auth
-    await updateDoc(doc(db, "users", userDoc.id), {
+    // Criar novo documento com o UID do Firebase Auth e excluir o antigo
+    const newUserRef = doc(db, "users", userCredential.user.uid)
+    await setDoc(newUserRef, {
+      ...userData,
+      id: userCredential.user.uid,
       status: "active",
       activationToken: null,
       activationTokenExpiresAt: null,
-      updatedAt: new Date().toISOString(),
-      uid: userCredential.user.uid
+      updatedAt: new Date().toISOString()
     })
+
+    // Excluir o documento antigo
+    await deleteDoc(doc(db, "users", userDoc.id))
 
     await signOut(auth) // Fazer logout para que o usuário faça login com as novas credenciais
 

@@ -67,7 +67,11 @@ export function LoginForm({
       window.location.href = redirectPath
     } catch (error) {
       console.error("Login error:", error)
-      setError("Erro ao fazer login. Verifique suas credenciais.")
+      if (error instanceof Error) {
+        setError(error.message)
+      } else {
+        setError("Erro ao fazer login. Verifique suas credenciais.")
+      }
     } finally {
       setLoading(false)
     }

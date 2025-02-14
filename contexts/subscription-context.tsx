@@ -7,7 +7,7 @@ import type { Subscription } from "@/types/subscription"
 interface SubscriptionContextType {
   subscriptions: Subscription[]
   loading: boolean
-  addSubscription: (memberId: string, partnerId: string) => Promise<void>
+  addSubscriptions: (memberId: string, subscriptions: { partnerId: string, expiresAt?: string }[]) => Promise<void>
   cancelSubscription: (id: string) => Promise<void>
   getPartnerSubscriptions: (partnerId: string) => Promise<Subscription[]>
   getMemberSubscriptions: (memberId: string) => Promise<Subscription[]>
@@ -27,25 +27,29 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [loading, setLoading] = useState(false)
 
-  const addSubscription = useCallback(async (memberId: string, partnerId: string) => {
+  const addSubscriptions = useCallback(async (memberId: string, subscriptions: { partnerId: string, expiresAt?: string }[]) => {
     try {
-      const response = await fetch("/api/subscriptions", {
+      const response = await fetch("/api/subscriptions/batch", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ memberId, partnerId }),
+        body: JSON.stringify({ 
+          subscriptions: subscriptions.map(s => ({
+            ...s,
+            memberId,
+            status: "active"
+          }))
+        }),
         credentials: "include"
       })
 
       if (!response.ok) {
         const error = await response.json()
-        throw new Error(error.error || "Erro ao criar assinatura")
+        throw new Error(error.error || "Erro ao criar assinaturas")
       }
 
-      const newSubscription = await response.json()
-      setSubscriptions((prev) => [...prev, newSubscription])
-      toast.success("Assinatura criada com sucesso!")
+      toast.success("Assinaturas atualizadas com sucesso!")
     } catch (error: any) {
       toast.error(error.message)
       throw error
@@ -128,7 +132,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       value={{
         subscriptions,
         loading,
-        addSubscription,
+        addSubscriptions,
         cancelSubscription,
         getPartnerSubscriptions,
         getMemberSubscriptions,

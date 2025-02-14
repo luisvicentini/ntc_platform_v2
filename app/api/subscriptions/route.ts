@@ -134,10 +134,29 @@ export async function GET(request: Request) {
     }
 
     const querySnapshot = await getDocs(subscriptionsQuery)
-    const subscriptions = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }))
+    const subscriptions = []
+
+    for (const doc of querySnapshot.docs) {
+      const subscriptionData = doc.data()
+      
+      // Buscar dados do parceiro
+      const partnersRef = collection(db, "users")
+      const partnerQuery = query(partnersRef, where("__name__", "==", subscriptionData.partnerId))
+      const partnerSnapshot = await getDocs(partnerQuery)
+      
+      if (!partnerSnapshot.empty) {
+        const partnerData = partnerSnapshot.docs[0].data()
+        subscriptions.push({
+          id: doc.id,
+          ...subscriptionData,
+          partner: {
+            id: subscriptionData.partnerId,
+            displayName: partnerData.displayName,
+            email: partnerData.email
+          }
+        })
+      }
+    }
 
     return NextResponse.json(subscriptions)
 

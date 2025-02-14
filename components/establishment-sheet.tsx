@@ -7,27 +7,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ChevronLeft, ChevronRight, MapPin, Clock, Phone, Ticket } from "lucide-react"
 import { useNotification } from "@/contexts/NotificationContext"
 import { useEstablishment } from "@/contexts/EstablishmentContext"
+import { useAuth } from "@/contexts/auth-context"
 import { FeaturedBadge } from "@/components/ui/featured-badge"
-
-interface Establishment {
-  id: string
-  name: string
-  type: string
-  location: string
-  images: string[]
-  description: string
-  phone: string
-  openingHours: string
-  voucherDescription: string
-  discountValue: string
-  discountRules: string
-  usageLimit: string
-  rating: number
-  isFeatured: boolean
-}
+import type { AvailableEstablishment } from "@/types/establishment"
 
 interface EstablishmentSheetProps {
-  establishment: Establishment | null
+  establishment: AvailableEstablishment | null
   isOpen: boolean
   onClose: () => void
 }
@@ -36,44 +21,49 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [voucherCode, setVoucherCode] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState<string | null>(null)
+  const [canGenerate, setCanGenerate] = useState(false)
   const { addNotification } = useNotification()
   const { generateVoucher, canGenerateVoucher, getNextVoucherTime } = useEstablishment()
+  const { user } = useAuth()
 
   useEffect(() => {
     setVoucherCode(null)
   }, [])
 
   useEffect(() => {
-    if (!establishment) return
+    if (!establishment || !user) return
 
-    const updateTimer = () => {
-      const nextVoucherTime = getNextVoucherTime(establishment.id, "current-user")
+    const checkCooldown = async () => {
+      const nextVoucherTime = await getNextVoucherTime(establishment.id, user.uid)
       if (!nextVoucherTime) {
         setTimeLeft(null)
+        setCanGenerate(true)
         return
       }
 
-      const now = Date.now()
+      const now = new Date()
       if (now >= nextVoucherTime) {
         setTimeLeft(null)
+        setCanGenerate(true)
         return
       }
 
-      const diff = nextVoucherTime - now
+      const diff = nextVoucherTime.getTime() - now.getTime()
       const hours = Math.floor(diff / (1000 * 60 * 60))
       const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
       setTimeLeft(`${hours}h${minutes.toString().padStart(2, "0")}`)
+      setCanGenerate(false)
     }
 
-    updateTimer()
-    const interval = setInterval(updateTimer, 1000)
+    checkCooldown()
+    const interval = setInterval(checkCooldown, 1000)
     return () => clearInterval(interval)
-  }, [establishment, getNextVoucherTime])
+  }, [establishment, user, getNextVoucherTime])
 
-  const handleGenerateVoucher = () => {
+  const handleGenerateVoucher = async () => {
     if (!establishment) return
 
-    const code = generateVoucher(establishment.id, "current-user")
+    const code = await generateVoucher(establishment.id)
     if (code) {
       setVoucherCode(code)
 
@@ -100,9 +90,7 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
     }
   }
 
-  if (!establishment) return null
-
-  const canGenerate = canGenerateVoucher(establishment.id, "current-user")
+  if (!establishment || !user) return null
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -111,7 +99,7 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
           <SheetHeader>
             <SheetTitle className="text-[#e5e2e9]">{establishment.name}</SheetTitle>
             <SheetDescription className="text-[#7a7b9f]">
-              {establishment.type} • {establishment.location}
+              {establishment.type.type} • {establishment.address.city}
             </SheetDescription>
           </SheetHeader>
         </div>
@@ -171,7 +159,7 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
           <div className="space-y-4">
             <div className="flex items-center text-[#e5e2e9] space-x-2">
               <MapPin className="h-4 w-4" />
-              <span>{establishment.location}</span>
+              <span>{establishment.address.street}, {establishment.address.number} - {establishment.address.neighborhood}, {establishment.address.city}/{establishment.address.state}</span>
             </div>
             <div className="flex items-center text-[#e5e2e9] space-x-2">
               <Clock className="h-4 w-4" />
@@ -179,7 +167,7 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             </div>
             <div className="flex items-center text-[#e5e2e9] space-x-2">
               <Phone className="h-4 w-4" />
-              <span>{establishment.phone}</span>
+              <span>+{establishment.phone.ddi} {establishment.phone.phone}</span>
             </div>
           </div>
 
@@ -222,4 +210,3 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
     </Sheet>
   )
 }
-

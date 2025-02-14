@@ -49,11 +49,55 @@ export async function POST(
       to: userData.email,
       subject: "Ative sua conta na plataforma NTC",
       html: `
-        <h1>Bem-vindo à plataforma NTC!</h1>
-        <p>Você foi convidado para acessar a plataforma. Para ativar sua conta e definir sua senha, clique no link abaixo:</p>
-        <p><a href="${activationUrl}">Ativar minha conta</a></p>
-        <p>Este link é válido por 24 horas.</p>
-        <p>Se você não solicitou este convite, por favor ignore este email.</p>
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { text-align: center; margin-bottom: 30px; }
+              .button { 
+                display: inline-block; 
+                padding: 12px 24px; 
+                background-color: #7435db; 
+                color: white; 
+                text-decoration: none; 
+                border-radius: 4px;
+                margin: 20px 0;
+              }
+              .footer { margin-top: 30px; font-size: 14px; color: #666; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Bem-vindo à plataforma NTC!</h1>
+              </div>
+              
+              <p>Olá ${userData.displayName},</p>
+              
+              <p>Você foi convidado para acessar a plataforma NTC como <strong>${
+                userData.userType === "master" ? "Usuário Master" :
+                userData.userType === "partner" ? "Parceiro" :
+                userData.userType === "member" ? "Membro" :
+                userData.userType === "business" ? "Business" : "Usuário"
+              }</strong>.</p>
+              
+              <p>Para ativar sua conta e definir sua senha, clique no botão abaixo:</p>
+              
+              <div style="text-align: center;">
+                <a href="${activationUrl}" class="button">Ativar minha conta</a>
+              </div>
+              
+              <p><strong>Importante:</strong> Este link é válido por 24 horas.</p>
+              
+              <div class="footer">
+                <p>Se você não solicitou este convite, por favor ignore este email.</p>
+                <p>Este é um email automático, não responda.</p>
+              </div>
+            </div>
+          </body>
+        </html>
       `
     })
 
