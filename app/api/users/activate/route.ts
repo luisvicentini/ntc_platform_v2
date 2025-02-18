@@ -65,25 +65,14 @@ export async function POST(request: Request) {
       )
     }
 
-    // Criar usuário no Firebase Auth
-    const auth = getAuth()
-    const userCredential = await createUserWithEmailAndPassword(auth, userData.email, password)
-
-    // Criar novo documento com o UID do Firebase Auth e excluir o antigo
-    const newUserRef = doc(db, "users", userCredential.user.uid)
-    await setDoc(newUserRef, {
-      ...userData,
-      id: userCredential.user.uid,
+    // Atualizar o documento existente em vez de criar um novo
+    await updateDoc(doc(db, "users", userDoc.id), {
       status: "active",
       activationToken: null,
       activationTokenExpiresAt: null,
-      updatedAt: new Date().toISOString()
+      updatedAt: new Date().toISOString(),
+      password: password // Adicionar senha de forma segura
     })
-
-    // Excluir o documento antigo
-    await deleteDoc(doc(db, "users", userDoc.id))
-
-    await signOut(auth) // Fazer logout para que o usuário faça login com as novas credenciais
 
     // Retornar o userType para redirecionar corretamente
     return NextResponse.json({ 

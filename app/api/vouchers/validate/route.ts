@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, getDocs, query, where, doc, updateDoc } from "firebase/firestore"
+import { collection, getDocs, query, where, doc, updateDoc, getDoc } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
 import type { Voucher } from "@/types/voucher"
@@ -16,10 +16,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Decodificar o token
     const session = jwtDecode<SessionToken>(sessionToken)
 
-    // Apenas estabelecimentos podem validar vouchers
     if (session.userType !== "business") {
       return NextResponse.json(
         { error: "Apenas estabelecimentos podem validar vouchers" },
@@ -29,12 +27,26 @@ export async function POST(request: Request) {
 
     const { code } = await request.json()
 
-    // Buscar voucher pelo código
-    const vouchersRef = collection(db, "vouchers")
-    const voucherQuery = query(vouchersRef, where("code", "==", code))
-    const voucherSnapshot = await getDocs(voucherQuery)
+    if (!code) {
+      return NextResponse.json({
+        valid: false,
+        message: "Código do voucher é obrigatório"
+      })
+    }
 
+    console.log("Buscando voucher com código:", code)
+
+    // Buscar voucher apenas pelo código
+    const vouchersRef = collection(db, "vouchers")
+    const voucherQuery = query(
+      vouchersRef, 
+      where("code", "==", code)
+    )
+    
+    const voucherSnapshot = await getDocs(voucherQuery)
+    
     if (voucherSnapshot.empty) {
+      console.log("Nenhum voucher encontrado com o código:", code)
       return NextResponse.json({
         valid: false,
         message: "Voucher não encontrado"
@@ -42,15 +54,13 @@ export async function POST(request: Request) {
     }
 
     const voucherDoc = voucherSnapshot.docs[0]
-    const voucher = voucherDoc.data() as Voucher
-
-    // Verificar se o voucher pertence a este estabelecimento
-    if (voucher.establishmentId !== session.uid) {
-      return NextResponse.json({
-        valid: false,
-        message: "Este voucher não pertence a este estabelecimento"
-      })
-    }
+    const voucher = voucherDoc.data()
+    
+    console.log("Voucher encontrado:", {
+      id: voucherDoc.id,
+      code: voucher.code,
+      status: voucher.status
+    })
 
     // Verificar se o voucher já foi usado
     if (voucher.status === "used") {
@@ -63,12 +73,6 @@ export async function POST(request: Request) {
 
     // Verificar se o voucher está expirado
     if (new Date(voucher.expiresAt) < new Date()) {
-      // Atualizar status para expirado
-      await updateDoc(doc(vouchersRef, voucherDoc.id), {
-        status: "expired",
-        updatedAt: new Date().toISOString()
-      })
-
       return NextResponse.json({
         valid: false,
         message: "Este voucher está expirado",
@@ -78,8 +82,25 @@ export async function POST(request: Request) {
 
     // Buscar dados do membro
     const membersRef = collection(db, "users")
-    const memberDoc = await getDocs(query(membersRef, where("__name__", "==", voucher.memberId)))
+    const memberDoc = await getDocs(query(
+      membersRef, 
+      where("__name__", "==", voucher.memberId)
+    ))
+
+    if (memberDoc.empty) {
+      console.log("Membro não encontrado:", voucher.memberId)
+      return NextResponse.json({
+        valid: false,
+        message: "Membro não encontrado"
+      })
+    }
+
     const memberData = memberDoc.docs[0].data()
+
+    // Buscar dados do estabelecimento original
+    const establishmentRef = doc(db, "establishments", voucher.establishmentId)
+    const establishmentDoc = await getDoc(establishmentRef)
+    const establishmentData = establishmentDoc.data()
 
     return NextResponse.json({
       valid: true,
@@ -89,7 +110,12 @@ export async function POST(request: Request) {
         member: {
           id: voucher.memberId,
           name: memberData.displayName,
-          email: memberData.email
+          email: memberData.email,
+          phone: memberData.phone
+        },
+        establishment: {
+          id: voucher.establishmentId,
+          name: establishmentData?.name || 'Estabelecimento não encontrado'
         }
       }
     })
@@ -97,7 +123,10 @@ export async function POST(request: Request) {
   } catch (error) {
     console.error("Erro ao validar voucher:", error)
     return NextResponse.json(
-      { error: "Erro ao validar voucher" },
+      { 
+        error: "Erro ao validar voucher",
+        details: error instanceof Error ? error.message : "Erro desconhecido"
+      },
       { status: 500 }
     )
   }
@@ -115,10 +144,8 @@ export async function PATCH(request: Request) {
       )
     }
 
-    // Decodificar o token
     const session = jwtDecode<SessionToken>(sessionToken)
 
-    // Apenas estabelecimentos podem validar vouchers
     if (session.userType !== "business") {
       return NextResponse.json(
         { error: "Apenas estabelecimentos podem validar vouchers" },
@@ -141,15 +168,7 @@ export async function PATCH(request: Request) {
     }
 
     const voucherDoc = voucherSnapshot.docs[0]
-    const voucher = voucherDoc.data() as Voucher
-
-    // Verificar se o voucher pertence a este estabelecimento
-    if (voucher.establishmentId !== session.uid) {
-      return NextResponse.json(
-        { error: "Este voucher não pertence a este estabelecimento" },
-        { status: 403 }
-      )
-    }
+    const voucher = voucherDoc.data()
 
     // Verificar se o voucher já foi usado
     if (voucher.status === "used") {
@@ -172,17 +191,19 @@ export async function PATCH(request: Request) {
     await updateDoc(doc(vouchersRef, voucherDoc.id), {
       status: "used",
       usedAt: now.toISOString(),
+      usedBy: session.uid, // ID do estabelecimento que realizou o check-in
       updatedAt: now.toISOString()
     })
 
     return NextResponse.json({
-      message: "Voucher utilizado com sucesso"
+      success: true,
+      message: "Check-in realizado com sucesso"
     })
 
   } catch (error) {
-    console.error("Erro ao utilizar voucher:", error)
+    console.error("Erro ao realizar check-in:", error)
     return NextResponse.json(
-      { error: "Erro ao utilizar voucher" },
+      { error: "Erro ao realizar check-in" },
       { status: 500 }
     )
   }

@@ -290,56 +290,91 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const provider = new GoogleAuthProvider()
       const { user: firebaseUser } = await signInWithPopup(auth, provider)
       
-      // Salvar dados do usuário no Firestore
-      const userData = {
-        userType,
-        displayName: firebaseUser.displayName || "",
-        email: firebaseUser.email || "",
-        photoURL: firebaseUser.photoURL || "",
-        createdAt: new Date().toISOString(),
-        emailVerified: firebaseUser.emailVerified,
-        phoneNumber: firebaseUser.phoneNumber || "",
-      }
+      // Primeiro, verificar se o usuário já existe
+      const existingUserDoc = await getDoc(doc(db, "users", firebaseUser.uid))
       
-      console.log('Salvando dados do usuário no Firestore:', userData)
-      await saveUserData(firebaseUser.uid, userData)
-      
-      // Buscar dados atualizados do Firestore
-      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
-      const updatedUserData = userDoc.data() as UserData | undefined
-      
-      if (!updatedUserData) {
-        console.error('Dados do usuário não encontrados após salvar')
-        throw new Error('Erro ao salvar dados do usuário')
-      }
-      
-      // Atualizar o estado do usuário com os dados do Firestore
-      const customUser = {
-        ...firebaseUser,
-        ...updatedUserData,
-        userType,
-        displayName: firebaseUser.displayName || updatedUserData.displayName || "",
-        photoURL: firebaseUser.photoURL || updatedUserData.photoURL || "",
-        email: firebaseUser.email || updatedUserData.email || "",
-        emailVerified: firebaseUser.emailVerified,
-        phoneNumber: firebaseUser.phoneNumber || updatedUserData.phoneNumber || "",
-      } as CustomUser
+      if (existingUserDoc.exists()) {
+        // Se o usuário existe, manter o userType existente
+        const existingUserData = existingUserDoc.data() as UserData
+        
+        // Verificar se o userType da tentativa de login corresponde ao perfil do usuário
+        if (existingUserData.userType !== userType) {
+          throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${existingUserData.userType}.`)
+        }
+        
+        // Atualizar apenas dados não sensíveis
+        const userData = {
+          displayName: firebaseUser.displayName || existingUserData.displayName || "",
+          email: firebaseUser.email || existingUserData.email || "",
+          photoURL: firebaseUser.photoURL || existingUserData.photoURL || "",
+          emailVerified: firebaseUser.emailVerified,
+          phoneNumber: firebaseUser.phoneNumber || existingUserData.phoneNumber || "",
+          updatedAt: new Date().toISOString()
+        }
+        
+        await saveUserData(firebaseUser.uid, userData)
+        
+        // Criar objeto do usuário com os dados existentes
+        const customUser = {
+          ...firebaseUser,
+          ...existingUserData,
+          ...userData,
+          userType: existingUserData.userType // Mantém o userType original
+        } as CustomUser
 
-      // Criar cookie de sessão
-      const response = await fetch("/api/auth/session", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ user: customUser }),
-      })
+        // Criar cookie de sessão
+        const response = await fetch("/api/auth/session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ user: customUser }),
+        })
 
-      if (!response.ok) {
-        throw new Error("Erro ao criar sessão")
+        if (!response.ok) {
+          throw new Error("Erro ao criar sessão")
+        }
+        
+        setUser(customUser)
+        localStorage.setItem('authUser', JSON.stringify(customUser))
+        
+      } else {
+        // Se é um novo usuário, criar com o userType fornecido
+        const userData = {
+          userType,
+          displayName: firebaseUser.displayName || "",
+          email: firebaseUser.email || "",
+          photoURL: firebaseUser.photoURL || "",
+          createdAt: new Date().toISOString(),
+          emailVerified: firebaseUser.emailVerified,
+          phoneNumber: firebaseUser.phoneNumber || "",
+        }
+        
+        await saveUserData(firebaseUser.uid, userData)
+        
+        // Criar objeto do usuário para novo cadastro
+        const customUser = {
+          ...firebaseUser,
+          ...userData,
+          userType
+        } as CustomUser
+
+        // Criar cookie de sessão
+        const response = await fetch("/api/auth/session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ user: customUser }),
+        })
+
+        if (!response.ok) {
+          throw new Error("Erro ao criar sessão")
+        }
+        
+        setUser(customUser)
+        localStorage.setItem('authUser', JSON.stringify(customUser))
       }
-      
-      console.log('Atualizando estado do usuário:', customUser)
-      setUser(customUser)
     } catch (error) {
       console.error("Error signing in with Google:", error)
       throw error

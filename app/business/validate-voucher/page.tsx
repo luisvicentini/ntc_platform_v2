@@ -60,13 +60,13 @@ export default function ValidateVoucherPage() {
 
     if (index === 0 && value.length > 1) {
       // Handling paste or multi-digit input in the first field
-      const cleanedValue = value.replace(/\D/g, "").slice(0, 6)
+      const cleanedValue = value.slice(0, 6).toUpperCase()
       for (let i = 0; i < 6; i++) {
         newCode[i] = cleanedValue[i] || ""
       }
     } else {
       // Handling single digit input
-      newCode[index] = value.replace(/\D/g, "").slice(0, 1)
+      newCode[index] = value.slice(0, 1).toUpperCase()
 
       // Move to next input if value is entered and not on last input
       if (value && index < 5) {
@@ -87,7 +87,7 @@ export default function ValidateVoucherPage() {
 
   const handlePaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
     e.preventDefault()
-    const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6)
+    const pastedData = e.clipboardData.getData("text").slice(0, 6).toUpperCase()
     const newVoucherCode = [...voucherCode]
     for (let i = 0; i < 6; i++) {
       newVoucherCode[i] = pastedData[i] || ""
@@ -100,18 +100,92 @@ export default function ValidateVoucherPage() {
     nextInput?.focus()
   }
 
-  const validateVoucher = () => {
-    const code = voucherCode.join("")
-    const result = validateVoucherCode(code)
-    setValidationResult(result)
-    setCheckInDone(false)
+  const validateVoucher = async () => {
+    try {
+      const code = voucherCode.join("")
+      const sessionToken = localStorage.getItem("sessionToken")
+
+      const response = await fetch("/api/vouchers/validate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": sessionToken || "",
+        },
+        body: JSON.stringify({ code }),
+      })
+
+      const data = await response.json()
+
+      if (data.valid) {
+        setValidationResult({
+          isValid: true,
+          status: "valid",
+          customerName: data.voucher.member.name,
+          customerPhone: data.voucher.member.phone || "Não informado",
+          checkInDate: new Date().toLocaleDateString(),
+          discount: data.voucher.discount,
+          conditions: data.voucher.conditions || "Sem condições especiais",
+          establishmentImage: data.voucher.establishmentImage || "/placeholder.svg",
+        })
+      } else {
+        // Mapear as diferentes respostas do backend para os status do frontend
+        if (data.message.includes("expirado")) {
+          setValidationResult({
+            isValid: false,
+            status: "expired"
+          })
+        } else if (data.message.includes("utilizado")) {
+          setValidationResult({
+            isValid: false,
+            status: "used"
+          })
+        } else if (data.message.includes("não pertence")) {
+          // Adicionando tratamento específico para voucher de outro estabelecimento
+          setValidationResult({
+            isValid: false,
+            status: "invalid"
+          })
+          toast.error("Este voucher pertence a outro estabelecimento")
+        } else {
+          setValidationResult({
+            isValid: false,
+            status: "invalid"
+          })
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao validar voucher:", error)
+      toast.error("Erro ao validar voucher")
+      setValidationResult({
+        isValid: false,
+        status: "invalid"
+      })
+    }
   }
 
-  const performCheckIn = () => {
-    if (validationResult?.isValid) {
+  const performCheckIn = async () => {
+    try {
+      const code = voucherCode.join("")
+      const sessionToken = localStorage.getItem("sessionToken")
+
+      const response = await fetch("/api/vouchers/validate", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": sessionToken || "",
+        },
+        body: JSON.stringify({ code }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao realizar check-in")
+      }
+
       setCheckInDone(true)
       toast.success("Check-in realizado com sucesso!")
-      // Here you would update the check-in report in a real application
+    } catch (error) {
+      console.error("Erro ao realizar check-in:", error)
+      toast.error("Erro ao realizar check-in")
     }
   }
 

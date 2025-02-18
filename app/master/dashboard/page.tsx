@@ -1,20 +1,23 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Users, Building, Ticket, TrendingUp } from "lucide-react"
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
 import { subDays } from "date-fns"
 
-const data = [
-  { name: "Jan", vouchers: 4000, checkins: 2400 },
-  { name: "Feb", vouchers: 3000, checkins: 1398 },
-  { name: "Mar", vouchers: 2000, checkins: 9800 },
-  { name: "Apr", vouchers: 2780, checkins: 3908 },
-  { name: "May", vouchers: 1890, checkins: 4800 },
-  { name: "Jun", vouchers: 2390, checkins: 3800 },
-]
+interface DashboardData {
+  totalUsers: number
+  totalPartners: number
+  totalVouchers: number
+  monthlyData: Array<{
+    name: string
+    vouchers: number
+    checkins: number
+  }>
+  growthRate: string
+}
 
 const predefinedRanges = [
   { label: "Hoje", value: [new Date(), new Date()] },
@@ -27,6 +30,36 @@ const predefinedRanges = [
 
 export default function DashboardPage() {
   const [dateRange, setDateRange] = useState({ from: subDays(new Date(), 30), to: new Date() })
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true)
+        const response = await fetch(`/api/dashboard/master?from=${dateRange.from.toISOString()}&to=${dateRange.to.toISOString()}`, {
+          headers: {
+            'x-session-token': localStorage.getItem('session_token') || ''
+          }
+        })
+        
+        if (!response.ok) throw new Error('Falha ao carregar dados')
+        
+        const data = await response.json()
+        setDashboardData(data)
+      } catch (error) {
+        console.error('Erro ao carregar dashboard:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [dateRange])
+
+  if (isLoading) {
+    return <div>Carregando...</div>
+  }
 
   return (
     <div className="container mx-auto py-6 px-4">
@@ -50,7 +83,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-[#7a7b9f]" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">10,234</div>
+            <div className="text-2xl font-bold text-[#e5e2e9]">{dashboardData?.totalUsers}</div>
             <p className="text-xs text-[#7a7b9f]">+5% em relação ao mês passado</p>
           </CardContent>
         </Card>
@@ -89,11 +122,11 @@ export default function DashboardPage() {
       <div className="grid gap-4 md:grid-cols-2">
         <Card className="bg-[#131320] border-[#1a1b2d]">
           <CardHeader>
-            <CardTitle className="text-[#e5e2e9]">Vouchers Gerados</CardTitle>
+            <CardTitle className="text-[#e5e2e9]">Vouchers e Check-ins</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data}>
+              <BarChart data={dashboardData?.monthlyData || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1a1b2d" />
                 <XAxis dataKey="name" stroke="#7a7b9f" />
                 <YAxis stroke="#7a7b9f" />
@@ -103,25 +136,6 @@ export default function DashboardPage() {
                 />
                 <Legend wrapperStyle={{ color: "#7a7b9f" }} />
                 <Bar dataKey="vouchers" fill="#7435db" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        <Card className="bg-[#131320] border-[#1a1b2d]">
-          <CardHeader>
-            <CardTitle className="text-[#e5e2e9]">Check-ins Realizados</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a1b2d" />
-                <XAxis dataKey="name" stroke="#7a7b9f" />
-                <YAxis stroke="#7a7b9f" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: "#131320", border: "1px solid #1a1b2d" }}
-                  labelStyle={{ color: "#e5e2e9" }}
-                />
-                <Legend wrapperStyle={{ color: "#7a7b9f" }} />
                 <Bar dataKey="checkins" fill="#a85fdd" />
               </BarChart>
             </ResponsiveContainer>

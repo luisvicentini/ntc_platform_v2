@@ -1,18 +1,9 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, addDoc, getDocs, query, where, writeBatch, doc } from "firebase/firestore"
+import { collection, getDocs, query, where, writeBatch, doc } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import { createTransport } from "nodemailer"
 import type { SessionToken } from "@/types/session"
-
-const transporter = createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-})
 
 interface SubscriptionRequest {
   memberId: string
@@ -45,7 +36,7 @@ export async function POST(request: Request) {
 
     const { subscriptions } = await request.json() as { subscriptions: SubscriptionRequest[] }
 
-    if (!subscriptions.length) {
+    if (!subscriptions?.length) {
       return NextResponse.json(
         { error: "Nenhuma assinatura fornecida" },
         { status: 400 }
@@ -56,6 +47,7 @@ export async function POST(request: Request) {
 
     // Verificar se o membro existe
     const membersRef = collection(db, "users")
+    const memberDoc = doc(membersRef, memberId)
     const memberSnapshot = await getDocs(query(membersRef, where("__name__", "==", memberId)))
 
     if (memberSnapshot.empty) {
@@ -66,25 +58,21 @@ export async function POST(request: Request) {
     }
 
     const memberData = memberSnapshot.docs[0].data()
-    if (memberData.userType !== "member") {
-      return NextResponse.json(
-        { error: "Usuário não é um membro" },
-        { status: 400 }
-      )
-    }
 
-    // Verificar se os parceiros existem
+    // Verificar se os parceiros existem e criar um mapa de dados dos parceiros
     const partnerIds = Array.from(new Set(subscriptions.map(s => s.partnerId)))
-    const partnersQuery = query(membersRef, where("__name__", "in", partnerIds))
-    const partnersSnapshot = await getDocs(partnersQuery)
+    const partnersSnapshot = await getDocs(query(membersRef, where("__name__", "in", partnerIds)))
+    
+    const partnerDataMap = new Map()
+    partnersSnapshot.docs.forEach(doc => {
+      partnerDataMap.set(doc.id, doc.data())
+    })
 
-    const validPartnerIds = partnersSnapshot.docs
-      .filter(doc => doc.data().userType === "partner")
-      .map(doc => doc.id)
-
-    if (validPartnerIds.length !== partnerIds.length) {
+    // Verificar se todos os parceiros são válidos
+    const invalidPartners = partnerIds.filter(id => !partnerDataMap.has(id))
+    if (invalidPartners.length > 0) {
       return NextResponse.json(
-        { error: "Um ou mais parceiros não encontrados" },
+        { error: `Parceiros não encontrados: ${invalidPartners.join(", ")}` },
         { status: 400 }
       )
     }
@@ -93,7 +81,7 @@ export async function POST(request: Request) {
     const batch = writeBatch(db)
     const subscriptionsRef = collection(db, "subscriptions")
 
-    // Primeiro, desativar todas as assinaturas existentes do membro
+    // Desativar assinaturas existentes
     const existingQuery = query(
       subscriptionsRef,
       where("memberId", "==", memberId),
@@ -108,86 +96,68 @@ export async function POST(request: Request) {
       })
     })
 
-    // Depois, criar as novas assinaturas
-    subscriptions.forEach(subscription => {
-      const newDocRef = doc(collection(db, "subscriptions"))
-      batch.set(newDocRef, {
-        ...subscription,
+    // Criar novas assinaturas
+    for (const subscription of subscriptions) {
+      const newSubscriptionRef = doc(subscriptionsRef)
+      batch.set(newSubscriptionRef, {
+        memberId: subscription.memberId,
+        partnerId: subscription.partnerId,
+        status: "active",
+        expiresAt: subscription.expiresAt,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       })
-    })
+    }
 
+    // Executar o batch
     await batch.commit()
 
-    // Buscar dados do parceiro
-    const partnerSnapshot = await getDocs(query(membersRef, where("__name__", "==", subscriptions[0].partnerId)))
-    const partnerData = partnerSnapshot.docs[0].data()
+    // Enviar emails de notificação (opcional, pode ser movido para um job separado)
+    try {
+      if (process.env.SMTP_HOST && process.env.SMTP_USER) {
+        const transporter = createTransport({
+          host: process.env.SMTP_HOST,
+          port: Number(process.env.SMTP_PORT),
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+        })
 
-    // Enviar email de boas-vindas
-    await transporter.sendMail({
-      from: process.env.SMTP_FROM,
-      to: memberData.email,
-      subject: "Bem-vindo à plataforma NTC!",
-      html: `
-        <!DOCTYPE html>
-        <html>
-          <head>
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { text-align: center; margin-bottom: 30px; }
-              .button { 
-                display: inline-block; 
-                padding: 12px 24px; 
-                background-color: #7435db; 
-                color: white; 
-                text-decoration: none; 
-                border-radius: 4px;
-                margin: 20px 0;
-              }
-              .footer { margin-top: 30px; font-size: 14px; color: #666; }
-              .highlight { color: #7435db; font-weight: bold; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>Bem-vindo à plataforma NTC!</h1>
-              </div>
-              
+        for (const subscription of subscriptions) {
+          const partnerData = partnerDataMap.get(subscription.partnerId)
+          await transporter.sendMail({
+            from: process.env.SMTP_FROM,
+            to: memberData.email,
+            subject: "Nova Assinatura Ativada - NTC",
+            html: `
+              <h1>Nova Assinatura Ativada</h1>
               <p>Olá ${memberData.displayName},</p>
-              
-              <p>Você foi vinculado como membro ao parceiro <span class="highlight">${partnerData.displayName}</span>.</p>
-              
-              <p>Com esta assinatura, você terá acesso a todos os benefícios oferecidos por este parceiro${
-                subscriptions[0].expiresAt 
-                  ? ` até ${new Date(subscriptions[0].expiresAt).toLocaleDateString("pt-BR")}`
-                  : ""
-              }.</p>
-              
-              <p>Para acessar sua conta e começar a aproveitar os benefícios, clique no botão abaixo:</p>
-              
-              <div style="text-align: center;">
-                <a href="${process.env.NEXT_PUBLIC_APP_URL}/auth/member" class="button">Acessar minha conta</a>
-              </div>
-              
-              <div class="footer">
-                <p>Se você não reconhece esta atividade, por favor ignore este email.</p>
-                <p>Este é um email automático, não responda.</p>
-              </div>
-            </div>
-          </body>
-        </html>
-      `
-    })
+              <p>Sua assinatura com ${partnerData.displayName} foi ativada.</p>
+              ${subscription.expiresAt ? 
+                `<p>Esta assinatura expira em: ${new Date(subscription.expiresAt).toLocaleDateString('pt-BR')}</p>` 
+                : ''}
+            `
+          })
+        }
+      }
+    } catch (emailError) {
+      console.error("Erro ao enviar emails:", emailError)
+      // Não falhar a operação se o envio de email falhar
+    }
 
-    return NextResponse.json({ message: "Assinaturas atualizadas com sucesso" })
+    return NextResponse.json({ 
+      message: "Assinaturas atualizadas com sucesso",
+      success: true 
+    })
 
   } catch (error) {
     console.error("Erro ao criar assinaturas:", error)
     return NextResponse.json(
-      { error: "Erro ao criar assinaturas" },
+      { 
+        error: "Erro ao criar assinaturas",
+        details: error instanceof Error ? error.message : "Erro desconhecido"
+      },
       { status: 500 }
     )
   }

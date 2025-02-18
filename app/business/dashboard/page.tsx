@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -91,13 +91,66 @@ const checkIns = [
   },
 ]
 
+interface DashboardData {
+  todayMetrics: {
+    vouchers: number
+    checkins: number
+    conversionRate: number
+    voucherGrowth: number
+  }
+  monthlyData: Array<{
+    name: string
+    vouchers: number
+    checkins: number
+    rate: number
+  }>
+  recentCheckins: Array<{
+    id: string
+    customerName: string
+    customerPhone: string
+    checkInDate: string
+    status: string
+    voucherCode: string
+  }>
+}
+
 export default function BusinessDashboardPage() {
   const [dateRange, setDateRange] = useState({ from: subDays(new Date(), 30), to: new Date() })
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
 
-  const filteredCheckIns = checkIns.filter((checkIn) =>
-    checkIn.customerName.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true)
+        const response = await fetch(`/api/dashboard/business?from=${dateRange.from.toISOString()}&to=${dateRange.to.toISOString()}`, {
+          headers: {
+            'x-session-token': localStorage.getItem('session_token') || ''
+          }
+        })
+        
+        if (!response.ok) throw new Error('Falha ao carregar dados')
+        
+        const data = await response.json()
+        setDashboardData(data)
+      } catch (error) {
+        console.error('Erro ao carregar dashboard:', error)
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchDashboardData()
+  }, [dateRange])
+
+  if (isLoading) {
+    return <div>Carregando...</div>
+  }
+
+  const filteredCheckins = dashboardData?.recentCheckins.filter((checkIn) =>
+    checkIn.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+  ) || []
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -119,7 +172,7 @@ export default function BusinessDashboardPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4">
+    <div className="container py-6">
       <h2 className="text-3xl font-bold tracking-tight text-[#e5e2e9] mb-6">Dashboard</h2>
 
       <div className="mb-6">
@@ -140,8 +193,11 @@ export default function BusinessDashboardPage() {
             <Ticket className="h-4 w-4 text-[#7a7b9f]" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">54</div>
-            <p className="text-xs text-[#7a7b9f]">+12% em relação a ontem</p>
+            <div className="text-2xl font-bold text-[#e5e2e9]">{dashboardData?.todayMetrics.vouchers}</div>
+            <p className="text-xs text-[#7a7b9f]">
+              {dashboardData?.todayMetrics.voucherGrowth > 0 ? '+' : ''}
+              {dashboardData?.todayMetrics.voucherGrowth.toFixed(1)}% em relação a ontem
+            </p>
           </CardContent>
         </Card>
         <Card className="bg-[#131320] border-[#1a1b2d]">
@@ -150,7 +206,7 @@ export default function BusinessDashboardPage() {
             <CheckSquare className="h-4 w-4 text-[#7a7b9f]" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">42</div>
+            <div className="text-2xl font-bold text-[#e5e2e9]">{dashboardData?.todayMetrics.checkins}</div>
             <p className="text-xs text-[#7a7b9f]">77% dos vouchers gerados</p>
           </CardContent>
         </Card>
@@ -160,7 +216,7 @@ export default function BusinessDashboardPage() {
             <TrendingUp className="h-4 w-4 text-[#7a7b9f]" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">77%</div>
+            <div className="text-2xl font-bold text-[#e5e2e9]">{dashboardData?.todayMetrics.conversionRate.toFixed(2)}%</div>
             <p className="text-xs text-[#7a7b9f]">+5% em relação à média semanal</p>
           </CardContent>
         </Card>
@@ -173,7 +229,7 @@ export default function BusinessDashboardPage() {
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={voucherData}>
+              <BarChart data={dashboardData?.monthlyData || []}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#1a1b2d" />
                 <XAxis dataKey="name" stroke="#7a7b9f" />
                 <YAxis stroke="#7a7b9f" />
@@ -276,7 +332,7 @@ export default function BusinessDashboardPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredCheckIns.map((checkIn) => (
+              {filteredCheckins.map((checkIn) => (
                 <TableRow key={checkIn.id} className="border-[#1a1b2d] hover:bg-[#1a1b2d]">
                   <TableCell>
                     <div className="flex flex-col">

@@ -36,7 +36,7 @@ export async function GET(request: Request) {
 
     // Se não houver assinaturas ativas, retornar array vazio
     if (subscriptionsSnapshot.empty) {
-      return NextResponse.json([])
+      return NextResponse.json({ establishments: [] })
     }
 
     // 2. Obter IDs dos parceiros das assinaturas ativas
@@ -46,6 +46,7 @@ export async function GET(request: Request) {
     const establishmentsRef = collection(db, "establishments")
     const establishments = []
 
+    // Buscar estabelecimentos para cada parceiro
     for (const partnerId of partnerIds) {
       const establishmentsQuery = query(
         establishmentsRef,
@@ -54,6 +55,7 @@ export async function GET(request: Request) {
       )
       const establishmentsSnapshot = await getDocs(establishmentsQuery)
 
+      // 4. Para cada estabelecimento, buscar informações adicionais
       for (const doc of establishmentsSnapshot.docs) {
         const establishmentData = doc.data()
 
@@ -78,28 +80,46 @@ export async function GET(request: Request) {
           ...vDoc.data()
         }))
 
+        // Garantir que as imagens sejam URLs completas do Firebase Storage
+        const images = establishmentData.images?.map((image: string) => {
+          if (image.startsWith('blob:')) {
+            return null // Ignorar blobs temporários
+          }
+          // Se a imagem já for uma URL completa, mantê-la
+          if (image.startsWith('http')) {
+            return image
+          }
+          // Se for um path do Storage, converter para URL completa
+          return `https://storage.googleapis.com/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/${image}`
+        }).filter(Boolean) || []
+
+        // Adicionar estabelecimento com todas as informações
         establishments.push({
           id: doc.id,
           ...establishmentData,
+          images: images,
           partner: {
             id: partnerId,
             displayName: partnerData.displayName,
             email: partnerData.email
           },
-          vouchers
+          vouchers: vouchers
         })
       }
     }
 
-    // Ordenar estabelecimentos por data de criação (mais recentes primeiro)
+    // 5. Ordenar estabelecimentos (pode ajustar critério conforme necessário)
     establishments.sort((a, b) => {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
     })
 
-    return NextResponse.json(establishments)
+    return NextResponse.json({ 
+      establishments,
+      total: establishments.length
+    })
 
   } catch (error) {
-    console.error("Erro ao buscar estabelecimentos do membro:", error)
+    console.error("Erro ao buscar feed do membro:", error)
     return NextResponse.json(
       { 
         error: "Erro ao buscar estabelecimentos",
