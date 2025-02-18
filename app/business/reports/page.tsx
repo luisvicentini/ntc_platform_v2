@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
@@ -9,74 +9,66 @@ import { Search, Filter, MoreVertical } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
-interface CheckIn {
+interface Report {
   id: string
   customerName: string
   customerPhone: string
   associatedBusiness: string
   checkInDate: string
-  status: "completed" | "expired" | "invalid" | "used"
+  status: string
   voucherCode: string
 }
 
-// Simulated data - in a real app this would come from your backend
-const checkIns: CheckIn[] = [
-  {
-    id: "1",
-    customerName: "Luis Henrique Vicentini",
-    customerPhone: "+55 (19) 98430-5001",
-    associatedBusiness: "Não Tem Chef",
-    checkInDate: "02/02/2025",
-    status: "completed",
-    voucherCode: "123456",
-  },
-  {
-    id: "2",
-    customerName: "Luis Henrique Vicentini",
-    customerPhone: "+55 (19) 98430-5001",
-    associatedBusiness: "Não Tem Chef",
-    checkInDate: "02/02/2025",
-    status: "completed",
-    voucherCode: "123456",
-  },
-  {
-    id: "3",
-    customerName: "Luis Henrique Vicentini",
-    customerPhone: "+55 (19) 98430-5001",
-    associatedBusiness: "Não Tem Chef",
-    checkInDate: "02/02/2025",
-    status: "completed",
-    voucherCode: "123456",
-  },
-]
-
 export default function ReportsPage() {
   const [searchTerm, setSearchTerm] = useState("")
+  const [reports, setReports] = useState<Report[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const filteredCheckIns = checkIns.filter((checkIn) =>
-    checkIn.customerName.toLowerCase().includes(searchTerm.toLowerCase()),
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const response = await fetch("/api/business/reports")
+        if (!response.ok) {
+          throw new Error("Erro ao carregar relatórios")
+        }
+        const data = await response.json()
+        setReports(data)
+      } catch (error) {
+        console.error("Erro ao buscar relatórios:", error)
+        setError("Não foi possível carregar os relatórios")
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchReports()
+  }, [])
+
+  const filteredReports = reports.filter((report) =>
+    report.customerName.toLowerCase().includes(searchTerm.toLowerCase()),
   )
 
-  const getStatusBadge = (status: CheckIn["status"]) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case "completed":
-        return <Badge className="bg-[#042f2e] text-[#2dd4bf] hover:bg-[#042f2e]">Check-in Realizado</Badge>
-      case "expired":
+      case "Check-in Realizado":
+        return <Badge className="bg-[#042f2e] text-[#2dd4bf] hover:bg-[#042f2e]">{status}</Badge>
+      case "Voucher Expirado":
         return (
           <Badge variant="secondary" className="bg-yellow-900/50 text-yellow-500">
-            Voucher Expirado
+            {status}
           </Badge>
         )
-      case "invalid":
-        return (
-          <Badge variant="destructive" className="bg-red-900/50 text-red-500">
-            Voucher Inválido
-          </Badge>
-        )
-      case "used":
+      case "Check-in Pendente":
         return (
           <Badge variant="secondary" className="bg-gray-900/50 text-gray-400">
-            Voucher Já Utilizado
+            {status}
+          </Badge>
+        )
+      default:
+        return (
+          <Badge variant="secondary" className="bg-gray-900/50 text-gray-400">
+            {status}
           </Badge>
         )
     }
@@ -120,37 +112,59 @@ export default function ReportsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredCheckIns.map((checkIn) => (
-              <TableRow key={checkIn.id} className="border-[#1a1b2d] hover:bg-[#1a1b2d]">
-                <TableCell>
-                  <div className="flex flex-col">
-                    <span className="font-medium text-[#e5e2e9]">{checkIn.customerName}</span>
-                    <span className="text-sm text-[#7a7b9f]">{checkIn.customerPhone}</span>
+              {loading ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-4">
+                  <div className="flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#7a7b9f]"></div>
+                    <span className="ml-2 text-[#7a7b9f]">Carregando relatórios...</span>
                   </div>
                 </TableCell>
-                <TableCell className="text-[#7a7b9f]">{checkIn.associatedBusiness}</TableCell>
-                <TableCell className="text-[#7a7b9f]">{checkIn.checkInDate}</TableCell>
-                <TableCell>{getStatusBadge(checkIn.status)}</TableCell>
-                <TableCell className="font-medium text-[#e5e2e9]">{checkIn.voucherCode}</TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" className="h-8 w-8 p-0 text-[#7a7b9f] hover:text-[#e5e2e9]">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]">
-                      <DropdownMenuItem className="hover:bg-[#1a1b2d]">Ver detalhes</DropdownMenuItem>
-                      <DropdownMenuItem className="hover:bg-[#1a1b2d]">Exportar PDF</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+              </TableRow>
+            ) : error ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-4 text-red-500">
+                  {error}
                 </TableCell>
               </TableRow>
-            ))}
+            ) : filteredReports.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={6} className="text-center py-4 text-[#7a7b9f]">
+                  Nenhum relatório encontrado
+                </TableCell>
+              </TableRow>
+            ) : (
+              filteredReports.map((report) => (
+                <TableRow key={report.id} className="border-[#1a1b2d] hover:bg-[#1a1b2d]">
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="font-medium text-[#e5e2e9]">{report.customerName}</span>
+                      <span className="text-sm text-[#7a7b9f]">{report.customerPhone}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-[#7a7b9f]">{report.associatedBusiness}</TableCell>
+                  <TableCell className="text-[#7a7b9f]">{report.checkInDate}</TableCell>
+                  <TableCell>{getStatusBadge(report.status)}</TableCell>
+                  <TableCell className="font-medium text-[#e5e2e9]">{report.voucherCode}</TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" className="h-8 w-8 p-0 text-[#7a7b9f] hover:text-[#e5e2e9]">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]">
+                        <DropdownMenuItem className="hover:bg-[#1a1b2d]">Ver detalhes</DropdownMenuItem>
+                        <DropdownMenuItem className="hover:bg-[#1a1b2d]">Exportar PDF</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </Card>
     </div>
   )
 }
-

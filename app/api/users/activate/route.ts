@@ -65,14 +65,25 @@ export async function POST(request: Request) {
       )
     }
 
-    // Atualizar o documento existente em vez de criar um novo
+    // Criar usuário no Firebase Auth
+    const auth = getAuth()
+    const { user: firebaseUser } = await createUserWithEmailAndPassword(
+      auth,
+      userData.email,
+      password
+    )
+
+    // Atualizar o documento existente
     await updateDoc(doc(db, "users", userDoc.id), {
       status: "active",
       activationToken: null,
       activationTokenExpiresAt: null,
       updatedAt: new Date().toISOString(),
-      password: password // Adicionar senha de forma segura
+      firebaseUid: firebaseUser.uid
     })
+
+    // Fazer logout do usuário recém-criado
+    await signOut(auth)
 
     // Retornar o userType para redirecionar corretamente
     return NextResponse.json({ 

@@ -23,32 +23,43 @@ export async function GET(request: Request) {
 
     // Buscar vouchers do período
     const vouchersRef = collection(db, "vouchers")
+    // Primeiro filtramos por establishmentId
     const vouchersQuery = query(
       vouchersRef,
-      where("establishmentId", "==", session.uid),
-      where("createdAt", ">=", Timestamp.fromDate(fromDate)),
-      where("createdAt", "<=", Timestamp.fromDate(toDate))
+      where("establishmentId", "==", session.uid)
     )
     const vouchersSnapshot = await getDocs(vouchersQuery)
-    const vouchers = vouchersSnapshot.docs.map(doc => {
-      const data = doc.data()
-      return {
-        id: doc.id,
-        ...data,
-        createdAt: data.createdAt?.toDate() || new Date()
-      }
-    })
+    const vouchers = vouchersSnapshot.docs
+      .map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt?.toDate() || new Date()
+        }
+      })
+      // Depois filtramos por data em memória
+      .filter(voucher => 
+        voucher.createdAt >= fromDate && 
+        voucher.createdAt <= toDate
+      )
 
     // Buscar check-ins do período
     const checkinsRef = collection(db, "checkins")
+    // Mesmo processo para checkins
     const checkinsQuery = query(
       checkinsRef,
-      where("establishmentId", "==", session.uid),
-      where("createdAt", ">=", Timestamp.fromDate(fromDate)),
-      where("createdAt", "<=", Timestamp.fromDate(toDate))
+      where("establishmentId", "==", session.uid)
     )
     const checkinsSnapshot = await getDocs(checkinsQuery)
-    const checkins = await Promise.all(checkinsSnapshot.docs.map(async doc => {
+    const checkins = await Promise.all(checkinsSnapshot.docs
+      // Filtramos por data em memória
+      .filter(doc => {
+        const data = doc.data()
+        const createdAt = data.createdAt?.toDate() || new Date()
+        return createdAt >= fromDate && createdAt <= toDate
+      })
+      .map(async doc => {
       const checkinData = doc.data()
       const userRef = collection(db, "users")
       const userQuery = query(userRef, where("__name__", "==", checkinData.userId))
@@ -137,4 +148,4 @@ export async function GET(request: Request) {
       { status: 500 }
     )
   }
-} 
+}

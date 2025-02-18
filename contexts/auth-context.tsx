@@ -9,9 +9,10 @@ import {
   createUserWithEmailAndPassword,
   signOut as firebaseSignOut,
   onAuthStateChanged,
-  User
+  User,
+  fetchSignInMethodsForEmail
 } from "firebase/auth"
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore"
+import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, updateDoc } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
 
 export type UserType = "member" | "partner" | "business" | "master"
@@ -25,12 +26,14 @@ interface UserData {
   emailVerified?: boolean
   createdAt?: string
   updatedAt?: any
+  authProvider?: string
 }
 
 interface CustomUser extends User {
   userType: UserType
   createdAt?: string
   updatedAt?: any
+  authProvider?: string
 }
 
 interface AuthContextType {
@@ -88,13 +91,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         console.log('Estado de autenticação alterado:', firebaseUser?.uid)
         if (firebaseUser && mounted) {
           try {
-            // Buscar dados adicionais do usuário no Firestore
-            console.log('Buscando dados do usuário no Firestore...')
-            const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
-            const userData = userDoc.data() as UserData | undefined
-            console.log('Dados do usuário:', userData)
+            // Buscar usuário pelo email
+            const usersRef = collection(db, "users")
+            const emailQuery = query(usersRef, where("email", "==", firebaseUser.email?.toLowerCase()))
+            const querySnapshot = await getDocs(emailQuery)
 
-            if (!userData) {
+            if (querySnapshot.empty) {
               console.log('Dados do usuário não encontrados no Firestore')
               setUser(null)
               setLoading(false)
@@ -102,16 +104,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               return
             }
 
+            const userDoc = querySnapshot.docs[0]
+            const userData = userDoc.data() as UserData
+
             // Combinar dados do Firebase Auth com dados do Firestore
             const customUser = {
               ...firebaseUser,
               ...userData,
+              id: userDoc.id,
               uid: firebaseUser.uid,
-              email: firebaseUser.email,
+              email: userData.email || firebaseUser.email,
               emailVerified: firebaseUser.emailVerified,
-              displayName: firebaseUser.displayName,
-              photoURL: firebaseUser.photoURL,
-              phoneNumber: firebaseUser.phoneNumber,
+              displayName: userData.displayName || firebaseUser.displayName,
+              photoURL: userData.photoURL || firebaseUser.photoURL,
+              phoneNumber: userData.phoneNumber || firebaseUser.phoneNumber,
               isAnonymous: firebaseUser.isAnonymous,
               metadata: firebaseUser.metadata,
               providerData: firebaseUser.providerData
@@ -167,102 +173,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const saveUserData = async (userId: string, data: Partial<UserData>) => {
-    const userRef = doc(db, "users", userId)
-    await setDoc(userRef, {
-      ...data,
-      updatedAt: serverTimestamp(),
-    }, { merge: true })
-
-    // Atualizar o estado do usuário com os novos dados
-    if (user) {
-      const updatedUser = {
-        ...user,
-        ...data,
-      } as CustomUser
-
-      setUser(updatedUser)
-      localStorage.setItem('authUser', JSON.stringify(updatedUser))
-    }
-  }
-
   const signIn = async (email: string, password: string, userType: UserType) => {
     try {
+      // Verificar os métodos de login disponíveis
+      const signInMethods = await fetchSignInMethodsForEmail(auth, email)
+      
+      // Se o usuário tem login social, não permitir login com email/senha
+      if (signInMethods.includes('google.com')) {
+        throw new Error("Este email está vinculado ao Google. Por favor, faça login com o Google.")
+      }
+      if (signInMethods.includes('facebook.com')) {
+        throw new Error("Este email está vinculado ao Facebook. Por favor, faça login com o Facebook.")
+      }
+
       console.log('Tentando autenticar com email:', email, 'e tipo:', userType)
       const { user: firebaseUser } = await signInWithEmailAndPassword(auth, email, password)
       console.log('Usuário autenticado no Firebase:', firebaseUser.uid)
       
-      // Buscar dados do usuário no Firestore
-      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
-      console.log('Documento do usuário existe?', userDoc.exists())
-      
-      if (!userDoc.exists()) {
-        // Se o documento não existe, criar com o tipo de usuário fornecido
-        const userData = {
-          userType,
-          displayName: firebaseUser.displayName || "",
-          email: firebaseUser.email || "",
-          photoURL: firebaseUser.photoURL || "",
-          createdAt: new Date().toISOString(),
-          emailVerified: firebaseUser.emailVerified,
-          phoneNumber: firebaseUser.phoneNumber || "",
-        }
-        
-        console.log('Criando documento do usuário:', userData)
-        await setDoc(doc(db, "users", firebaseUser.uid), userData)
-        
-        // Buscar o documento recém-criado
-        const newUserDoc = await getDoc(doc(db, "users", firebaseUser.uid))
-        const newUserData = newUserDoc.data() as UserData
-        
-        // Criar objeto do usuário
-        const customUser = {
-          ...firebaseUser,
-          ...newUserData,
-          userType,
-          displayName: firebaseUser.displayName || newUserData.displayName || "",
-          photoURL: firebaseUser.photoURL || newUserData.photoURL || "",
-          email: firebaseUser.email || newUserData.email || "",
-          emailVerified: firebaseUser.emailVerified,
-          phoneNumber: firebaseUser.phoneNumber || newUserData.phoneNumber || "",
-        } as CustomUser
+      // Buscar usuário pelo email
+      const usersRef = collection(db, "users")
+      const emailQuery = query(usersRef, where("email", "==", email.toLowerCase()))
+      const querySnapshot = await getDocs(emailQuery)
 
-        // Criar cookie de sessão
-        const response = await fetch("/api/auth/session", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ user: customUser }),
-        })
-
-        if (!response.ok) {
-          throw new Error("Erro ao criar sessão")
-        }
-        
-        setUser(customUser)
-        localStorage.setItem('authUser', JSON.stringify(customUser))
-        return
+      if (querySnapshot.empty) {
+        throw new Error("Usuário não encontrado no banco de dados")
       }
 
-      // Se o documento existe, verificar o tipo de usuário
+      // Pegar o primeiro documento encontrado
+      const userDoc = querySnapshot.docs[0]
       const userData = userDoc.data() as UserData
+      
+      // Verificar o tipo de usuário
       console.log('Dados do usuário:', userData)
       
       if (userData.userType !== userType) {
         throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userData.userType}.`)
       }
       
+      // Atualizar o documento com o firebaseUid
+      await updateDoc(doc(db, "users", userDoc.id), {
+        firebaseUid: firebaseUser.uid,
+        authProvider: 'password',
+        updatedAt: serverTimestamp()
+      })
+
       // Criar objeto do usuário com os dados existentes
       const customUser = {
         ...firebaseUser,
         ...userData,
-        userType,
-        displayName: firebaseUser.displayName || userData.displayName || "",
-        photoURL: firebaseUser.photoURL || userData.photoURL || "",
-        email: firebaseUser.email || userData.email || "",
+        id: userDoc.id,
+        userType: userData.userType,
+        displayName: userData.displayName || firebaseUser.displayName || "",
+        photoURL: userData.photoURL || firebaseUser.photoURL || "",
+        email: userData.email || firebaseUser.email || "",
         emailVerified: firebaseUser.emailVerified,
-        phoneNumber: firebaseUser.phoneNumber || userData.phoneNumber || "",
+        phoneNumber: userData.phoneNumber || firebaseUser.phoneNumber || "",
+        authProvider: 'password'
       } as CustomUser
 
       // Criar cookie de sessão
@@ -279,6 +245,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       setUser(customUser)
+      localStorage.setItem('authUser', JSON.stringify(customUser))
     } catch (error) {
       console.error("Error signing in:", error)
       throw error
@@ -290,135 +257,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const provider = new GoogleAuthProvider()
       const { user: firebaseUser } = await signInWithPopup(auth, provider)
       
-      // Primeiro, verificar se o usuário já existe
-      const existingUserDoc = await getDoc(doc(db, "users", firebaseUser.uid))
-      
-      if (existingUserDoc.exists()) {
-        // Se o usuário existe, manter o userType existente
-        const existingUserData = existingUserDoc.data() as UserData
-        
-        // Verificar se o userType da tentativa de login corresponde ao perfil do usuário
-        if (existingUserData.userType !== userType) {
-          throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${existingUserData.userType}.`)
-        }
-        
-        // Atualizar apenas dados não sensíveis
-        const userData = {
-          displayName: firebaseUser.displayName || existingUserData.displayName || "",
-          email: firebaseUser.email || existingUserData.email || "",
-          photoURL: firebaseUser.photoURL || existingUserData.photoURL || "",
-          emailVerified: firebaseUser.emailVerified,
-          phoneNumber: firebaseUser.phoneNumber || existingUserData.phoneNumber || "",
-          updatedAt: new Date().toISOString()
-        }
-        
-        await saveUserData(firebaseUser.uid, userData)
-        
-        // Criar objeto do usuário com os dados existentes
-        const customUser = {
-          ...firebaseUser,
-          ...existingUserData,
-          ...userData,
-          userType: existingUserData.userType // Mantém o userType original
-        } as CustomUser
+      // Buscar usuário pelo email
+      const usersRef = collection(db, "users")
+      const emailQuery = query(usersRef, where("email", "==", firebaseUser.email?.toLowerCase()))
+      const querySnapshot = await getDocs(emailQuery)
 
-        // Criar cookie de sessão
-        const response = await fetch("/api/auth/session", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ user: customUser }),
-        })
-
-        if (!response.ok) {
-          throw new Error("Erro ao criar sessão")
-        }
-        
-        setUser(customUser)
-        localStorage.setItem('authUser', JSON.stringify(customUser))
-        
-      } else {
-        // Se é um novo usuário, criar com o userType fornecido
-        const userData = {
-          userType,
-          displayName: firebaseUser.displayName || "",
-          email: firebaseUser.email || "",
-          photoURL: firebaseUser.photoURL || "",
-          createdAt: new Date().toISOString(),
-          emailVerified: firebaseUser.emailVerified,
-          phoneNumber: firebaseUser.phoneNumber || "",
-        }
-        
-        await saveUserData(firebaseUser.uid, userData)
-        
-        // Criar objeto do usuário para novo cadastro
-        const customUser = {
-          ...firebaseUser,
-          ...userData,
-          userType
-        } as CustomUser
-
-        // Criar cookie de sessão
-        const response = await fetch("/api/auth/session", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ user: customUser }),
-        })
-
-        if (!response.ok) {
-          throw new Error("Erro ao criar sessão")
-        }
-        
-        setUser(customUser)
-        localStorage.setItem('authUser', JSON.stringify(customUser))
+      if (querySnapshot.empty) {
+        throw new Error("Usuário não encontrado no banco de dados")
       }
-    } catch (error) {
-      console.error("Error signing in with Google:", error)
-      throw error
-    }
-  }
 
-  const signInWithFacebook = async (userType: UserType) => {
-    try {
-      const provider = new FacebookAuthProvider()
-      const { user: firebaseUser } = await signInWithPopup(auth, provider)
+      // Pegar o primeiro documento encontrado
+      const userDoc = querySnapshot.docs[0]
+      const userData = userDoc.data() as UserData
       
-      // Salvar dados do usuário no Firestore
-      const userData = {
-        userType,
-        displayName: firebaseUser.displayName || "",
-        email: firebaseUser.email || "",
-        photoURL: firebaseUser.photoURL || "",
-        createdAt: new Date().toISOString(),
+      // Verificar o tipo de usuário
+      if (userData.userType !== userType) {
+        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userData.userType}.`)
+      }
+      
+      // Atualizar o documento com o firebaseUid
+      await updateDoc(doc(db, "users", userDoc.id), {
+        firebaseUid: firebaseUser.uid,
+        authProvider: 'google.com',
+        displayName: firebaseUser.displayName || userData.displayName || "",
+        photoURL: firebaseUser.photoURL || userData.photoURL || "",
         emailVerified: firebaseUser.emailVerified,
-        phoneNumber: firebaseUser.phoneNumber || "",
-      }
-      
-      console.log('Salvando dados do usuário no Firestore:', userData)
-      await saveUserData(firebaseUser.uid, userData)
-      
-      // Buscar dados atualizados do Firestore
-      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
-      const updatedUserData = userDoc.data() as UserData | undefined
-      
-      if (!updatedUserData) {
-        console.error('Dados do usuário não encontrados após salvar')
-        throw new Error('Erro ao salvar dados do usuário')
-      }
-      
-      // Atualizar o estado do usuário com os dados do Firestore
+        phoneNumber: firebaseUser.phoneNumber || userData.phoneNumber || "",
+        updatedAt: serverTimestamp()
+      })
+
+      // Criar objeto do usuário com os dados existentes
       const customUser = {
         ...firebaseUser,
-        ...updatedUserData,
-        userType,
-        displayName: firebaseUser.displayName || updatedUserData.displayName || "",
-        photoURL: firebaseUser.photoURL || updatedUserData.photoURL || "",
-        email: firebaseUser.email || updatedUserData.email || "",
+        ...userData,
+        id: userDoc.id,
+        userType: userData.userType,
+        displayName: firebaseUser.displayName || userData.displayName || "",
+        photoURL: firebaseUser.photoURL || userData.photoURL || "",
+        email: userData.email || firebaseUser.email || "",
         emailVerified: firebaseUser.emailVerified,
-        phoneNumber: firebaseUser.phoneNumber || updatedUserData.phoneNumber || "",
+        phoneNumber: userData.phoneNumber || firebaseUser.phoneNumber || "",
+        authProvider: 'google.com'
       } as CustomUser
 
       // Criar cookie de sessão
@@ -435,6 +314,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       setUser(customUser)
+      localStorage.setItem('authUser', JSON.stringify(customUser))
+    } catch (error) {
+      console.error("Error signing in with Google:", error)
+      throw error
+    }
+  }
+
+  const signInWithFacebook = async (userType: UserType) => {
+    try {
+      const provider = new FacebookAuthProvider()
+      const { user: firebaseUser } = await signInWithPopup(auth, provider)
+      
+      // Buscar usuário pelo email
+      const usersRef = collection(db, "users")
+      const emailQuery = query(usersRef, where("email", "==", firebaseUser.email?.toLowerCase()))
+      const querySnapshot = await getDocs(emailQuery)
+
+      if (querySnapshot.empty) {
+        throw new Error("Usuário não encontrado no banco de dados")
+      }
+
+      // Pegar o primeiro documento encontrado
+      const userDoc = querySnapshot.docs[0]
+      const userData = userDoc.data() as UserData
+      
+      // Verificar o tipo de usuário
+      if (userData.userType !== userType) {
+        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userData.userType}.`)
+      }
+      
+      // Atualizar o documento com o firebaseUid
+      await updateDoc(doc(db, "users", userDoc.id), {
+        firebaseUid: firebaseUser.uid,
+        authProvider: 'facebook.com',
+        displayName: firebaseUser.displayName || userData.displayName || "",
+        photoURL: firebaseUser.photoURL || userData.photoURL || "",
+        emailVerified: firebaseUser.emailVerified,
+        phoneNumber: firebaseUser.phoneNumber || userData.phoneNumber || "",
+        updatedAt: serverTimestamp()
+      })
+
+      // Criar objeto do usuário com os dados existentes
+      const customUser = {
+        ...firebaseUser,
+        ...userData,
+        id: userDoc.id,
+        userType: userData.userType,
+        displayName: firebaseUser.displayName || userData.displayName || "",
+        photoURL: firebaseUser.photoURL || userData.photoURL || "",
+        email: userData.email || firebaseUser.email || "",
+        emailVerified: firebaseUser.emailVerified,
+        phoneNumber: userData.phoneNumber || firebaseUser.phoneNumber || "",
+        authProvider: 'facebook.com'
+      } as CustomUser
+
+      // Criar cookie de sessão
+      const response = await fetch("/api/auth/session", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ user: customUser }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao criar sessão")
+      }
+      
+      setUser(customUser)
+      localStorage.setItem('authUser', JSON.stringify(customUser))
     } catch (error) {
       console.error("Error signing in with Facebook:", error)
       throw error
@@ -454,30 +403,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date().toISOString(),
         emailVerified: firebaseUser.emailVerified,
         phoneNumber: firebaseUser.phoneNumber || "",
+        authProvider: 'password'
       }
       
-      console.log('Salvando dados do usuário no Firestore:', userData)
-      await saveUserData(firebaseUser.uid, userData)
-      
-      // Buscar dados atualizados do Firestore
-      const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
-      const updatedUserData = userDoc.data() as UserData | undefined
-      
-      if (!updatedUserData) {
-        console.error('Dados do usuário não encontrados após salvar')
-        throw new Error('Erro ao salvar dados do usuário')
+      // Buscar usuário pelo email
+      const usersRef = collection(db, "users")
+      const emailQuery = query(usersRef, where("email", "==", email.toLowerCase()))
+      const querySnapshot = await getDocs(emailQuery)
+
+      if (querySnapshot.empty) {
+        throw new Error("Usuário não encontrado no banco de dados")
       }
+
+      // Pegar o primeiro documento encontrado
+      const userDoc = querySnapshot.docs[0]
+      const existingData = userDoc.data()
+
+      // Atualizar o documento existente
+      await updateDoc(doc(db, "users", userDoc.id), {
+        ...userData,
+        firebaseUid: firebaseUser.uid,
+        updatedAt: serverTimestamp()
+      })
       
-      // Atualizar o estado do usuário com os dados do Firestore
+      // Criar objeto do usuário
       const customUser = {
         ...firebaseUser,
-        ...updatedUserData,
-        userType,
-        displayName: firebaseUser.displayName || updatedUserData.displayName || "",
-        photoURL: firebaseUser.photoURL || updatedUserData.photoURL || "",
-        email: firebaseUser.email || updatedUserData.email || "",
-        emailVerified: firebaseUser.emailVerified,
-        phoneNumber: firebaseUser.phoneNumber || updatedUserData.phoneNumber || "",
+        ...existingData,
+        ...userData,
+        id: userDoc.id
       } as CustomUser
 
       // Criar cookie de sessão
@@ -494,6 +448,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       setUser(customUser)
+      localStorage.setItem('authUser', JSON.stringify(customUser))
     } catch (error) {
       console.error("Error signing up:", error)
       throw error
