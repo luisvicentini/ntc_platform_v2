@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, addDoc, getDocs, query, where } from "firebase/firestore"
+import { collection, addDoc, getDocs, query, where, Timestamp } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
 
@@ -39,95 +39,70 @@ export async function POST(request: Request) {
       )
     }
 
+    const establishmentData = establishmentDoc.docs[0].data()
+
     // Verificar se o membro tem assinatura ativa com o parceiro
     const subscriptionsRef = collection(db, "subscriptions")
+    const now = Timestamp.now()
+    
     const subscriptionQuery = query(
       subscriptionsRef,
       where("memberId", "==", session.uid),
-      where("partnerId", "==", establishmentDoc.docs[0].data().partnerId),
+      where("partnerId", "==", establishmentData.partnerId),
       where("status", "==", "active")
     )
+    
     const subscriptionDoc = await getDocs(subscriptionQuery)
 
+    // Se não encontrar assinatura ativa, tentar buscar por data de expiração
     if (subscriptionDoc.empty) {
-      return NextResponse.json(
-        { error: "Você não tem uma assinatura ativa com este parceiro" },
-        { status: 403 }
+      const allSubscriptionsQuery = query(
+        subscriptionsRef,
+        where("memberId", "==", session.uid),
+        where("partnerId", "==", establishmentData.partnerId)
       )
-    }
+      
+      const allSubscriptions = await getDocs(allSubscriptionsQuery)
+      
+      const activeSubscription = allSubscriptions.docs.find(doc => {
+        const data = doc.data()
+        const expiresAt = data.expiresAt?.toDate()
+        return expiresAt && expiresAt > new Date()
+      })
 
-    const establishmentData = establishmentDoc.docs[0].data()
-
-    // Verificar se já existe um voucher pendente
-    const vouchersRef = collection(db, "vouchers")
-    const existingVoucherQuery = query(
-      vouchersRef,
-      where("memberId", "==", session.uid),
-      where("establishmentId", "==", establishmentId)
-    )
-    const existingVoucherDoc = await getDocs(existingVoucherQuery)
-
-    // Verificar cooldown
-    if (!existingVoucherDoc.empty) {
-      const lastVoucher = existingVoucherDoc.docs
-        .map(doc => ({ id: doc.id, ...doc.data() }))
-        .sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime())[0]
-
-      const lastGeneratedTime = new Date(lastVoucher.generatedAt).getTime()
-      const cooldownMs = establishmentData.voucherCooldown * 60 * 60 * 1000
-      const now = Date.now()
-
-      if (now - lastGeneratedTime < cooldownMs) {
-        const nextAvailable = new Date(lastGeneratedTime + cooldownMs)
-        return NextResponse.json({
-          error: "Aguarde o tempo de cooldown",
-          nextAvailable: nextAvailable.toISOString()
-        }, { status: 400 })
+      if (!activeSubscription) {
+        return NextResponse.json(
+          { error: "Você não tem uma assinatura ativa com este parceiro" },
+          { status: 403 }
+        )
       }
-    }
-
-    // Verificar se já existe um voucher pendente
-    const pendingVoucherQuery = query(
-      vouchersRef,
-      where("memberId", "==", session.uid),
-      where("establishmentId", "==", establishmentId),
-      where("status", "==", "pending")
-    )
-    const pendingVoucherDoc = await getDocs(pendingVoucherQuery)
-
-    if (!pendingVoucherDoc.empty) {
-      return NextResponse.json(
-        { error: "Você já possui um voucher pendente para este estabelecimento" },
-        { status: 400 }
-      )
     }
 
     // Gerar código do voucher
     const code = Math.random().toString(36).substring(2, 8).toUpperCase()
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
 
-    // Calcular data de expiração (24h)
-    const now = new Date()
-    const expiresAt = new Date(now.getTime() + 24 * 60 * 60 * 1000)
-
-    // Salvar voucher no banco
+    // Salvar voucher com todas as relações necessárias
     const voucher = {
       code,
       memberId: session.uid,
       establishmentId,
+      partnerId: establishmentData.partnerId,
+      businessId: establishmentData.businessId,
       status: "pending",
-      generatedAt: now.toISOString(),
-      expiresAt: expiresAt.toISOString(),
-      createdAt: now.toISOString(),
-      updatedAt: now.toISOString()
+      generatedAt: Timestamp.now(),
+      expiresAt: Timestamp.fromDate(expiresAt),
+      createdAt: Timestamp.now(),
+      updatedAt: Timestamp.now()
     }
 
-    const docRef = await addDoc(vouchersRef, voucher)
+    const docRef = await addDoc(collection(db, "vouchers"), voucher)
 
     return NextResponse.json({
       id: docRef.id,
-      ...voucher
+      ...voucher,
+      code
     })
-
   } catch (error) {
     console.error("Erro ao gerar voucher:", error)
     return NextResponse.json(

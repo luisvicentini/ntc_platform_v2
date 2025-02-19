@@ -10,6 +10,7 @@ import { useEstablishment } from "@/contexts/EstablishmentContext"
 import { useAuth } from "@/contexts/auth-context"
 import { FeaturedBadge } from "@/components/ui/featured-badge"
 import type { AvailableEstablishment } from "@/types/establishment"
+import { toast } from "sonner"
 
 interface EstablishmentSheetProps {
   establishment: AvailableEstablishment | null
@@ -63,18 +64,14 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
   const handleGenerateVoucher = async () => {
     if (!establishment) return
 
-    const code = await generateVoucher(establishment.id)
-    if (code) {
-      setVoucherCode(code)
-
-      setTimeout(() => {
-        addNotification({
-          type: "vote",
-          message: `Você gerou um voucher para ${establishment.name}. Que tal avaliar o estabelecimento?`,
-          establishmentId: establishment.id,
-          establishmentName: establishment.name,
-        })
-      }, 5000)
+    try {
+      const code = await generateVoucher(establishment.id)
+      if (code) {
+        setVoucherCode(code)
+        toast.success("Voucher gerado com sucesso!")
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao gerar voucher")
     }
   }
 

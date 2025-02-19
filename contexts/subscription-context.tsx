@@ -3,29 +3,64 @@
 import React, { createContext, useContext, useState, useCallback } from "react"
 import { toast } from "sonner"
 import type { Subscription } from "@/types/subscription"
+import { collection, getDocs, query, where } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
-interface SubscriptionContextType {
+interface SubscriptionContextData {
   subscriptions: Subscription[]
   loading: boolean
   addSubscriptions: (memberId: string, subscriptions: { partnerId: string, expiresAt?: string }[]) => Promise<void>
   cancelSubscription: (id: string) => Promise<void>
   getPartnerSubscriptions: (partnerId: string) => Promise<Subscription[]>
   getMemberSubscriptions: (memberId: string) => Promise<Subscription[]>
+  loadMemberSubscriptions: (memberId: string) => Promise<void>
+  checkActiveSubscription: (memberId: string, partnerId: string) => Promise<boolean>
 }
 
-const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined)
+const SubscriptionContext = createContext({} as SubscriptionContextData)
 
-export const useSubscription = () => {
-  const context = useContext(SubscriptionContext)
-  if (!context) {
-    throw new Error("useSubscription must be used within a SubscriptionProvider")
-  }
-  return context
-}
-
-export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [loading, setLoading] = useState(false)
+
+  const loadMemberSubscriptions = useCallback(async (memberId: string) => {
+    try {
+      const subscriptionsRef = collection(db, "subscriptions")
+      const subscriptionsQuery = query(
+        subscriptionsRef,
+        where("memberId", "==", memberId)
+      )
+      const snapshot = await getDocs(subscriptionsQuery)
+      
+      const subscriptionsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+
+      setSubscriptions(subscriptionsData)
+    } catch (error) {
+      console.error("Erro ao carregar assinaturas:", error)
+      throw error
+    }
+  }, [])
+
+  const checkActiveSubscription = useCallback(async (memberId: string, partnerId: string) => {
+    try {
+      const subscriptionsRef = collection(db, "subscriptions")
+      const activeQuery = query(
+        subscriptionsRef,
+        where("memberId", "==", memberId),
+        where("partnerId", "==", partnerId),
+        where("status", "==", "active")
+      )
+      
+      const activeSnapshot = await getDocs(activeQuery)
+      return !activeSnapshot.empty
+    } catch (error) {
+      console.error("Erro ao verificar assinatura:", error)
+      return false
+    }
+  }, [])
 
   const addSubscriptions = useCallback(async (memberId: string, subscriptions: { partnerId: string, expiresAt?: string }[]) => {
     try {
@@ -40,8 +75,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
             memberId,
             status: "active"
           }))
-        }),
-        credentials: "include"
+        })
       })
 
       if (!response.ok) {
@@ -61,9 +95,7 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       const response = await fetch(`/api/subscriptions/${id}`, {
         method: "PATCH",
         headers: {
-          "Content-Type": "application/json",
         },
-        credentials: "include"
       })
 
       if (!response.ok) {
@@ -85,7 +117,6 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
   const getPartnerSubscriptions = useCallback(async (partnerId: string) => {
     try {
-      setLoading(true)
       const response = await fetch(`/api/subscriptions?partnerId=${partnerId}`, {
         credentials: "include"
       })
@@ -95,19 +126,15 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
       }
 
       const data = await response.json()
-      setSubscriptions(data)
       return data
     } catch (error: any) {
       toast.error(error.message)
       throw error
-    } finally {
-      setLoading(false)
     }
   }, [])
 
   const getMemberSubscriptions = useCallback(async (memberId: string) => {
     try {
-      setLoading(true)
       const response = await fetch(`/api/subscriptions?memberId=${memberId}`, {
         credentials: "include"
       })
@@ -122,23 +149,26 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     } catch (error: any) {
       toast.error(error.message)
       throw error
-    } finally {
-      setLoading(false)
     }
   }, [])
 
   return (
-    <SubscriptionContext.Provider
-      value={{
-        subscriptions,
-        loading,
-        addSubscriptions,
-        cancelSubscription,
-        getPartnerSubscriptions,
-        getMemberSubscriptions,
-      }}
-    >
+    <SubscriptionContext.Provider value={{
+      subscriptions,
+      loading,
+      addSubscriptions,
+      cancelSubscription,
+      getPartnerSubscriptions,
+      getMemberSubscriptions,
+      loadMemberSubscriptions,
+      checkActiveSubscription
+    }}>
       {children}
     </SubscriptionContext.Provider>
   )
 }
+
+export const useSubscription = () => useContext(SubscriptionContext)
+
+
+

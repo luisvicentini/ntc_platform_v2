@@ -2,6 +2,7 @@
 
 import { RouteGuard } from "@/components/auth/route-guard"
 import { EstablishmentProvider } from "@/contexts/EstablishmentContext"
+import { SubscriptionProvider } from "@/contexts/subscription-context"
 import { Header } from "@/components/header"
 import { useAuth } from "@/contexts/auth-context"
 import { Home, User, Ticket } from "lucide-react"
@@ -28,14 +29,16 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
   ]
   return (
     <RouteGuard allowedUserType="member">
-      <EstablishmentProvider>
-        <div className="min-h-screen">
-          <Header menuItems={menuItems} />
-          <main className="container mx-auto px-4 py-8">
-            {children}
-          </main>
-        </div>
-      </EstablishmentProvider>
+      <SubscriptionProvider>
+        <EstablishmentProvider>
+          <div className="min-h-screen">
+            <Header menuItems={menuItems} />
+            <main className="container mx-auto px-4 py-8">
+              {children}
+            </main>
+          </div>
+        </EstablishmentProvider>
+      </SubscriptionProvider>
     </RouteGuard>
   )
 }

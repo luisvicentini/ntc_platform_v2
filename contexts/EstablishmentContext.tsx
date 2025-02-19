@@ -35,18 +35,7 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
   const refreshEstablishments = useCallback(async () => {
     try {
       setLoading(true)
-      let url = "/api/establishments"
-
-      // Buscar estabelecimentos baseado no tipo de usuário
-      if (user) {
-        if (user.userType === "partner") {
-          url += `?partnerId=${user.uid}`
-        } else if (user.userType === "member") {
-          url = "/api/establishments/member"
-        } else if (user.userType === "master") {
-          url = "/api/establishments/available"
-        }
-      }
+      let url = "/api/member/feed"
 
       const response = await fetch(url, {
         credentials: "include"
@@ -56,14 +45,14 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error("Erro ao carregar estabelecimentos")
       }
 
-      const data = await response.json()
-      setEstablishments(data)
+      const { establishments } = await response.json()
+      setEstablishments(establishments)
     } catch (error: any) {
       toast.error(error.message)
     } finally {
       setLoading(false)
     }
-  }, [user])
+  }, [])
 
   useEffect(() => {
     refreshEstablishments()
@@ -121,33 +110,29 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [])
 
-  const generateVoucher = useCallback(
-    async (establishmentId: string): Promise<string | null> => {
-      try {
-        const response = await fetch("/api/vouchers/generate", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ establishmentId }),
-          credentials: "include"
-        })
+  const generateVoucher = useCallback(async (establishmentId: string) => {
+    try {
+      const response = await fetch("/api/vouchers/generate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ establishmentId }),
+        credentials: "include"
+      })
 
-        if (!response.ok) {
-          const error = await response.json()
-          throw new Error(error.error || "Erro ao gerar voucher")
-        }
-
-        const data = await response.json()
-        return data.code
-
-      } catch (error: any) {
-        toast.error(error.message)
-        return null
+      if (!response.ok) {
+        const error = await response.json()
+        throw new Error(error.error || "Erro ao gerar voucher")
       }
-    },
-    [],
-  )
+
+      const data = await response.json()
+      return data.code
+    } catch (error: any) {
+      console.error("Erro ao gerar voucher:", error)
+      throw error
+    }
+  }, [])
 
   const canGenerateVoucher = useCallback(
     async (establishmentId: string, userId: string): Promise<boolean> => {

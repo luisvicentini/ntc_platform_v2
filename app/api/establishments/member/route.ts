@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, query, where, getDocs } from "firebase/firestore"
+import { collection, getDocs, query, where } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
 
@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       )
     }
 
-    // 1. Buscar assinaturas ativas do membro
+    // Buscar assinaturas ativas do membro
     const subscriptionsRef = collection(db, "subscriptions")
     const subscriptionsQuery = query(
       subscriptionsRef,
@@ -34,77 +34,34 @@ export async function GET(request: Request) {
     )
     const subscriptionsSnapshot = await getDocs(subscriptionsQuery)
 
-    // Se não houver assinaturas ativas, retornar array vazio
+    // Se não houver assinaturas, retornar array vazio
     if (subscriptionsSnapshot.empty) {
       return NextResponse.json([])
     }
 
-    // 2. Obter IDs dos parceiros das assinaturas ativas
+    // Obter IDs dos parceiros das assinaturas ativas
     const partnerIds = subscriptionsSnapshot.docs.map(doc => doc.data().partnerId)
 
-    // 3. Buscar estabelecimentos vinculados aos parceiros
+    // Buscar estabelecimentos dos parceiros
     const establishmentsRef = collection(db, "establishments")
-    const establishments = []
+    const establishmentsQuery = query(
+      establishmentsRef,
+      where("partnerId", "in", partnerIds),
+      where("status", "==", "active")
+    )
+    const establishmentsSnapshot = await getDocs(establishmentsQuery)
 
-    for (const partnerId of partnerIds) {
-      const establishmentsQuery = query(
-        establishmentsRef,
-        where("partnerId", "==", partnerId),
-        where("status", "==", "active")
-      )
-      const establishmentsSnapshot = await getDocs(establishmentsQuery)
-
-      for (const doc of establishmentsSnapshot.docs) {
-        const establishmentData = doc.data()
-
-        // Buscar dados do parceiro
-        const partnerDoc = await getDocs(query(
-          collection(db, "users"),
-          where("__name__", "==", partnerId)
-        ))
-
-        const partnerData = partnerDoc.docs[0]?.data() || {}
-
-        // Buscar vouchers ativos do estabelecimento
-        const vouchersRef = collection(db, "vouchers")
-        const vouchersQuery = query(
-          vouchersRef,
-          where("establishmentId", "==", doc.id),
-          where("status", "==", "active")
-        )
-        const vouchersSnapshot = await getDocs(vouchersQuery)
-        const vouchers = vouchersSnapshot.docs.map(vDoc => ({
-          id: vDoc.id,
-          ...vDoc.data()
-        }))
-
-        establishments.push({
-          id: doc.id,
-          ...establishmentData,
-          partner: {
-            id: partnerId,
-            displayName: partnerData.displayName,
-            email: partnerData.email
-          },
-          vouchers
-        })
-      }
-    }
-
-    // Ordenar estabelecimentos por data de criação (mais recentes primeiro)
-    establishments.sort((a, b) => {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    })
+    const establishments = establishmentsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    }))
 
     return NextResponse.json(establishments)
 
   } catch (error) {
-    console.error("Erro ao buscar estabelecimentos do membro:", error)
+    console.error("Erro ao buscar estabelecimentos:", error)
     return NextResponse.json(
-      { 
-        error: "Erro ao buscar estabelecimentos",
-        details: error instanceof Error ? error.message : "Erro desconhecido"
-      },
+      { error: "Erro ao buscar estabelecimentos" },
       { status: 500 }
     )
   }

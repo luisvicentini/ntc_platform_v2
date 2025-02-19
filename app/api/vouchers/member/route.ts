@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, getDocs, query, where } from "firebase/firestore"
+import { collection, getDocs, query, where, orderBy } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
 
@@ -26,12 +26,16 @@ export async function GET(request: Request) {
       )
     }
 
-    // Buscar todos os vouchers do membro
+    // Buscar vouchers do membro
     const vouchersRef = collection(db, "vouchers")
-    const voucherQuery = query(vouchersRef, where("memberId", "==", session.uid))
+    const voucherQuery = query(
+      vouchersRef,
+      where("memberId", "==", session.uid),
+      orderBy("createdAt", "desc")
+    )
     const voucherSnapshot = await getDocs(voucherQuery)
 
-    // Buscar dados dos estabelecimentos
+    // Buscar dados dos estabelecimentos relacionados
     const establishmentIds = Array.from(new Set(voucherSnapshot.docs.map(doc => doc.data().establishmentId)))
     const establishmentsRef = collection(db, "establishments")
     const establishmentsQuery = query(establishmentsRef, where("__name__", "in", establishmentIds))
@@ -39,32 +43,18 @@ export async function GET(request: Request) {
 
     const establishmentsMap = new Map()
     establishmentsSnapshot.docs.forEach(doc => {
-      establishmentsMap.set(doc.id, {
-        id: doc.id,
-        ...doc.data()
-      })
+      establishmentsMap.set(doc.id, { id: doc.id, ...doc.data() })
     })
 
-    // Mapear vouchers com dados do estabelecimento
+    // Retornar vouchers com dados do estabelecimento
     const vouchers = voucherSnapshot.docs.map(doc => {
       const voucherData = doc.data()
-      const establishment = establishmentsMap.get(voucherData.establishmentId)
-
       return {
         id: doc.id,
         ...voucherData,
-        establishment: {
-          id: establishment.id,
-          name: establishment.name,
-          type: establishment.type,
-          address: establishment.address,
-          discountValue: establishment.discountValue
-        }
+        establishment: establishmentsMap.get(voucherData.establishmentId)
       }
     })
-
-    // Ordenar por data de geração (mais recentes primeiro)
-    vouchers.sort((a, b) => new Date(b.generatedAt).getTime() - new Date(a.generatedAt).getTime())
 
     return NextResponse.json(vouchers)
 

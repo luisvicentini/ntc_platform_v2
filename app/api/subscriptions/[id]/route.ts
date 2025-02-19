@@ -4,7 +4,7 @@ import { doc, getDoc, updateDoc } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
 
-export async function PATCH(
+export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
@@ -18,37 +18,33 @@ export async function PATCH(
       )
     }
 
-    // Decodificar o token
     const session = jwtDecode<SessionToken>(sessionToken)
 
     // Apenas usuários master podem cancelar assinaturas
     if (session.userType !== "master") {
       return NextResponse.json(
-        { error: "Apenas administradores podem cancelar assinaturas" },
+        { error: "Acesso não autorizado" },
         { status: 403 }
       )
     }
 
-    // Verificar se a assinatura existe
     const subscriptionRef = doc(db, "subscriptions", params.id)
-    const subscriptionSnap = await getDoc(subscriptionRef)
+    const subscriptionDoc = await getDoc(subscriptionRef)
 
-    if (!subscriptionSnap.exists()) {
+    if (!subscriptionDoc.exists()) {
       return NextResponse.json(
         { error: "Assinatura não encontrada" },
         { status: 404 }
       )
     }
 
-    // Atualizar assinatura
+    // Atualizar status da assinatura para "cancelled"
     await updateDoc(subscriptionRef, {
-      status: "inactive",
+      status: "cancelled",
       updatedAt: new Date().toISOString()
     })
 
-    return NextResponse.json({
-      message: "Assinatura cancelada com sucesso"
-    })
+    return NextResponse.json({ success: true })
 
   } catch (error) {
     console.error("Erro ao cancelar assinatura:", error)

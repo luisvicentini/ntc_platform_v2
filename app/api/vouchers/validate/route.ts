@@ -27,47 +27,25 @@ export async function POST(request: Request) {
 
     const { code } = await request.json()
 
-    if (!code) {
-      return NextResponse.json({
-        valid: false,
-        message: "Código do voucher é obrigatório"
-      })
-    }
-
-    console.log("Buscando voucher com código:", code)
-
-    // Buscar voucher apenas pelo código
+    // Buscar voucher pelo código
     const vouchersRef = collection(db, "vouchers")
-    const voucherQuery = query(
-      vouchersRef, 
-      where("code", "==", code)
-    )
-    
-    const voucherSnapshot = await getDocs(voucherQuery)
-    
-    if (voucherSnapshot.empty) {
-      console.log("Nenhum voucher encontrado com o código:", code)
+    const voucherQuery = query(vouchersRef, where("code", "==", code))
+    const voucherDoc = await getDocs(voucherQuery)
+
+    if (voucherDoc.empty) {
       return NextResponse.json({
         valid: false,
         message: "Voucher não encontrado"
       })
     }
 
-    const voucherDoc = voucherSnapshot.docs[0]
-    const voucher = voucherDoc.data()
-    
-    console.log("Voucher encontrado:", {
-      id: voucherDoc.id,
-      code: voucher.code,
-      status: voucher.status
-    })
+    const voucher = { id: voucherDoc.docs[0].id, ...voucherDoc.docs[0].data() }
 
-    // Verificar se o voucher já foi usado
-    if (voucher.status === "used") {
+    // Verificar se o voucher pertence ao estabelecimento do usuário business
+    if (voucher.businessId !== session.uid) {
       return NextResponse.json({
         valid: false,
-        message: "Este voucher já foi utilizado",
-        usedAt: voucher.usedAt
+        message: "Este voucher não pertence ao seu estabelecimento"
       })
     }
 
@@ -75,20 +53,23 @@ export async function POST(request: Request) {
     if (new Date(voucher.expiresAt) < new Date()) {
       return NextResponse.json({
         valid: false,
-        message: "Este voucher está expirado",
-        expiresAt: voucher.expiresAt
+        message: "Este voucher está expirado"
+      })
+    }
+
+    // Verificar se o voucher já foi utilizado
+    if (voucher.status === "used") {
+      return NextResponse.json({
+        valid: false,
+        message: "Este voucher já foi utilizado"
       })
     }
 
     // Buscar dados do membro
     const membersRef = collection(db, "users")
-    const memberDoc = await getDocs(query(
-      membersRef, 
-      where("__name__", "==", voucher.memberId)
-    ))
+    const memberDoc = await getDocs(query(membersRef, where("__name__", "==", voucher.memberId)))
 
     if (memberDoc.empty) {
-      console.log("Membro não encontrado:", voucher.memberId)
       return NextResponse.json({
         valid: false,
         message: "Membro não encontrado"
@@ -97,36 +78,27 @@ export async function POST(request: Request) {
 
     const memberData = memberDoc.docs[0].data()
 
-    // Buscar dados do estabelecimento original
-    const establishmentRef = doc(db, "establishments", voucher.establishmentId)
-    const establishmentDoc = await getDoc(establishmentRef)
-    const establishmentData = establishmentDoc.data()
+    // Atualizar status do voucher para usado
+    await updateDoc(doc(db, "vouchers", voucher.id), {
+      status: "used",
+      usedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    })
 
     return NextResponse.json({
       valid: true,
       voucher: {
         ...voucher,
-        id: voucherDoc.id,
         member: {
-          id: voucher.memberId,
           name: memberData.displayName,
-          email: memberData.email,
           phone: memberData.phone
-        },
-        establishment: {
-          id: voucher.establishmentId,
-          name: establishmentData?.name || 'Estabelecimento não encontrado'
         }
       }
     })
-
   } catch (error) {
     console.error("Erro ao validar voucher:", error)
     return NextResponse.json(
-      { 
-        error: "Erro ao validar voucher",
-        details: error instanceof Error ? error.message : "Erro desconhecido"
-      },
+      { error: "Erro ao validar voucher" },
       { status: 500 }
     )
   }
