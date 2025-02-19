@@ -1,102 +1,89 @@
 "use client"
 
-import React, { createContext, useContext, useState, useCallback } from "react"
+import { createContext, useContext, useState, useCallback } from "react"
 import { toast } from "sonner"
-import type { Subscription } from "@/types/subscription"
 
-interface SubscriptionContextType {
+interface Subscription {
+  id: string
+  partnerId: string
+  memberId: string
+  status: "active" | "inactive"
+  expiresAt?: string
+  partner: {
+    displayName: string
+    email: string
+  }
+}
+
+interface SubscriptionContextData {
   subscriptions: Subscription[]
   loading: boolean
-  addSubscriptions: (memberId: string, subscriptions: { partnerId: string, expiresAt?: string }[]) => Promise<void>
-  cancelSubscription: (id: string) => Promise<void>
+  addSubscriptions: (memberId: string, subscriptionsData: any[]) => Promise<void>
+  cancelSubscription: (subscriptionId: string) => Promise<void>
   getPartnerSubscriptions: (partnerId: string) => Promise<Subscription[]>
   getMemberSubscriptions: (memberId: string) => Promise<Subscription[]>
+  getMemberEstablishments: (memberId: string) => Promise<any[]>
 }
 
-const SubscriptionContext = createContext<SubscriptionContextType | undefined>(undefined)
+const SubscriptionContext = createContext({} as SubscriptionContextData)
 
-export const useSubscription = () => {
-  const context = useContext(SubscriptionContext)
-  if (!context) {
-    throw new Error("useSubscription must be used within a SubscriptionProvider")
-  }
-  return context
-}
-
-export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function SubscriptionProvider({ children }: { children: React.ReactNode }) {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [loading, setLoading] = useState(false)
 
-  const addSubscriptions = useCallback(async (memberId: string, subscriptions: { partnerId: string, expiresAt?: string }[]) => {
+  const addSubscriptions = useCallback(async (memberId: string, subscriptionsData: any[]) => {
     try {
-      const response = await fetch("/api/subscriptions/batch", {
+      setLoading(true)
+      const response = await fetch("/api/subscriptions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ 
-          subscriptions: subscriptions.map(s => ({
-            ...s,
-            memberId,
-            status: "active"
-          }))
+        body: JSON.stringify({
+          memberId,
+          subscriptions: subscriptionsData
         }),
         credentials: "include"
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Erro ao criar assinaturas")
+        throw new Error("Erro ao adicionar assinaturas")
       }
 
-      toast.success("Assinaturas atualizadas com sucesso!")
+      const data = await response.json()
+      setSubscriptions(prev => [...prev, ...data])
+      return data
     } catch (error: any) {
       toast.error(error.message)
       throw error
+    } finally {
+      setLoading(false)
     }
   }, [])
 
-  const cancelSubscription = useCallback(async (id: string) => {
+  const cancelSubscription = useCallback(async (subscriptionId: string) => {
     try {
-      const response = await fetch(`/api/subscriptions/${id}`, {
+      setLoading(true)
+      const response = await fetch(`/api/subscriptions/${subscriptionId}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
         },
+        body: JSON.stringify({ status: "inactive" }),
         credentials: "include"
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Erro ao cancelar assinatura")
+        throw new Error("Erro ao cancelar assinatura")
       }
 
-      setSubscriptions((prev) => 
-        prev.map((sub) => 
-          sub.id === id ? { ...sub, status: "inactive" } : sub
+      setSubscriptions(prev => 
+        prev.map(sub => 
+          sub.id === subscriptionId 
+            ? { ...sub, status: "inactive" }
+            : sub
         )
       )
-      toast.success("Assinatura cancelada com sucesso!")
-    } catch (error: any) {
-      toast.error(error.message)
-      throw error
-    }
-  }, [])
-
-  const getPartnerSubscriptions = useCallback(async (partnerId: string) => {
-    try {
-      setLoading(true)
-      const response = await fetch(`/api/subscriptions?partnerId=${partnerId}`, {
-        credentials: "include"
-      })
-
-      if (!response.ok) {
-        throw new Error("Erro ao carregar assinaturas")
-      }
-
-      const data = await response.json()
-      setSubscriptions(data)
-      return data
     } catch (error: any) {
       toast.error(error.message)
       throw error
@@ -127,6 +114,49 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
     }
   }, [])
 
+  const getPartnerSubscriptions = useCallback(async (partnerId: string) => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/subscriptions?partnerId=${partnerId}`, {
+        credentials: "include"
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao carregar assinaturas")
+      }
+
+      const data = await response.json()
+      setSubscriptions(data)
+      return data
+    } catch (error: any) {
+      toast.error(error.message)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  const getMemberEstablishments = useCallback(async (memberId: string) => {
+    try {
+      setLoading(true)
+      const response = await fetch(`/api/establishments/member/${memberId}`, {
+        credentials: "include"
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao carregar estabelecimentos")
+      }
+
+      const data = await response.json()
+      return data
+    } catch (error: any) {
+      toast.error(error.message)
+      throw error
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
   return (
     <SubscriptionContext.Provider
       value={{
@@ -136,9 +166,18 @@ export const SubscriptionProvider: React.FC<{ children: React.ReactNode }> = ({ 
         cancelSubscription,
         getPartnerSubscriptions,
         getMemberSubscriptions,
+        getMemberEstablishments
       }}
     >
       {children}
     </SubscriptionContext.Provider>
   )
+}
+
+export const useSubscription = () => {
+  const context = useContext(SubscriptionContext)
+  if (!context) {
+    throw new Error('useSubscription must be used within a SubscriptionProvider')
+  }
+  return context
 }

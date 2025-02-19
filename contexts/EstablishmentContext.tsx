@@ -7,6 +7,7 @@ import type { Establishment, AvailableEstablishment } from "@/types/establishmen
 
 interface EstablishmentContextType {
   establishments: (Establishment | AvailableEstablishment)[]
+  setEstablishments: React.Dispatch<React.SetStateAction<(Establishment | AvailableEstablishment)[]>>
   loading: boolean
   addEstablishment: (establishment: Omit<Establishment, "id" | "partnerId" | "status" | "createdAt" | "updatedAt" | "rating" | "totalRatings" | "isFeatured">) => Promise<void>
   updateEstablishment: (id: string, establishment: Partial<Establishment>) => Promise<void>
@@ -35,39 +36,13 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
   const refreshEstablishments = useCallback(async () => {
     try {
       setLoading(true)
-      let url = "/api/establishments"
-
-      // Buscar estabelecimentos baseado no tipo de usuário
-      if (user) {
-        if (user.userType === "partner") {
-          url += `?partnerId=${user.uid}`
-        } else if (user.userType === "member") {
-          url = "/api/establishments/member"
-        } else if (user.userType === "master") {
-          url = "/api/establishments/available"
-        }
-      }
-
-      const response = await fetch(url, {
-        credentials: "include"
-      })
-      
-      if (!response.ok) {
-        throw new Error("Erro ao carregar estabelecimentos")
-      }
-
-      const data = await response.json()
-      setEstablishments(data)
+      // Deixar a lógica de busca para os componentes específicos
     } catch (error: any) {
       toast.error(error.message)
     } finally {
       setLoading(false)
     }
   }, [user])
-
-  useEffect(() => {
-    refreshEstablishments()
-  }, [refreshEstablishments])
 
   const addEstablishment = useCallback(async (establishment: Omit<Establishment, "id" | "partnerId" | "status" | "createdAt" | "updatedAt" | "rating" | "totalRatings" | "isFeatured">) => {
     try {
@@ -221,6 +196,7 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
     <EstablishmentContext.Provider
       value={{
         establishments,
+        setEstablishments,
         loading,
         addEstablishment,
         updateEstablishment,

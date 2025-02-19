@@ -1,130 +1,106 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, query, where, getDocs } from "firebase/firestore"
+import { collection, query, where, getDocs, getDoc, doc } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
 
 export async function GET(request: Request) {
   try {
     const sessionToken = request.headers.get("x-session-token")
-    
     if (!sessionToken) {
-      return NextResponse.json(
-        { error: "Sessão inválida" },
-        { status: 403 }
-      )
+      return NextResponse.json({ error: "Sessão inválida" }, { status: 403 })
     }
 
-    // Decodificar o token
     const session = jwtDecode<SessionToken>(sessionToken)
+    console.log("[Member Feed] Session:", session)
 
     if (session.userType !== "member") {
       return NextResponse.json(
-        { error: "Acesso não autorizado" },
+        { error: "Apenas membros podem acessar o feed" },
         { status: 403 }
       )
     }
 
-    // 1. Buscar assinaturas ativas do membro
+    // 1. Verificar os dados do banco
+    console.log("[Member Feed] Verificando dados do banco...")
+    
+    // 1.1 Verificar assinaturas
     const subscriptionsRef = collection(db, "subscriptions")
     const subscriptionsQuery = query(
       subscriptionsRef,
-      where("memberId", "==", session.uid),
-      where("status", "==", "active")
+      where("memberId", "==", session.uid)
     )
     const subscriptionsSnapshot = await getDocs(subscriptionsQuery)
+    
+    console.log("[Member Feed] Assinaturas encontradas:", subscriptionsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })))
 
-    // Se não houver assinaturas ativas, retornar array vazio
     if (subscriptionsSnapshot.empty) {
-      return NextResponse.json({ establishments: [] })
+      return NextResponse.json({ 
+        establishments: [],
+        total: 0
+      })
     }
 
-    // 2. Obter IDs dos parceiros das assinaturas ativas
+    // 1.2 Verificar partners
     const partnerIds = subscriptionsSnapshot.docs.map(doc => doc.data().partnerId)
-
-    // 3. Buscar estabelecimentos vinculados aos parceiros
-    const establishmentsRef = collection(db, "establishments")
-    const establishments = []
-
-    // Buscar estabelecimentos para cada parceiro
+    const partners = []
+    
     for (const partnerId of partnerIds) {
-      const establishmentsQuery = query(
-        establishmentsRef,
-        where("partnerId", "==", partnerId),
-        where("status", "==", "active")
-      )
-      const establishmentsSnapshot = await getDocs(establishmentsQuery)
-
-      // 4. Para cada estabelecimento, buscar informações adicionais
-      for (const doc of establishmentsSnapshot.docs) {
-        const establishmentData = doc.data()
-
-        // Buscar dados do parceiro
-        const partnerDoc = await getDocs(query(
-          collection(db, "users"),
-          where("__name__", "==", partnerId)
-        ))
-
-        const partnerData = partnerDoc.docs[0]?.data() || {}
-
-        // Buscar vouchers ativos do estabelecimento
-        const vouchersRef = collection(db, "vouchers")
-        const vouchersQuery = query(
-          vouchersRef,
-          where("establishmentId", "==", doc.id),
-          where("status", "==", "active")
-        )
-        const vouchersSnapshot = await getDocs(vouchersQuery)
-        const vouchers = vouchersSnapshot.docs.map(vDoc => ({
-          id: vDoc.id,
-          ...vDoc.data()
-        }))
-
-        // Garantir que as imagens sejam URLs completas do Firebase Storage
-        const images = establishmentData.images?.map((image: string) => {
-          if (image.startsWith('blob:')) {
-            return null // Ignorar blobs temporários
-          }
-          // Se a imagem já for uma URL completa, mantê-la
-          if (image.startsWith('http')) {
-            return image
-          }
-          // Se for um path do Storage, converter para URL completa
-          return `https://storage.googleapis.com/${process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET}/${image}`
-        }).filter(Boolean) || []
-
-        // Adicionar estabelecimento com todas as informações
-        establishments.push({
-          id: doc.id,
-          ...establishmentData,
-          images: images,
-          partner: {
-            id: partnerId,
-            displayName: partnerData.displayName,
-            email: partnerData.email
-          },
-          vouchers: vouchers
+      const partnerDoc = await getDoc(doc(db, "users", partnerId))
+      if (partnerDoc.exists()) {
+        partners.push({
+          id: partnerDoc.id,
+          ...partnerDoc.data()
         })
       }
     }
+    
+    console.log("[Member Feed] Partners encontrados:", partners)
 
-    // 5. Ordenar estabelecimentos (pode ajustar critério conforme necessário)
-    establishments.sort((a, b) => {
-      return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    })
+    // 1.3 Verificar estabelecimentos
+    const establishments = []
+    for (const partnerId of partnerIds) {
+      const establishmentsRef = collection(db, "establishments")
+      const establishmentsQuery = query(
+        establishmentsRef,
+        where("partner", "==", partnerId) // Alterado de partnerId para partner
+      )
+      
+      const establishmentsSnapshot = await getDocs(establishmentsQuery)
+      console.log(`[Member Feed] Estabelecimentos do partner ${partnerId}:`, establishmentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })))
+      
+      establishments.push(...establishmentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })))
+    }
 
-    return NextResponse.json({ 
+    console.log("[Member Feed] Total de estabelecimentos:", establishments)
+
+    return NextResponse.json({
       establishments,
-      total: establishments.length
+      total: establishments.length,
+      debug: {
+        memberId: session.uid,
+        subscriptions: subscriptionsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })),
+        partners,
+        establishments
+      }
     })
 
   } catch (error) {
-    console.error("Erro ao buscar feed do membro:", error)
+    console.error("[Member Feed] Error:", error)
     return NextResponse.json(
-      { 
-        error: "Erro ao buscar estabelecimentos",
-        details: error instanceof Error ? error.message : "Erro desconhecido"
-      },
+      { error: "Erro ao buscar feed" },
       { status: 500 }
     )
   }

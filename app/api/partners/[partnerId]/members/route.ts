@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, getDocs, query, where } from "firebase/firestore"
+import { collection, getDocs, query, where, getDoc, doc } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: { partnerId: string } }
 ) {
   try {
     const sessionToken = request.headers.get("x-session-token")
@@ -17,57 +17,60 @@ export async function GET(
     const session = jwtDecode<SessionToken>(sessionToken)
     console.log("[Partner Members] Session:", session)
 
-    if (session.userType !== "partner" || session.uid !== params.id) {
+    if (session.userType !== "partner") {
       return NextResponse.json(
         { error: "Acesso não autorizado" },
         { status: 403 }
       )
     }
 
-    // 1. Buscar assinaturas ativas do partner
+    // 1. Verificar dados do banco
+    console.log("[Partner Members] Verificando dados do banco...")
+    
+    // 1.1 Verificar assinaturas
     const subscriptionsRef = collection(db, "subscriptions")
     const subscriptionsQuery = query(
       subscriptionsRef,
-      where("partnerId", "==", session.uid),
-      where("status", "==", "active")
+      where("partner", "==", session.uid) // Alterado de partnerId para partner
     )
     
     const subscriptionsSnapshot = await getDocs(subscriptionsQuery)
-    console.log("[Partner Members] Active subscriptions:", subscriptionsSnapshot.size)
+    console.log("[Partner Members] Assinaturas encontradas:", subscriptionsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data()
+    })))
 
     if (subscriptionsSnapshot.empty) {
       return NextResponse.json({ members: [], total: 0 })
     }
 
-    // 2. Obter IDs únicos dos membros
+    // 1.2 Buscar membros
     const memberIds = [...new Set(subscriptionsSnapshot.docs.map(doc => doc.data().memberId))]
-    console.log("[Partner Members] Unique member IDs:", memberIds.length)
-
-    // 3. Buscar dados dos membros em lotes de 10
-    const usersRef = collection(db, "users")
     const members = []
 
-    for (let i = 0; i < memberIds.length; i += 10) {
-      const batch = memberIds.slice(i, i + 10)
-      const membersQuery = query(
-        usersRef,
-        where("__name__", "in", batch)
-      )
-      
-      const membersSnapshot = await getDocs(membersQuery)
-      members.push(...membersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        displayName: doc.data().displayName,
-        email: doc.data().email,
-        status: doc.data().status
-      })))
+    for (const memberId of memberIds) {
+      const memberDoc = await getDoc(doc(db, "users", memberId))
+      if (memberDoc.exists()) {
+        members.push({
+          id: memberDoc.id,
+          ...memberDoc.data()
+        })
+      }
     }
 
-    console.log(`[Partner Members] Found ${members.length} members`)
+    console.log("[Partner Members] Membros encontrados:", members)
 
     return NextResponse.json({
       members,
-      total: members.length
+      total: members.length,
+      debug: {
+        partnerId: session.uid,
+        subscriptions: subscriptionsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })),
+        members
+      }
     })
 
   } catch (error) {
@@ -77,4 +80,4 @@ export async function GET(
       { status: 500 }
     )
   }
-}
+} 

@@ -1,0 +1,27 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "establishments",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "partnerId", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "subscriptions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "partnerId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "subscriptions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "memberId", "order": "ASCENDING" },
+        { "fieldPath": "status", "order": "ASCENDING" }
+      ]
+    }
+  ]
+} 

@@ -1,6 +1,6 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useState, useCallback } from "react"
 import { 
   signInWithEmailAndPassword,
   signInWithPopup,
@@ -10,7 +10,8 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User,
-  fetchSignInMethodsForEmail
+  fetchSignInMethodsForEmail,
+  getAuth
 } from "firebase/auth"
 import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, updateDoc } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
@@ -44,6 +45,7 @@ interface AuthContextType {
   signInWithFacebook: (userType: UserType) => Promise<void>
   signUp: (email: string, password: string, userType: UserType) => Promise<void>
   signOut: () => Promise<void>
+  getToken: () => Promise<string | null>
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType)
@@ -482,6 +484,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
+  const getToken = useCallback(async () => {
+    const auth = getAuth()
+    const currentUser = auth.currentUser
+    if (!currentUser) return null
+    return currentUser.getIdToken()
+  }, [])
+
   return (
     <AuthContext.Provider
       value={{
@@ -492,6 +501,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         signInWithFacebook,
         signUp,
         signOut,
+        getToken
       }}
     >
       {children}

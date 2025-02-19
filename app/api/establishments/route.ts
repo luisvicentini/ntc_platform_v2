@@ -90,49 +90,47 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url)
-    const partnerId = searchParams.get("partnerId")
-    const memberId = searchParams.get("memberId")
-
-    let establishmentsQuery
-
-    if (partnerId) {
-      // Buscar estabelecimentos de um parceiro específico
-      establishmentsQuery = query(
-        collection(db, "establishments"), 
-        where("partnerId", "==", partnerId)
-      )
-    } else if (memberId) {
-      // Buscar estabelecimentos dos parceiros que o membro é assinante
-      const subscriptionsRef = collection(db, "subscriptions")
-      const subscriptionsQuery = query(subscriptionsRef, where("memberId", "==", memberId))
-      const subscriptionsSnapshot = await getDocs(subscriptionsQuery)
-      
-      const partnerIds = subscriptionsSnapshot.docs.map(doc => doc.data().partnerId)
-      
-      if (partnerIds.length === 0) {
-        return NextResponse.json([])
-      }
-
-      establishmentsQuery = query(
-        collection(db, "establishments"), 
-        where("partnerId", "in", partnerIds)
-      )
-    } else {
-      // Buscar todos os estabelecimentos
-      establishmentsQuery = collection(db, "establishments")
+    const sessionToken = request.headers.get("x-session-token")
+    if (!sessionToken) {
+      return NextResponse.json({ error: "Sessão inválida" }, { status: 403 })
     }
 
+    const session = jwtDecode<SessionToken>(sessionToken)
+    console.log("[Partner Establishments] Session:", session)
+
+    if (session.userType !== "partner") {
+      return NextResponse.json(
+        { error: "Apenas parceiros podem listar estabelecimentos" },
+        { status: 403 }
+      )
+    }
+
+    // Buscar estabelecimentos do partner
+    const establishmentsRef = collection(db, "establishments")
+    const establishmentsQuery = query(
+      establishmentsRef,
+      where("partnerId", "==", session.uid)
+    )
+
     const querySnapshot = await getDocs(establishmentsQuery)
+    console.log("[Partner Establishments] Raw query result:", querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })))
+
     const establishments = querySnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
     }))
 
-    return NextResponse.json(establishments)
+    return NextResponse.json({
+      establishments,
+      total: establishments.length,
+      debug: {
+        partnerId: session.uid,
+        userType: session.userType
+      }
+    })
 
   } catch (error) {
-    console.error("Erro ao buscar estabelecimentos:", error)
+    console.error("[Partner Establishments] Error:", error)
     return NextResponse.json(
       { error: "Erro ao buscar estabelecimentos" },
       { status: 500 }

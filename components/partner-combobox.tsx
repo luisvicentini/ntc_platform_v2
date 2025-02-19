@@ -21,6 +21,7 @@ interface Partner {
   id: string
   displayName: string
   email: string
+  establishmentsCount?: number
 }
 
 interface PartnerComboboxProps {
@@ -39,7 +40,7 @@ export function PartnerCombobox({ partners, onSelect }: PartnerComboboxProps) {
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between bg-[#1a1b2d] border-[#131320] hover:bg-[#1a1b2d]/80"
+          className="w-full justify-between"
         >
           {value
             ? partners.find((partner) => partner.id === value)?.displayName
@@ -47,21 +48,20 @@ export function PartnerCombobox({ partners, onSelect }: PartnerComboboxProps) {
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-[#1a1b2d] border-[#131320]">
+      <PopoverContent className="w-full p-0">
         <Command>
-          <CommandInput placeholder="Buscar parceiro..." className="h-9 bg-[#1a1b2d]" />
+          <CommandInput placeholder="Buscar parceiro..." />
           <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
           <CommandGroup>
             {partners.map((partner) => (
               <CommandItem
                 key={partner.id}
-                value={partner.displayName}
-                onSelect={() => {
-                  setValue(partner.id)
-                  onSelect(partner)
+                value={partner.id}
+                onSelect={(currentValue) => {
+                  setValue(currentValue)
                   setOpen(false)
+                  onSelect(partner)
                 }}
-                className="hover:bg-[#131320]"
               >
                 <Check
                   className={cn(
@@ -69,9 +69,11 @@ export function PartnerCombobox({ partners, onSelect }: PartnerComboboxProps) {
                     value === partner.id ? "opacity-100" : "opacity-0"
                   )}
                 />
-                <div>
-                  <p className="font-medium">{partner.displayName}</p>
-                  <p className="text-sm text-[#7a7b9f]">{partner.email}</p>
+                <div className="flex flex-col">
+                  <span>{partner.displayName}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {partner.establishmentsCount || 0} estabelecimentos
+                  </span>
                 </div>
               </CommandItem>
             ))}

@@ -1,12 +1,11 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, addDoc, getDocs, query, where } from "firebase/firestore"
+import { collection, addDoc, getDocs, query, where, updateDoc, doc } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
 
 export async function POST(request: Request) {
   try {
-    const { memberId, partnerId } = await request.json()
     const sessionToken = request.headers.get("x-session-token")
     
     if (!sessionToken) {
@@ -16,93 +15,42 @@ export async function POST(request: Request) {
       )
     }
 
-    // Decodificar o token
     const session = jwtDecode<SessionToken>(sessionToken)
+    const { memberId, subscriptions } = await request.json()
 
-    // Apenas usuários master podem criar assinaturas
-    if (session.userType !== "master") {
+    if (!memberId || !subscriptions || !Array.isArray(subscriptions)) {
       return NextResponse.json(
-        { error: "Apenas administradores podem vincular membros a parceiros" },
-        { status: 403 }
-      )
-    }
-
-    // Verificar se o membro existe
-    const membersRef = collection(db, "users")
-    const memberQuery = query(membersRef, where("uid", "==", memberId))
-    const memberSnapshot = await getDocs(memberQuery)
-
-    if (memberSnapshot.empty) {
-      return NextResponse.json(
-        { error: "Membro não encontrado" },
-        { status: 404 }
-      )
-    }
-
-    const memberData = memberSnapshot.docs[0].data()
-    if (memberData.userType !== "member") {
-      return NextResponse.json(
-        { error: "Usuário não é um membro" },
+        { error: "Dados inválidos" },
         { status: 400 }
       )
     }
 
-    // Verificar se o parceiro existe
-    const partnerQuery = query(membersRef, where("uid", "==", partnerId))
-    const partnerSnapshot = await getDocs(partnerQuery)
-
-    if (partnerSnapshot.empty) {
-      return NextResponse.json(
-        { error: "Parceiro não encontrado" },
-        { status: 404 }
-      )
-    }
-
-    const partnerData = partnerSnapshot.docs[0].data()
-    if (partnerData.userType !== "partner") {
-      return NextResponse.json(
-        { error: "Usuário não é um parceiro" },
-        { status: 400 }
-      )
-    }
-
-    // Verificar se já existe uma assinatura ativa
+    // Criar as assinaturas
     const subscriptionsRef = collection(db, "subscriptions")
-    const existingQuery = query(
-      subscriptionsRef,
-      where("memberId", "==", memberId),
-      where("partnerId", "==", partnerId),
-      where("status", "==", "active")
-    )
-    const existingSnapshot = await getDocs(existingQuery)
+    const createdSubscriptions = []
 
-    if (!existingSnapshot.empty) {
-      return NextResponse.json(
-        { error: "Membro já está vinculado a este parceiro" },
-        { status: 400 }
-      )
+    for (const sub of subscriptions) {
+      const subscriptionData = {
+        memberId,
+        partnerId: sub.partnerId,
+        status: 'active',
+        expiresAt: sub.expiresAt,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }
+
+      const docRef = await addDoc(subscriptionsRef, subscriptionData)
+      createdSubscriptions.push({
+        id: docRef.id,
+        ...subscriptionData
+      })
     }
 
-    // Criar assinatura
-    const subscriptionData = {
-      memberId,
-      partnerId,
-      status: "active",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
-
-    const docRef = await addDoc(collection(db, "subscriptions"), subscriptionData)
-
-    return NextResponse.json({
-      id: docRef.id,
-      ...subscriptionData
-    })
-
+    return NextResponse.json(createdSubscriptions)
   } catch (error) {
-    console.error("Erro ao criar assinatura:", error)
+    console.error('Erro na rota de assinaturas:', error)
     return NextResponse.json(
-      { error: "Erro ao criar assinatura" },
+      { error: "Erro interno do servidor" },
       { status: 500 }
     )
   }
@@ -110,60 +58,100 @@ export async function POST(request: Request) {
 
 export async function GET(request: Request) {
   try {
+    const sessionToken = request.headers.get("x-session-token")
+    
+    if (!sessionToken) {
+      return NextResponse.json(
+        { error: "Sessão inválida" },
+        { status: 403 }
+      )
+    }
+
+    const session = jwtDecode<SessionToken>(sessionToken)
     const { searchParams } = new URL(request.url)
-    const memberId = searchParams.get("memberId")
-    const partnerId = searchParams.get("partnerId")
+    const memberId = searchParams.get('memberId')
+    const partnerId = searchParams.get('partnerId')
 
     const subscriptionsRef = collection(db, "subscriptions")
-    let subscriptionsQuery
+    let subscriptionsQuery = query(subscriptionsRef)
 
     if (memberId) {
-      subscriptionsQuery = query(
-        subscriptionsRef,
-        where("memberId", "==", memberId),
-        where("status", "==", "active")
-      )
-    } else if (partnerId) {
-      subscriptionsQuery = query(
-        subscriptionsRef,
-        where("partnerId", "==", partnerId),
-        where("status", "==", "active")
-      )
-    } else {
-      subscriptionsQuery = query(subscriptionsRef)
+      subscriptionsQuery = query(subscriptionsRef, where("memberId", "==", memberId))
+    }
+    if (partnerId) {
+      subscriptionsQuery = query(subscriptionsRef, where("partnerId", "==", partnerId))
     }
 
-    const querySnapshot = await getDocs(subscriptionsQuery)
-    const subscriptions = []
+    const snapshot = await getDocs(subscriptionsQuery)
+    
+    // Buscar dados dos parceiros
+    const partnerIds = snapshot.docs.map(doc => doc.data().partnerId)
+    const usersRef = collection(db, "users")
+    const partnersQuery = query(usersRef, where("__name__", "in", partnerIds))
+    const partnersSnapshot = await getDocs(partnersQuery)
 
-    for (const doc of querySnapshot.docs) {
+    // Criar mapa de parceiros para fácil acesso
+    const partnersMap = new Map()
+    partnersSnapshot.docs.forEach(doc => {
+      partnersMap.set(doc.id, {
+        id: doc.id,
+        displayName: doc.data().displayName,
+        email: doc.data().email
+      })
+    })
+
+    // Combinar dados das assinaturas com dados dos parceiros
+    const subscriptions = snapshot.docs.map(doc => {
       const subscriptionData = doc.data()
+      const partner = partnersMap.get(subscriptionData.partnerId)
       
-      // Buscar dados do parceiro
-      const partnersRef = collection(db, "users")
-      const partnerQuery = query(partnersRef, where("__name__", "==", subscriptionData.partnerId))
-      const partnerSnapshot = await getDocs(partnerQuery)
-      
-      if (!partnerSnapshot.empty) {
-        const partnerData = partnerSnapshot.docs[0].data()
-        subscriptions.push({
-          id: doc.id,
-          ...subscriptionData,
-          partner: {
-            id: subscriptionData.partnerId,
-            displayName: partnerData.displayName,
-            email: partnerData.email
-          }
-        })
+      return {
+        id: doc.id,
+        memberId: subscriptionData.memberId,
+        partnerId: subscriptionData.partnerId,
+        status: subscriptionData.status,
+        expiresAt: subscriptionData.expiresAt,
+        createdAt: subscriptionData.createdAt,
+        updatedAt: subscriptionData.updatedAt,
+        partner: partner // Incluindo dados do parceiro
       }
-    }
+    })
 
     return NextResponse.json(subscriptions)
-
   } catch (error) {
-    console.error("Erro ao buscar assinaturas:", error)
+    console.error('Erro na rota de assinaturas:', error)
     return NextResponse.json(
-      { error: "Erro ao buscar assinaturas" },
+      { error: "Erro interno do servidor" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const sessionToken = request.headers.get("x-session-token")
+    
+    if (!sessionToken) {
+      return NextResponse.json(
+        { error: "Sessão inválida" },
+        { status: 403 }
+      )
+    }
+
+    const session = jwtDecode<SessionToken>(sessionToken)
+    const { id } = await request.json()
+
+    const subscriptionRef = doc(db, "subscriptions", id)
+    await updateDoc(subscriptionRef, {
+      status: "inactive",
+      updatedAt: new Date().toISOString()
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Erro ao atualizar assinatura:', error)
+    return NextResponse.json(
+      { error: "Erro interno do servidor" },
       { status: 500 }
     )
   }

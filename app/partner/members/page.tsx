@@ -4,7 +4,6 @@ import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Search } from "lucide-react"
-import { toast } from "sonner"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
 import { useAuth } from "@/contexts/auth-context"
 
@@ -20,31 +19,45 @@ interface Member {
 }
 
 export default function MembersPage() {
-  const { user } = useAuth()
+  const { user, getToken } = useAuth()
   const [members, setMembers] = useState<Member[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const loadMembers = async () => {
+    const fetchMembers = async () => {
       try {
-        const response = await fetch(`/api/partners/${user?.uid}/members`)
+        if (!user) return
+        setLoading(true)
+
+        const token = await getToken()
+        if (!token) {
+          console.error("Token não encontrado")
+          return
+        }
+
+        const response = await fetch(`/api/partners/${user.uid}/members`, {
+          headers: {
+            "x-session-token": token
+          }
+        })
+
         if (!response.ok) {
           throw new Error("Erro ao carregar membros")
         }
+
         const data = await response.json()
-        setMembers(data)
-      } catch (error: any) {
-        toast.error(error.message)
+        console.log("Dados dos membros:", data)
+        setMembers(data.members || [])
+      } catch (error) {
+        console.error("Erro ao carregar membros:", error)
       } finally {
         setLoading(false)
       }
     }
 
-    if (user?.uid) {
-      loadMembers()
-    }
-  }, [user?.uid])
+    fetchMembers()
+  }, [user, getToken])
 
   const filteredMembers = members.filter(
     (member) =>
@@ -59,6 +72,10 @@ export default function MembersPage() {
       return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
     }
     return name.substring(0, 2).toUpperCase()
+  }
+
+  if (loading) {
+    return <div>Carregando...</div>
   }
 
   return (
@@ -91,13 +108,7 @@ export default function MembersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-[#7a7b9f]">
-                  Carregando...
-                </TableCell>
-              </TableRow>
-            ) : filteredMembers.length === 0 ? (
+            {members.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={5} className="text-center py-8 text-[#7a7b9f]">
                   Nenhum membro encontrado

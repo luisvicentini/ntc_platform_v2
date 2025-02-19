@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Search, Filter } from "lucide-react"
@@ -14,9 +14,17 @@ import { EstablishmentSheet } from "@/components/establishment-sheet"
 import { useEstablishment } from "@/contexts/EstablishmentContext"
 import { FeaturedBadge } from "@/components/ui/featured-badge"
 import type { AvailableEstablishment } from "@/types/establishment"
+import { useAuth } from "@/contexts/auth-context"
+import { getAuth } from "firebase/auth"
 
 export default function FeedPage() {
-  const { establishments } = useEstablishment()
+  const { user, getToken } = useAuth()
+  const { setEstablishments } = useEstablishment()
+  const [loading, setLoading] = useState(true)
+  const [feedData, setFeedData] = useState<{
+    establishments: AvailableEstablishment[]
+    total: number
+  }>({ establishments: [], total: 0 })
   const [searchTerm, setSearchTerm] = useState("")
   const [filters, setFilters] = useState({
     cities: [] as string[],
@@ -28,20 +36,56 @@ export default function FeedPage() {
   const [selectedEstablishment, setSelectedEstablishment] = useState<AvailableEstablishment | null>(null)
   const [activeTab, setActiveTab] = useState("explore")
 
-  const filteredEstablishments = establishments.filter((establishment) => {
+  useEffect(() => {
+    const fetchFeed = async () => {
+      try {
+        if (!user) return
+        setLoading(true)
+
+        const token = await getToken()
+        if (!token) return
+
+        const response = await fetch("/api/member/feed", {
+          headers: {
+            "x-session-token": token
+          }
+        })
+
+        if (!response.ok) {
+          throw new Error("Erro ao carregar feed")
+        }
+
+        const data = await response.json()
+        console.log("Dados do feed:", data)
+        
+        setFeedData(data)
+        setEstablishments(data.establishments || [])
+      } catch (error) {
+        console.error("Erro ao carregar feed:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchFeed()
+  }, [user, getToken, setEstablishments])
+
+  const filteredEstablishments = feedData.establishments.filter((establishment) => {
     const matchesSearch =
       establishment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      establishment.type.type.toLowerCase().includes(searchTerm.toLowerCase())
+      establishment.type?.type.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesFilters =
-      (filters.cities.length === 0 || filters.cities.includes(establishment.address.city)) &&
-      (filters.types.length === 0 || filters.types.includes(establishment.type.type)) &&
-      establishment.rating >= filters.minRating
+      (filters.cities.length === 0 || filters.cities.includes(establishment.address?.city)) &&
+      (filters.types.length === 0 || filters.types.includes(establishment.type?.type)) &&
+      (establishment.rating || 0) >= filters.minRating
 
     return matchesSearch && matchesFilters
-  }) as AvailableEstablishment[]
+  })
 
-  const featuredEstablishments = filteredEstablishments.filter((establishment) => establishment.isFeatured)
+  const featuredEstablishments = filteredEstablishments.filter(
+    (establishment) => establishment.isFeatured
+  )
 
   const handleSearch = (term: string) => {
     setSearchTerm(term)
@@ -74,7 +118,7 @@ export default function FeedPage() {
                   clipRule="evenodd"
                 />
               </svg>
-              <span>{establishment.rating.toFixed(1)}</span>
+              <span>{establishment.rating?.toFixed(1) || "Não avaliado"}</span>
               <span>{establishment.isFeatured && <FeaturedBadge />}</span>
             </div>
             
@@ -82,13 +126,21 @@ export default function FeedPage() {
           <div className="p-4 space-y-2">
             <h3 className="font-semibold text-[#e5e2e9] group-hover:text-[#7435db]">{establishment.name}</h3>
             <p className="text-sm text-[#7a7b9f]">
-              {establishment.type.type} • {establishment.address.city}
+              {establishment.type?.type} • {establishment.address?.city}
             </p>
           </div>
         </Card>
       ))}
     </div>
   )
+
+  if (loading) {
+    return <div>Carregando...</div>
+  }
+
+  if (!feedData.establishments.length) {
+    return <div>Nenhum estabelecimento encontrado</div>
+  }
 
   return (
     <div className="container py-6">

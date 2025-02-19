@@ -1,24 +1,38 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useCallback, useEffect } from "react"
+import { useSubscription } from "@/contexts/subscription-context"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Calendar, X } from "lucide-react"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { toast } from "sonner"
+import { Badge } from "./ui/badge"
+import { X, Search } from "lucide-react"
+import { Input } from "./ui/input"
+import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { cn } from "@/lib/utils"
-import { useSubscription } from "@/contexts/subscription-context"
-import { toast } from "sonner"
-import { PartnerCombobox } from "./partner-combobox"
-import type { PartnerSubscription } from "@/types/subscription"
 
 interface Partner {
   id: string
   displayName: string
   email: string
+  establishmentsCount?: number
+}
+
+interface PartnerSubscription {
+  id: string
+  partnerId: string
+  memberId: string
+  status: "active" | "inactive"
+  expiresAt?: string
+  partner: {
+    displayName: string
+    email: string
+  }
 }
 
 interface SubscriptionManagementModalProps {
@@ -34,34 +48,29 @@ export function SubscriptionManagementModal({
   memberId,
   memberName 
 }: SubscriptionManagementModalProps) {
-  const { addSubscriptions, getMemberSubscriptions } = useSubscription()
+  const { addSubscriptions, getMemberSubscriptions, cancelSubscription } = useSubscription()
   const [partners, setPartners] = useState<Partner[]>([])
-  const [selectedPartners, setSelectedPartners] = useState<(Partner & { expiresAt?: Date })[]>([])
+  const [activeSubscriptions, setActiveSubscriptions] = useState<PartnerSubscription[]>([])
   const [loading, setLoading] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
 
   const loadData = useCallback(async () => {
     if (!isOpen || !memberId) return
 
     setLoading(true)
     try {
-      // Carregar assinaturas existentes
-      const subscriptions = await getMemberSubscriptions(memberId) as PartnerSubscription[]
-      const existingPartners = subscriptions
-        .filter(s => s.status === "active")
-        .map(s => ({
-          id: s.partnerId,
-          displayName: s.partner.displayName,
-          email: s.partner.email,
-          expiresAt: s.expiresAt ? new Date(s.expiresAt) : undefined
-        }))
-      setSelectedPartners(existingPartners)
+      // Carregar assinaturas ativas
+      const subscriptions = await getMemberSubscriptions(memberId)
+      setActiveSubscriptions(subscriptions.filter(s => s.status === "active"))
 
-      // Carregar parceiros disponíveis
+      // Carregar todos os parceiros
       const response = await fetch("/api/partners/list")
       if (!response.ok) {
         throw new Error("Erro ao carregar parceiros")
       }
       const data = await response.json()
+      console.log("Parceiros carregados:", data)
       setPartners(data)
     } catch (error) {
       console.error("Erro ao carregar dados:", error)
@@ -71,158 +80,165 @@ export function SubscriptionManagementModal({
     }
   }, [isOpen, memberId, getMemberSubscriptions])
 
-  // Carregar dados quando o modal abrir
   useEffect(() => {
     loadData()
   }, [loadData])
 
-  // Limpar dados quando o modal fechar
-  useEffect(() => {
-    if (!isOpen) {
-      setSelectedPartners([])
-      setPartners([])
+  const handleAddSubscription = async (partner: Partner) => {
+    if (!selectedDate) {
+      toast.error("Selecione uma data de expiração")
+      return
     }
-  }, [isOpen])
 
-  const handlePartnerSelect = (partner: Partner) => {
-    if (!selectedPartners.find(p => p.id === partner.id)) {
-      setSelectedPartners([...selectedPartners, partner])
-    }
-  }
-
-  const handleDateSelect = (partnerId: string, date: Date | undefined) => {
-    setSelectedPartners(prev => 
-      prev.map(partner => 
-        partner.id === partnerId 
-          ? { ...partner, expiresAt: date }
-          : partner
-      )
-    )
-  }
-
-  const handleSave = async () => {
     try {
-      const subscriptionsData = selectedPartners.map(partner => ({
+      await addSubscriptions(memberId, [{
         partnerId: partner.id,
-        expiresAt: partner.expiresAt?.toISOString()
-      }))
-
-      await addSubscriptions(memberId, subscriptionsData)
-      onClose()
-      toast.success("Assinaturas atualizadas com sucesso")
+        status: "active",
+        expiresAt: selectedDate.toISOString()
+      }])
+      
+      setSelectedDate(undefined) // Reset date after adding
+      await loadData() // Recarrega os dados
+      toast.success(`Assinatura adicionada: ${partner.displayName}`)
     } catch (error) {
-      console.error("Erro ao salvar assinaturas:", error)
-      toast.error("Erro ao salvar assinaturas")
+      toast.error("Erro ao adicionar assinatura")
     }
   }
+
+  const handleCancelSubscription = async (subscriptionId: string, partnerName: string) => {
+    try {
+      await cancelSubscription(subscriptionId)
+      await loadData() // Recarrega os dados
+      toast.success(`Assinatura cancelada: ${partnerName}`)
+    } catch (error) {
+      toast.error("Erro ao cancelar assinatura")
+    }
+  }
+
+  const filteredPartners = partners.filter(partner => 
+    partner.displayName.toLowerCase().includes(searchTerm.toLowerCase()) &&
+    !activeSubscriptions.find(s => s.partnerId === partner.id)
+  )
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#131320] text-[#e5e2e9] border-[#1a1b2d] max-w-5xl">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Gerenciar Assinaturas - {memberName}</DialogTitle>
         </DialogHeader>
 
         <div className="grid gap-6">
-          {/* Adicionar Parceiro */}
+          {/* Data de Expiração */}
           <div>
-            <Label>Adicionar Parceiro</Label>
-            <div className="mt-2">
-              <PartnerCombobox 
-                partners={partners.filter(p => !selectedPartners.find(sp => sp.id === p.id))}
-                onSelect={handlePartnerSelect}
+            <Label>Data de Expiração</Label>
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal mt-2",
+                    !selectedDate && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {selectedDate ? (
+                    format(selectedDate, "PPP", { locale: ptBR })
+                  ) : (
+                    <span>Selecione uma data</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={setSelectedDate}
+                  initialFocus
+                  disabled={(date) => date < new Date()}
+                />
+              </PopoverContent>
+            </Popover>
+          </div>
+
+          {/* Parceiros Disponíveis */}
+          <div>
+            <Label>Parceiros Disponíveis</Label>
+            <div className="relative mt-2">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar parceiros..."
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
+            </div>
+            <div className="mt-2 space-y-2">
+              {loading ? (
+                <p className="text-sm text-muted-foreground">Carregando...</p>
+              ) : filteredPartners.length > 0 ? (
+                filteredPartners.map(partner => (
+                  <div 
+                    key={partner.id}
+                    className="flex items-center justify-between p-3 bg-secondary rounded-lg"
+                  >
+                    <div>
+                      <p className="font-medium">{partner.displayName}</p>
+                      <p className="text-sm text-muted-foreground">{partner.email}</p>
+                    </div>
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => handleAddSubscription(partner)}
+                      disabled={!selectedDate}
+                    >
+                      Adicionar
+                    </Button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum parceiro disponível encontrado
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Parceiros Selecionados */}
+          {/* Assinaturas Ativas */}
           <div>
-            <Label>Parceiros Vinculados</Label>
+            <Label>Assinaturas Ativas</Label>
             <div className="mt-2 space-y-2">
-              {selectedPartners.map((partner) => (
-                <div
-                  key={partner.id}
-                  className="bg-[#1a1b2d] p-4 rounded-lg flex items-center justify-between"
+              {activeSubscriptions.map(subscription => (
+                <div 
+                  key={subscription.id} 
+                  className="flex items-center justify-between p-3 bg-secondary rounded-lg"
                 >
                   <div>
-                    <h4 className="font-medium">{partner.displayName}</h4>
-                    <p className="text-sm text-[#7a7b9f]">{partner.email}</p>
-                    {partner.expiresAt && (
-                      <p className="text-sm text-[#7a7b9f]">
-                        Expira em: {format(partner.expiresAt, "dd/MM/yyyy", { locale: ptBR })}
-                      </p>
-                    )}
+                    <p className="font-medium">{subscription.partner.displayName}</p>
+                    <p className="text-sm text-muted-foreground">{subscription.partner.email}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-[240px] pl-3 text-left font-normal bg-[#1a1b2d] border-[#131320] hover:bg-[#1a1b2d]/80",
-                            !partner.expiresAt && "text-muted-foreground"
-                          )}
-                        >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {partner.expiresAt ? (
-                            format(partner.expiresAt, "PPP", { locale: ptBR })
-                          ) : (
-                            "Definir data de expiração"
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="end" className="w-auto p-0 bg-[#1a1b2d] border-[#131320]">
-                        <div className="p-3">
-                          <CalendarComponent
-                            mode="single"
-                            selected={partner.expiresAt}
-                            onSelect={(date) => handleDateSelect(partner.id, date)}
-                            disabled={(date) => date < new Date()}
-                            initialFocus
-                            locale={ptBR}
-                            className="rounded-md border border-[#1a1b2d]"
-                          />
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                    {subscription.expiresAt && (
+                      <Badge variant="outline">
+                        Expira em: {new Date(subscription.expiresAt).toLocaleDateString()}
+                      </Badge>
+                    )}
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setSelectedPartners(prev => prev.filter(p => p.id !== partner.id))}
-                      className="text-red-500 hover:text-red-600"
+                      onClick={() => handleCancelSubscription(subscription.id, subscription.partner.displayName)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
               ))}
-
-              {loading && (
-                <div className="text-center text-[#7a7b9f] py-4">
-                  Carregando...
-                </div>
-              )}
-
-              {!loading && selectedPartners.length === 0 && (
-                <div className="text-center text-[#7a7b9f] py-4">
-                  Nenhum parceiro vinculado
-                </div>
+              {activeSubscriptions.length === 0 && (
+                <p className="text-sm text-muted-foreground">
+                  Nenhuma assinatura ativa
+                </p>
               )}
             </div>
           </div>
-        </div>
-
-        <div className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={onClose} className="bg-[#1a1b2d] border-[#131320]">
-            Cancelar
-          </Button>
-          <Button 
-            onClick={handleSave} 
-            className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
-            disabled={selectedPartners.length === 0 || loading}
-          >
-            Salvar
-          </Button>
         </div>
       </DialogContent>
     </Dialog>
