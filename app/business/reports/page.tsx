@@ -15,10 +15,14 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Filter, Columns3, List } from "lucide-react"
-import { format, parseISO } from "date-fns"
+import { Calendar, Filter, Columns3, List, ChevronLeft, ChevronRight, X, Search } from "lucide-react"
+import { format, parseISO, subDays, startOfDay, endOfDay } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { toast } from "sonner"
+import { DatePicker } from "@/components/ui/date-picker"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Label } from "@/components/ui/label"
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 
 interface Member {
   id: string
@@ -44,46 +48,368 @@ interface Voucher {
   discount: number
 }
 
+interface FilterOptions {
+  status: string[]
+  dateRange: {
+    start: Date | null
+    end: null
+  }
+  period: string
+  name: string
+  email: string
+  phone: string
+  partner: string
+  establishment: string
+  code: string
+}
+
+const getStatusText = (status: string) => {
+  switch (status) {
+    case "pending":
+      return "Pendente"
+    case "verified":
+      return "Verificado"
+    case "used":
+      return "Utilizado"
+    case "expired":
+      return "Expirado"
+    default:
+      return "Desconhecido"
+  }
+}
+
+const FilterSidebar = ({ 
+  isOpen, 
+  onOpenChange, 
+  initialFilters, 
+  onApplyFilters 
+}: { 
+  isOpen: boolean
+  onOpenChange: (open: boolean) => void
+  initialFilters: FilterOptions
+  onApplyFilters: (filters: FilterOptions) => void
+}) => {
+  // Estado local para os campos do formulário
+  const [localFilters, setLocalFilters] = useState<FilterOptions>(initialFilters)
+
+  // Resetar estado local quando a sidebar abre
+  useEffect(() => {
+    if (isOpen) {
+      setLocalFilters(initialFilters)
+    }
+  }, [isOpen, initialFilters])
+
+  const handleApplyFilters = () => {
+    onApplyFilters(localFilters)
+  }
+
+  return (
+    <Sheet open={isOpen} onOpenChange={onOpenChange}>
+      <SheetContent className="bg-[#131320] border-l-[#1a1b2d] w-[400px]">
+        <SheetHeader>
+          <SheetTitle className="text-[#e5e2e9]">Filtros</SheetTitle>
+        </SheetHeader>
+        
+        <div className="space-y-6 mt-6">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-[#7a7b9f]">Código do Cupom</Label>
+              <Input
+                value={localFilters.code}
+                onChange={(e) => setLocalFilters(prev => ({ ...prev, code: e.target.value }))}
+                className="bg-[#1a1b2d] border-[#282942] text-[#e5e2e9]"
+                placeholder="Digite o código"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[#7a7b9f]">Nome do Cliente</Label>
+              <Input
+                value={localFilters.name}
+                onChange={(e) => setLocalFilters(prev => ({ ...prev, name: e.target.value }))}
+                className="bg-[#1a1b2d] border-[#282942] text-[#e5e2e9]"
+                placeholder="Digite o nome"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[#7a7b9f]">Email</Label>
+              <Input
+                value={localFilters.email}
+                onChange={(e) => setLocalFilters(prev => ({ ...prev, email: e.target.value }))}
+                className="bg-[#1a1b2d] border-[#282942] text-[#e5e2e9]"
+                placeholder="Digite o email"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[#7a7b9f]">Telefone</Label>
+              <Input
+                value={localFilters.phone}
+                onChange={(e) => setLocalFilters(prev => ({ ...prev, phone: e.target.value }))}
+                className="bg-[#1a1b2d] border-[#282942] text-[#e5e2e9]"
+                placeholder="Digite o telefone"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-[#7a7b9f]">Estabelecimento</Label>
+              <Input
+                value={localFilters.establishment}
+                onChange={(e) => setLocalFilters(prev => ({ ...prev, establishment: e.target.value }))}
+                className="bg-[#1a1b2d] border-[#282942] text-[#e5e2e9]"
+                placeholder="Digite o estabelecimento"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[#7a7b9f]">Status</Label>
+            <div className="grid grid-cols-2 gap-2">
+              {["pending", "verified", "used", "expired"].map((status) => (
+                <Button
+                  key={status}
+                  variant="outline"
+                  className={`border-[#1a1b2d] ${
+                    localFilters.status.includes(status) 
+                      ? "bg-[#7435db] text-white" 
+                      : "text-[#7a7b9f]"
+                  }`}
+                  onClick={() => {
+                    setLocalFilters(prev => ({
+                      ...prev,
+                      status: prev.status.includes(status)
+                        ? prev.status.filter(s => s !== status)
+                        : [...prev.status, status]
+                    }))
+                  }}
+                >
+                  {getStatusText(status)}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-[#7a7b9f]">Período</Label>
+            <RadioGroup
+              value={localFilters.period}
+              onValueChange={(value) => {
+                setLocalFilters(prev => ({
+                  ...prev,
+                  period: value,
+                  dateRange: { start: null, end: null }
+                }))
+              }}
+              className="space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="all" id="all" />
+                <Label htmlFor="all" className="text-[#e5e2e9]">Todos</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="7days" id="7days" />
+                <Label htmlFor="7days" className="text-[#e5e2e9]">Últimos 7 dias</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="30days" id="30days" />
+                <Label htmlFor="30days" className="text-[#e5e2e9]">Últimos 30 dias</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="90days" id="90days" />
+                <Label htmlFor="90days" className="text-[#e5e2e9]">Últimos 90 dias</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="custom" id="custom" />
+                <Label htmlFor="custom" className="text-[#e5e2e9]">Personalizado</Label>
+              </div>
+            </RadioGroup>
+          </div>
+
+          {localFilters.period === 'custom' && (
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-[#7a7b9f]">Data Inicial</Label>
+                <DatePicker
+                  date={localFilters.dateRange.start}
+                  onSelect={(date) => 
+                    setLocalFilters(prev => ({
+                      ...prev,
+                      dateRange: { ...prev.dateRange, start: date }
+                    }))
+                  }
+                  placeholder="Selecione a data inicial"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[#7a7b9f]">Data Final</Label>
+                <DatePicker
+                  date={localFilters.dateRange.end}
+                  onSelect={(date) => 
+                    setLocalFilters(prev => ({
+                      ...prev,
+                      dateRange: { ...prev.dateRange, end: date }
+                    }))
+                  }
+                  placeholder="Selecione a data final"
+                />
+              </div>
+            </div>
+          )}
+
+          <Button
+            className="w-full bg-[#7435db] hover:bg-[#5a2ba7]"
+            onClick={handleApplyFilters}
+          >
+            Aplicar Filtros
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  )
+}
+
 export default function ReportsPage() {
   const [vouchers, setVouchers] = useState<Voucher[]>([])
-  const [viewMode, setViewMode] = useState<"list" | "kanban">("list")
+  const [viewMode, setViewMode] = useState<"list" | "kanban">("kanban")
   const [selectedVoucher, setSelectedVoucher] = useState<Voucher | null>(null)
   const [isDetailsOpen, setIsDetailsOpen] = useState(false)
+  const [isFilterOpen, setIsFilterOpen] = useState(false)
   const [loading, setLoading] = useState(true)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [filteredVouchers, setFilteredVouchers] = useState<Voucher[]>([])
+  
+  // Estado principal dos filtros (aplicados)
+  const [filters, setFilters] = useState<FilterOptions>({
+    status: [],
+    dateRange: {
+      start: null,
+      end: null
+    },
+    period: 'all',
+    name: '',
+    email: '',
+    phone: '',
+    partner: '',
+    establishment: '',
+    code: ''
+  })
+  
+  // Estado temporário dos filtros (em edição)
+  const [tempFilters, setTempFilters] = useState<FilterOptions>({ ...filters })
+
+  // Adicione o estado para o termo de busca
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const itemsPerPage = 10
+  const totalPages = Math.ceil(filteredVouchers.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const currentVouchers = filteredVouchers.slice(startIndex, endIndex)
 
   useEffect(() => {
-    fetchVouchers()
+    const loadInitialData = async () => {
+      await fetchVouchers()
+    }
+    loadInitialData()
   }, [])
 
   const fetchVouchers = async () => {
     try {
       setLoading(true)
       const sessionToken = localStorage.getItem("sessionToken")
-      console.log("Iniciando busca de vouchers")
-      
       const response = await fetch("/api/business/reports", {
         headers: {
           "x-session-token": sessionToken || "",
         },
       })
       
-      console.log("Status da resposta:", response.status)
-      
       if (!response.ok) {
         throw new Error(`Erro ao carregar vouchers: ${response.status}`)
       }
       
       const data = await response.json()
-      console.log("Total de vouchers recebidos:", data.vouchers?.length || 0)
-      console.log("Primeiro voucher:", data.vouchers?.[0])
-      
       setVouchers(data.vouchers)
+      setFilteredVouchers(data.vouchers) // Inicializa filteredVouchers com todos os vouchers
     } catch (error) {
       console.error("Erro ao buscar vouchers:", error)
       toast.error("Erro ao carregar vouchers")
     } finally {
       setLoading(false)
     }
+  }
+
+  const applyFilters = (newFilters: FilterOptions) => {
+    let filtered = [...vouchers]
+
+    // Filtros de texto
+    if (newFilters.name) {
+      filtered = filtered.filter(v => 
+        v.member.name.toLowerCase().includes(newFilters.name.toLowerCase())
+      )
+    }
+    if (newFilters.email) {
+      filtered = filtered.filter(v => 
+        v.member.email?.toLowerCase().includes(newFilters.email.toLowerCase())
+      )
+    }
+    if (newFilters.phone) {
+      filtered = filtered.filter(v => 
+        v.member.phone?.includes(newFilters.phone)
+      )
+    }
+    if (newFilters.code) {
+      filtered = filtered.filter(v => 
+        v.code.toLowerCase().includes(newFilters.code.toLowerCase())
+      )
+    }
+    if (newFilters.establishment) {
+      filtered = filtered.filter(v => 
+        v.establishment.name.toLowerCase().includes(newFilters.establishment.toLowerCase())
+      )
+    }
+
+    // Filtros existentes...
+    if (newFilters.status.length > 0) {
+      filtered = filtered.filter(voucher => newFilters.status.includes(voucher.status))
+    }
+
+    // Filtro de data...
+    if (newFilters.period === 'custom' && newFilters.dateRange.start && newFilters.dateRange.end) {
+      filtered = filtered.filter(voucher => {
+        const voucherDate = new Date(voucher.createdAt)
+        const startDate = startOfDay(newFilters.dateRange.start!)
+        const endDate = endOfDay(newFilters.dateRange.end!)
+        return voucherDate >= startDate && voucherDate <= endDate
+      })
+    } else if (newFilters.period !== 'all' && newFilters.period !== 'custom') {
+      const today = new Date()
+      let startDate = new Date()
+
+      switch (newFilters.period) {
+        case '7days':
+          startDate = subDays(today, 7)
+          break
+        case '30days':
+          startDate = subDays(today, 30)
+          break
+        case '90days':
+          startDate = subDays(today, 90)
+          break
+      }
+
+      filtered = filtered.filter(voucher => {
+        const voucherDate = new Date(voucher.createdAt)
+        return voucherDate >= startOfDay(startDate) && voucherDate <= endOfDay(today)
+      })
+    }
+
+    // Atualizar os estados
+    setFilters(newFilters)
+    setTempFilters(newFilters)
+    setFilteredVouchers(filtered)
+    setIsFilterOpen(false)
+    setCurrentPage(1)
   }
 
   const performCheckIn = async (code: string) => {
@@ -124,21 +450,6 @@ export default function ReportsPage() {
         return "bg-red-500/10 text-red-500"
       default:
         return "bg-gray-500/10 text-gray-500"
-    }
-  }
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case "pending":
-        return "Pendente"
-      case "verified":
-        return "Verificado"
-      case "used":
-        return "Utilizado"
-      case "expired":
-        return "Expirado"
-      default:
-        return "Desconhecido"
     }
   }
 
@@ -188,11 +499,11 @@ export default function ReportsPage() {
     </Card>
   )
 
-  const KanbanView = () => {
+  const KanbanView = ({ vouchers }: { vouchers: Voucher[] }) => {
     const columns = ["pending", "verified", "used", "expired"]
     
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="flex overflow-y-auto gap-4 flex-nowrap">
         {columns.map(status => (
           <div key={status} className="space-y-4">
             <div className="flex items-center justify-between">
@@ -216,10 +527,70 @@ export default function ReportsPage() {
     )
   }
 
+  const hasActiveFilters = (filters: FilterOptions) => {
+    return (
+      filters.status.length > 0 ||
+      filters.period !== 'all' ||
+      filters.name !== '' ||
+      filters.email !== '' ||
+      filters.phone !== '' ||
+      filters.partner !== '' ||
+      filters.establishment !== '' ||
+      filters.code !== ''
+    )
+  }
+
+  const clearFilters = () => {
+    const defaultFilters = {
+      status: [],
+      dateRange: {
+        start: null,
+        end: null
+      },
+      period: 'all',
+      name: '',
+      email: '',
+      phone: '',
+      partner: '',
+      establishment: '',
+      code: ''
+    }
+    
+    setFilters(defaultFilters)
+    setTempFilters(defaultFilters)
+    setFilteredVouchers(vouchers)
+    setCurrentPage(1)
+  }
+
+  // Adicione esta função de busca global
+  const performGlobalSearch = (searchTerm: string) => {
+    if (!searchTerm.trim()) {
+      // Se a busca estiver vazia, aplicar apenas os filtros ativos
+      applyFilters(filters)
+      return
+    }
+
+    const search = searchTerm.toLowerCase().trim()
+    const filtered = filteredVouchers.filter(voucher => {
+      // Busca em todos os campos relevantes
+      return (
+        voucher.code.toLowerCase().includes(search) ||
+        voucher.member.name.toLowerCase().includes(search) ||
+        (voucher.member.email || '').toLowerCase().includes(search) ||
+        (voucher.member.phone || '').toLowerCase().includes(search) ||
+        voucher.establishment.name.toLowerCase().includes(search) ||
+        (voucher.partner?.name || '').toLowerCase().includes(search)
+      )
+    })
+
+    setFilteredVouchers(filtered)
+    setCurrentPage(1)
+  }
+
   if (loading) {
     return (
       <div className="container py-6">
-        <h1 className="text-2xl font-bold text-[#e5e2e9] mb-6">Relatórios</h1>
+        <h1 className="text-2xl font-bold text-[#e5e2e9] mb-6">Todos os vouchers gerados</h1>
         <div className="text-[#7a7b9f]">Carregando...</div>
       </div>
     )
@@ -228,69 +599,145 @@ export default function ReportsPage() {
   return (
     <div className="container py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-[#e5e2e9]">Relatórios</h1>
-        <div className="flex items-center space-x-2">
-          <Button
-            variant="outline"
-            className="border-[#1a1b2d] text-[#7a7b9f] hover:bg-[#1a1b2d]"
-            onClick={() => setViewMode(viewMode === "list" ? "kanban" : "list")}
-          >
-            {viewMode === "list" ? <Columns3 className="h-4 w-4" /> : <List className="h-4 w-4" />}
-          </Button>
-          <Button
-            variant="outline"
-            className="border-[#1a1b2d] text-[#7a7b9f] hover:bg-[#1a1b2d]"
-          >
-            <Filter className="h-4 w-4" />
-          </Button>
+        <h1 className="text-2xl font-bold text-[#e5e2e9]">Relatório de Vouchers</h1>
+        
+        <div className="flex items-center space-x-4">
+          {/* Campo de busca */}
+          <div className="relative w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7a7b9f]" />
+            <Input
+              type="text"
+              placeholder="Buscar em todos os campos..."
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                performGlobalSearch(e.target.value)
+              }}
+              className="pl-10 bg-[#1a1b2d] border-[#282942] text-[#e5e2e9] w-full"
+            />
+            {searchTerm && (
+              <Button
+                variant="ghost"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-5 w-5 p-0 text-[#7a7b9f] hover:text-[#e5e2e9]"
+                onClick={() => {
+                  setSearchTerm('')
+                  performGlobalSearch('')
+                }}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
+          </div>
+
+          {/* Botões existentes */}
+          <div className="flex items-center space-x-2">
+            <Button
+              variant="outline"
+              className="border-[#1a1b2d] text-[#7a7b9f] hover:bg-[#1a1b2d]"
+              onClick={() => setViewMode(viewMode === "kanban" ? "list" : "kanban")}
+            >
+              {viewMode === "kanban" ? <List className="h-4 w-4" /> : <Columns3 className="h-4 w-4" />}
+            </Button>
+            
+            {hasActiveFilters(filters) && (
+              <Button
+                variant="outline"
+                className="border-[#1a1b2d] text-red-500 hover:bg-red-500/10 space-x-2"
+                onClick={clearFilters}
+              >
+                <X className="h-4 w-4" />
+                <span>Limpar Filtros</span>
+              </Button>
+            )}
+            
+            <Button
+              variant="outline"
+              className="border-[#1a1b2d] text-[#7a7b9f] hover:bg-[#1a1b2d]"
+              onClick={() => setIsFilterOpen(true)}
+            >
+              <Filter className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
       </div>
 
-      {viewMode === "list" ? (
-        <Card className="bg-[#131320] border-[#1a1b2d]">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Código</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Data de Criação</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {vouchers.map((voucher) => (
-                <TableRow key={voucher.id}>
-                  <TableCell>{voucher.code}</TableCell>
-                  <TableCell>{voucher.member.name}</TableCell>
-                  <TableCell>
-                    {formatFirebaseDate(voucher.createdAt)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(voucher.status)}>
-                      {getStatusText(voucher.status)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      variant="ghost"
-                      className="text-[#7a7b9f] hover:text-[#e5e2e9]"
-                      onClick={() => {
-                        setSelectedVoucher(voucher)
-                        setIsDetailsOpen(true)
-                      }}
-                    >
-                      Detalhes
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Card>
+      {viewMode === "kanban" ? (
+        <KanbanView vouchers={filteredVouchers} />
       ) : (
-        <KanbanView />
+        <div className="space-y-4">
+          <Card className="bg-[#131320] border-[#1a1b2d]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Cliente</TableHead>
+                  <TableHead>Data de Criação</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {currentVouchers.map((voucher) => (
+                  <TableRow key={voucher.id}>
+                    <TableCell>{voucher.code}</TableCell>
+                    <TableCell>{voucher.member.name}</TableCell>
+                    <TableCell>
+                      {formatFirebaseDate(voucher.createdAt)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge className={getStatusColor(voucher.status)}>
+                        {getStatusText(voucher.status)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        className="text-[#7a7b9f] hover:text-[#e5e2e9]"
+                        onClick={() => {
+                          setSelectedVoucher(voucher)
+                          setIsDetailsOpen(true)
+                        }}
+                      >
+                        Detalhes
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+
+          {/* Paginação */}
+          <div className="flex justify-center items-center space-x-4">
+            <Button
+              variant="outline"
+              className="border-[#1a1b2d] text-[#7a7b9f]"
+              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-[#7a7b9f]">
+              Página {currentPage} de {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              className="border-[#1a1b2d] text-[#7a7b9f]"
+              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
       )}
+
+      <FilterSidebar
+        isOpen={isFilterOpen}
+        onOpenChange={setIsFilterOpen}
+        initialFilters={filters}
+        onApplyFilters={applyFilters}
+      />
 
       <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
         <SheetContent className="bg-[#131320] border-l-[#1a1b2d]">
