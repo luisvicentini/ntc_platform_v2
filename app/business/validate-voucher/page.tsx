@@ -5,16 +5,20 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { toast } from "sonner"
+import { Badge } from "@/components/ui/badge"
+import { VoucherTicket } from "@/app/components/voucher-ticket"
 
 interface VoucherValidationResult {
   isValid: boolean
-  status: "valid" | "invalid" | "expired" | "used"
+  status: "valid" | "invalid" | "expired" | "used" | "verified"
   customerName?: string
   customerPhone?: string
+  customerAvatar?: string
   checkInDate?: string
   discount?: string
   conditions?: string
   establishmentImage?: string
+  code?: string
 }
 
 // Simulated validation function - in a real app this would call your API
@@ -27,12 +31,13 @@ const validateVoucherCode = (code: string): VoucherValidationResult => {
         status: "valid",
         customerName: "Luis Henrique Vicentini",
         customerPhone: "+55 (19) 98430-5001",
+        customerAvatar: "/placeholder.svg?height=200&width=300",
         checkInDate: new Date().toLocaleDateString(),
         discount: "15% de desconto em qualquer prato",
         conditions: "Válido apenas para consumo no local. Não cumulativo com outras promoções.",
         establishmentImage: "/placeholder.svg?height=200&width=300",
       }
-    case "654321":
+    case "222222":
       return {
         isValid: false,
         status: "expired",
@@ -47,6 +52,36 @@ const validateVoucherCode = (code: string): VoucherValidationResult => {
         isValid: false,
         status: "invalid",
       }
+  }
+}
+
+const getStatusText = (status: string) => {
+  switch (status) {
+    case "pending":
+      return "Pendente"
+    case "verified":
+      return "Verificado"
+    case "used":
+      return "Utilizado"
+    case "expired":
+      return "Expirado"
+    default:
+      return "Status desconhecido"
+  }
+}
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case "pending":
+      return "bg-yellow-500/10 text-yellow-500"
+    case "verified":
+      return "bg-blue-500/10 text-blue-500"
+    case "used":
+      return "bg-emerald-500/10 text-emerald-500"
+    case "expired":
+      return "bg-red-500/10 text-red-500"
+    default:
+      return "bg-gray-500/10 text-gray-500"
   }
 }
 
@@ -119,9 +154,11 @@ export default function ValidateVoucherPage() {
       if (data.valid) {
         setValidationResult({
           isValid: true,
-          status: "valid",
+          status: "verified",
+          code: code,
           customerName: data.voucher.member.name,
           customerPhone: data.voucher.member.phone || "Não informado",
+          customerAvatar: data.voucher.member.photoURL,
           checkInDate: new Date().toLocaleDateString(),
           discount: data.voucher.discount,
           conditions: data.voucher.conditions || "Sem condições especiais",
@@ -164,35 +201,32 @@ export default function ValidateVoucherPage() {
   }
 
   const performCheckIn = async () => {
-    try {
-      const code = voucherCode.join("")
-      const sessionToken = localStorage.getItem("sessionToken")
+    if (!validationResult?.code) return
 
+    try {
+      const sessionToken = localStorage.getItem("sessionToken")
       const response = await fetch("/api/vouchers/validate", {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
           "x-session-token": sessionToken || "",
         },
-        body: JSON.stringify({ code }),
+        body: JSON.stringify({ code: validationResult.code }),
       })
 
-      if (!response.ok) {
-        throw new Error("Erro ao realizar check-in")
-      }
+      const data = await response.json()
 
-      setCheckInDone(true)
-      toast.success("Check-in realizado com sucesso!")
+      if (data.success) {
+        setCheckInDone(true)
+        toast.success("Check-in realizado com sucesso!")
+        setValidationResult(prev => prev ? { ...prev, status: "used" } : null)
+      } else {
+        toast.error(data.error || "Erro ao realizar check-in")
+      }
     } catch (error) {
       console.error("Erro ao realizar check-in:", error)
       toast.error("Erro ao realizar check-in")
     }
-  }
-
-  const resetForm = () => {
-    setVoucherCode(["", "", "", "", "", ""])
-    setValidationResult(null)
-    setCheckInDone(false)
   }
 
   const renderValidationResult = () => {
@@ -235,7 +269,11 @@ export default function ValidateVoucherPage() {
               ) : (
                 <div className="space-y-4">
                   <p className="text-[#2dd4bf] text-center font-semibold">Check-in Confirmado</p>
-                  <Button onClick={resetForm} className="w-full bg-[#a85fdd] hover:bg-[#a85fdd]/80 text-white">
+                  <Button onClick={() => {
+                    setVoucherCode(["", "", "", "", "", ""])
+                    setValidationResult(null)
+                    setCheckInDone(false)
+                  }} className="w-full bg-[#a85fdd] hover:bg-[#a85fdd]/80 text-white">
                     Validar outro voucher
                   </Button>
                 </div>
@@ -247,7 +285,11 @@ export default function ValidateVoucherPage() {
         return (
           <div className="p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-center space-y-4 mt-6">
             <p className="text-yellow-500 text-xl">Este voucher está expirado!</p>
-            <Button onClick={resetForm} className="bg-[#7435db] hover:bg-[#a85fdd] text-white">
+            <Button onClick={() => {
+              setVoucherCode(["", "", "", "", "", ""])
+              setValidationResult(null)
+              setCheckInDone(false)
+            }} className="bg-[#7435db] hover:bg-[#a85fdd] text-white">
               Inserir outro voucher
             </Button>
           </div>
@@ -256,7 +298,11 @@ export default function ValidateVoucherPage() {
         return (
           <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-lg text-center space-y-4 mt-6">
             <p className="text-red-500 text-xl">Este voucher já foi utilizado!</p>
-            <Button onClick={resetForm} className="bg-[#7435db] hover:bg-[#a85fdd] text-white">
+            <Button onClick={() => {
+              setVoucherCode(["", "", "", "", "", ""])
+              setValidationResult(null)
+              setCheckInDone(false)
+            }} className="bg-[#7435db] hover:bg-[#a85fdd] text-white">
               Inserir outro voucher
             </Button>
           </div>
@@ -265,7 +311,11 @@ export default function ValidateVoucherPage() {
         return (
           <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-lg text-center space-y-4 mt-6">
             <p className="text-red-500 text-xl">Voucher inválido!</p>
-            <Button onClick={resetForm} className="bg-[#7435db] hover:bg-[#a85fdd] text-white">
+            <Button onClick={() => {
+              setVoucherCode(["", "", "", "", "", ""])
+              setValidationResult(null)
+              setCheckInDone(false)
+            }} className="bg-[#7435db] hover:bg-[#a85fdd] text-white">
               Inserir outro voucher
             </Button>
           </div>
@@ -274,41 +324,75 @@ export default function ValidateVoucherPage() {
   }
 
   return (
-    <div className="container max-w-2xl mx-auto py-10 px-4 min-h-screen flex flex-col justify-center">
-      <Card className="bg-[#1a1b2d] border-[#a85fdd]">
-        <CardContent className="p-6 space-y-6">
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold text-[#e5e2e9]">Validar Voucher</h1>
-            <p className="text-xl text-[#b5b6c9]">Digite o código do cupom para validar e fazer Check-in</p>
-          </div>
+    <div className="container py-6">
+      <h1 className="text-2xl font-bold text-[#e5e2e9] mb-6">Validar Voucher</h1>
 
-          <div className="flex justify-center gap-2">
-            {voucherCode.map((digit, index) => (
-              <Input
-                key={index}
-                id={`code-${index}`}
-                type="text"
-                value={digit}
-                onChange={(e) => handleInputChange(index, e.target.value)}
-                onKeyDown={(e) => handleKeyDown(index, e)}
-                onPaste={handlePaste}
-                className="w-16 h-16 text-center text-3xl bg-[#0f0f1a] text-[#e5e2e9] border-[#a85fdd] focus:ring-[#a85fdd] focus:border-[#a85fdd]"
-                maxLength={index === 0 ? 6 : 1}
-              />
-            ))}
-          </div>
+      <Card className="bg-[#131320] border-[#1a1b2d] p-6">
+        <h2 className="text-xl text-[#e5e2e9] mb-4">
+          Digite o código do cupom para validar e fazer Check-in
+        </h2>
 
-          {renderValidationResult()}
+        <div className="flex justify-center space-x-2 mb-6">
+          {voucherCode.map((digit, index) => (
+            <Input
+              key={index}
+              id={`code-${index}`}
+              type="text"
+              value={digit}
+              onChange={(e) => handleInputChange(index, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(index, e)}
+              onPaste={handlePaste}
+              className="w-16 h-16 text-center text-3xl bg-[#0f0f1a] text-[#e5e2e9] border-[#a85fdd] focus:ring-[#a85fdd] focus:border-[#a85fdd]"
+              maxLength={index === 0 ? 6 : 1}
+            />
+          ))}
+        </div>
 
-          {!validationResult && (
+        {!validationResult && (
+          <Button
+            onClick={validateVoucher}
+            className="w-full bg-[#7435db] hover:bg-[#6229c5]"
+            disabled={voucherCode.some(v => !v)}
+          >
+            Verificar
+          </Button>
+        )}
+
+        {validationResult && (
+          <div className="space-y-6">
+            <VoucherTicket
+              customerName={validationResult.customerName}
+              customerPhone={validationResult.customerPhone}
+              customerAvatar={validationResult.customerAvatar}
+              checkInDate={validationResult.checkInDate}
+              discount={validationResult.discount}
+              conditions={validationResult.conditions}
+              status={validationResult.status}
+              establishmentImage={validationResult.establishmentImage}
+            />
+
+            {validationResult.status === "verified" && !checkInDone && (
+              <Button
+                onClick={performCheckIn}
+                className="w-full bg-emerald-600 hover:bg-emerald-700"
+              >
+                Confirmar Check-in
+              </Button>
+            )}
+
             <Button
-              onClick={validateVoucher}
-              className="w-full bg-[#a85fdd] hover:bg-[#a85fdd]/80 text-white text-2xl py-8"
+              onClick={() => {
+                setVoucherCode(["", "", "", "", "", ""])
+                setValidationResult(null)
+                setCheckInDone(false)
+              }}
+              variant="outline"
+              className="w-full border-[#1a1b2d] text-[#7a7b9f] hover:bg-[#1a1b2d]"
             >
-              Validar Voucher
+              Inserir outro voucher
             </Button>
-          )}
-        </CardContent>
+          </div>
+        )}
       </Card>
     </div>
   )

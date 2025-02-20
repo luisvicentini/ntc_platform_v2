@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, getDocs, query, where, doc, updateDoc, getDoc } from "firebase/firestore"
+import { collection, getDocs, query, where, doc, updateDoc, getDoc, Timestamp } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
 import type { Voucher } from "@/types/voucher"
@@ -30,27 +30,24 @@ export async function POST(request: Request) {
     // Buscar voucher pelo código
     const vouchersRef = collection(db, "vouchers")
     const voucherQuery = query(vouchersRef, where("code", "==", code))
-    const voucherDoc = await getDocs(voucherQuery)
+    const voucherSnap = await getDocs(voucherQuery)
 
-    if (voucherDoc.empty) {
+    if (voucherSnap.empty) {
       return NextResponse.json({
         valid: false,
         message: "Voucher não encontrado"
       })
     }
 
-    const voucher = { id: voucherDoc.docs[0].id, ...voucherDoc.docs[0].data() }
-
-    // Verificar se o voucher pertence ao estabelecimento do usuário business
-    if (voucher.businessId !== session.uid) {
-      return NextResponse.json({
-        valid: false,
-        message: "Este voucher não pertence ao seu estabelecimento"
-      })
-    }
+    const voucherDoc = voucherSnap.docs[0]
+    const voucher = { id: voucherDoc.id, ...voucherDoc.data() }
 
     // Verificar se o voucher está expirado
-    if (new Date(voucher.expiresAt) < new Date()) {
+    const expirationTime = voucher.expiresAt?.seconds ? 
+      new Date(voucher.expiresAt.seconds * 1000) : 
+      new Date(voucher.expiresAt)
+
+    if (expirationTime < new Date()) {
       return NextResponse.json({
         valid: false,
         message: "Este voucher está expirado"
@@ -66,23 +63,23 @@ export async function POST(request: Request) {
     }
 
     // Buscar dados do membro
-    const membersRef = collection(db, "users")
-    const memberDoc = await getDocs(query(membersRef, where("__name__", "==", voucher.memberId)))
+    const memberRef = doc(db, "users", voucher.memberId)
+    const memberSnap = await getDoc(memberRef)
 
-    if (memberDoc.empty) {
+    if (!memberSnap.exists()) {
       return NextResponse.json({
         valid: false,
         message: "Membro não encontrado"
       })
     }
 
-    const memberData = memberDoc.docs[0].data()
+    const memberData = memberSnap.data()
 
-    // Atualizar status do voucher para usado
-    await updateDoc(doc(db, "vouchers", voucher.id), {
-      status: "used",
-      usedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
+    // Atualizar status para verificado
+    await updateDoc(doc(db, "vouchers", voucherDoc.id), {
+      status: "verified",
+      verifiedAt: Timestamp.now(),
+      verifiedBy: session.uid
     })
 
     return NextResponse.json({
@@ -95,6 +92,7 @@ export async function POST(request: Request) {
         }
       }
     })
+
   } catch (error) {
     console.error("Erro ao validar voucher:", error)
     return NextResponse.json(
@@ -104,7 +102,7 @@ export async function POST(request: Request) {
   }
 }
 
-// Rota para marcar voucher como utilizado
+// Rota para realizar o check-in
 export async function PATCH(request: Request) {
   try {
     const sessionToken = request.headers.get("x-session-token")
@@ -120,7 +118,7 @@ export async function PATCH(request: Request) {
 
     if (session.userType !== "business") {
       return NextResponse.json(
-        { error: "Apenas estabelecimentos podem validar vouchers" },
+        { error: "Apenas estabelecimentos podem realizar check-in" },
         { status: 403 }
       )
     }
@@ -130,41 +128,30 @@ export async function PATCH(request: Request) {
     // Buscar voucher pelo código
     const vouchersRef = collection(db, "vouchers")
     const voucherQuery = query(vouchersRef, where("code", "==", code))
-    const voucherSnapshot = await getDocs(voucherQuery)
+    const voucherSnap = await getDocs(voucherQuery)
 
-    if (voucherSnapshot.empty) {
+    if (voucherSnap.empty) {
       return NextResponse.json(
         { error: "Voucher não encontrado" },
         { status: 404 }
       )
     }
 
-    const voucherDoc = voucherSnapshot.docs[0]
+    const voucherDoc = voucherSnap.docs[0]
     const voucher = voucherDoc.data()
 
-    // Verificar se o voucher já foi usado
-    if (voucher.status === "used") {
+    if (voucher.status !== "verified") {
       return NextResponse.json(
-        { error: "Este voucher já foi utilizado" },
+        { error: "Voucher não foi verificado" },
         { status: 400 }
       )
     }
 
-    // Verificar se o voucher está expirado
-    if (new Date(voucher.expiresAt) < new Date()) {
-      return NextResponse.json(
-        { error: "Este voucher está expirado" },
-        { status: 400 }
-      )
-    }
-
-    // Marcar voucher como utilizado
-    const now = new Date()
-    await updateDoc(doc(vouchersRef, voucherDoc.id), {
+    // Realizar check-in
+    await updateDoc(doc(db, "vouchers", voucherDoc.id), {
       status: "used",
-      usedAt: now.toISOString(),
-      usedBy: session.uid, // ID do estabelecimento que realizou o check-in
-      updatedAt: now.toISOString()
+      usedAt: Timestamp.now(),
+      usedBy: session.uid
     })
 
     return NextResponse.json({
