@@ -30,7 +30,7 @@ export const useEstablishment = () => {
 export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [establishments, setEstablishments] = useState<(Establishment | AvailableEstablishment)[]>([])
   const [loading, setLoading] = useState(true)
-  const { user } = useAuth()
+  const auth = useAuth()
 
   const refreshEstablishments = useCallback(async () => {
     try {
@@ -112,27 +112,41 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
 
   const generateVoucher = useCallback(async (establishmentId: string) => {
     try {
+      if (!auth.user?.userType || auth.user.userType !== 'member') {
+        console.log('Auth state:', {
+          userType: auth.user?.userType,
+          uid: auth.user?.uid
+        })
+        throw new Error("Acesso não autorizado")
+      }
+
       const response = await fetch("/api/vouchers/generate", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify({ establishmentId }),
-        credentials: "include"
+        body: JSON.stringify({ 
+          establishmentId,
+          uid: auth.user.uid,
+          userType: auth.user.userType
+        })
       })
 
+      const data = await response.json()
+      
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Erro ao gerar voucher")
+        throw new Error(data.error || "Erro ao gerar voucher")
       }
 
-      const data = await response.json()
+      toast.success(`Voucher gerado: ${data.code}`)
       return data.code
+
     } catch (error: any) {
-      console.error("Erro ao gerar voucher:", error)
+      console.error('Erro na geração:', error)
+      toast.error(error.message)
       throw error
     }
-  }, [])
+  }, [auth])
 
   const canGenerateVoucher = useCallback(
     async (establishmentId: string, userId: string): Promise<boolean> => {

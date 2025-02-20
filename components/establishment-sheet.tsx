@@ -11,6 +11,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { FeaturedBadge } from "@/components/ui/featured-badge"
 import type { AvailableEstablishment } from "@/types/establishment"
 import { toast } from "sonner"
+import { useCountdown } from "@/hooks/use-countdown"
 
 interface EstablishmentSheetProps {
   establishment: AvailableEstablishment | null
@@ -18,48 +19,70 @@ interface EstablishmentSheetProps {
   onClose: () => void
 }
 
+type VoucherState = {
+  code: string;
+  expiresAt: Date;
+}
+
 export function EstablishmentSheet({ establishment, isOpen, onClose }: EstablishmentSheetProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
-  const [voucherCode, setVoucherCode] = useState<string | null>(null)
-  const [timeLeft, setTimeLeft] = useState<string | null>(null)
-  const [canGenerate, setCanGenerate] = useState(false)
+  const { generateVoucher } = useEstablishment()
+  const [voucherStates, setVoucherStates] = useState<Record<string, VoucherState>>({})
+  const { timeLeft, startCountdown } = useCountdown(24 * 60 * 60)
   const { addNotification } = useNotification()
-  const { generateVoucher, canGenerateVoucher, getNextVoucherTime } = useEstablishment()
   const { user } = useAuth()
-
-  useEffect(() => {
-    setVoucherCode(null)
-  }, [])
 
   useEffect(() => {
     if (!establishment || !user) return
 
     const checkCooldown = async () => {
-      const nextVoucherTime = await getNextVoucherTime(establishment.id, user.uid)
-      if (!nextVoucherTime) {
-        setTimeLeft(null)
-        setCanGenerate(true)
-        return
-      }
+      try {
+        const response = await fetch(`/api/vouchers/cooldown?establishmentId=${establishment.id}`, {
+          credentials: "include"
+        })
 
-      const now = new Date()
-      if (now >= nextVoucherTime) {
-        setTimeLeft(null)
-        setCanGenerate(true)
-        return
-      }
+        if (!response.ok) return
 
-      const diff = nextVoucherTime.getTime() - now.getTime()
-      const hours = Math.floor(diff / (1000 * 60 * 60))
-      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-      setTimeLeft(`${hours}h${minutes.toString().padStart(2, "0")}`)
-      setCanGenerate(false)
+        const data = await response.json()
+        if (!data.canGenerate && data.nextAvailable) {
+          const nextTime = new Date(data.nextAvailable)
+          const now = new Date()
+          const diff = Math.floor((nextTime.getTime() - now.getTime()) / 1000)
+          if (diff > 0) {
+            startCountdown(diff)
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao verificar cooldown:", error)
+      }
     }
 
     checkCooldown()
-    const interval = setInterval(checkCooldown, 1000)
-    return () => clearInterval(interval)
-  }, [establishment, user, getNextVoucherTime])
+  }, [establishment, user, startCountdown])
+
+  useEffect(() => {
+    if (!establishment) return
+
+    const savedState = localStorage.getItem(`voucher_${establishment.id}`)
+    if (savedState) {
+      try {
+        const { code, expiresAt } = JSON.parse(savedState)
+        if (new Date(expiresAt) > new Date()) {
+          setVoucherStates(prev => ({
+            ...prev,
+            [establishment.id]: { code, expiresAt: new Date(expiresAt) }
+          }))
+          const secondsLeft = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)
+          startCountdown(secondsLeft)
+        } else {
+          localStorage.removeItem(`voucher_${establishment.id}`)
+        }
+      } catch (error) {
+        console.error("Erro ao carregar estado do voucher:", error)
+        localStorage.removeItem(`voucher_${establishment.id}`)
+      }
+    }
+  }, [establishment])
 
   const handleGenerateVoucher = async () => {
     if (!establishment) return
@@ -67,11 +90,23 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
     try {
       const code = await generateVoucher(establishment.id)
       if (code) {
-        setVoucherCode(code)
-        toast.success("Voucher gerado com sucesso!")
+        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+        const newState = { code, expiresAt }
+        
+        setVoucherStates(prev => ({
+          ...prev,
+          [establishment.id]: newState
+        }))
+        
+        localStorage.setItem(
+          `voucher_${establishment.id}`,
+          JSON.stringify(newState)
+        )
+        
+        startCountdown(24 * 60 * 60)
       }
     } catch (error: any) {
-      toast.error(error.message || "Erro ao gerar voucher")
+      toast.error(error.message)
     }
   }
 
@@ -87,7 +122,16 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
     }
   }
 
-  if (!establishment || !user) return null
+  const formatTimeLeft = () => {
+    const hours = Math.floor(timeLeft / 3600)
+    const minutes = Math.floor((timeLeft % 3600) / 60)
+    const seconds = timeLeft % 60
+    return `${hours}h ${minutes}m ${seconds}s`
+  }
+
+  if (!establishment) return null
+
+  const currentVoucher = establishment.id ? voucherStates[establishment.id] : null
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
@@ -179,27 +223,30 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             <p className="text-[#7a7b9f]">Limite de uso: {establishment.usageLimit}</p>
           </div>
 
-          {voucherCode && (
+          {currentVoucher && (
             <Card className="bg-[#1a1b2d] border-[#a85fdd]">
               <CardContent className="p-6 text-center">
                 <h3 className="text-lg font-semibold text-[#e1e1e6] mb-2">Seu Voucher</h3>
-                <p className="text-3xl font-bold text-[#a85fdd]">{voucherCode}</p>
+                <p className="text-3xl font-bold text-[#a85fdd]">{currentVoucher.code}</p>
+                {timeLeft > 0 && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Expira em: {formatTimeLeft()}
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}
         </div>
 
         <div className="p-6 border-t border-[#1a1b2d] mt-auto">
-          {!voucherCode && (
+          {!currentVoucher && (
             <div className="space-y-2">
-              <Button
-                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold"
+              <Button 
                 onClick={handleGenerateVoucher}
-                disabled={!canGenerate}
+                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold"
               >
-                RESGATAR VOUCHER
+                Gerar Voucher
               </Button>
-              {timeLeft && <p className="text-center text-[#b5b6c9]">Cupom disponível novamente em: {timeLeft}</p>}
             </div>
           )}
         </div>

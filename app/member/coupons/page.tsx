@@ -5,10 +5,12 @@ import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Ticket, MapPin, Clock } from "lucide-react"
 import type { Voucher } from "@/types/voucher"
+import { Timestamp } from "firebase/firestore"
 
 export default function CouponsPage() {
   const [vouchers, setVouchers] = useState<(Voucher & { establishment: any })[]>([])
   const [loading, setLoading] = useState(true)
+  const [timeLeft, setTimeLeft] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const fetchVouchers = async () => {
@@ -22,7 +24,8 @@ export default function CouponsPage() {
         }
 
         const data = await response.json()
-        setVouchers(data)
+        const validVouchers = data.filter((v: any) => v.establishment)
+        setVouchers(validVouchers)
       } catch (error) {
         console.error("Erro ao carregar vouchers:", error)
       } finally {
@@ -32,6 +35,49 @@ export default function CouponsPage() {
 
     fetchVouchers()
   }, [])
+
+  // Atualizar countdown para cada voucher
+  useEffect(() => {
+    const calculateTimeLeft = (expiresAt: any) => {
+      // Converter Timestamp do Firestore para milissegundos
+      const expirationTime = expiresAt?.seconds ? 
+        new Date(expiresAt.seconds * 1000).getTime() : 
+        new Date(expiresAt).getTime()
+      
+      const diff = expirationTime - Date.now()
+      
+      if (diff <= 0) return "Expirado"
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60))
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      
+      return `${hours}h ${minutes}m`
+    }
+
+    const timer = setInterval(() => {
+      const newTimeLeft: Record<string, string> = {}
+      
+      vouchers.forEach(voucher => {
+        if (voucher.expiresAt) {
+          newTimeLeft[voucher.id] = calculateTimeLeft(voucher.expiresAt)
+        }
+      })
+      
+      setTimeLeft(newTimeLeft)
+    }, 1000 * 60) // Atualiza a cada minuto
+
+    // Calcular tempo inicial
+    vouchers.forEach(voucher => {
+      if (voucher.expiresAt) {
+        setTimeLeft(prev => ({
+          ...prev,
+          [voucher.id]: calculateTimeLeft(voucher.expiresAt)
+        }))
+      }
+    })
+
+    return () => clearInterval(timer)
+  }, [vouchers])
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -87,7 +133,9 @@ export default function CouponsPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 <Ticket className="h-5 w-5 text-emerald-500" />
-                <h3 className="font-semibold text-[#e5e2e9]">{voucher.establishment.name}</h3>
+                <h3 className="font-semibold text-[#e5e2e9]">
+                  {voucher.establishment?.name || "Estabelecimento não disponível"}
+                </h3>
               </div>
               <Badge className={getStatusColor(voucher.status)}>
                 {getStatusText(voucher.status)}
@@ -97,11 +145,16 @@ export default function CouponsPage() {
             <div className="space-y-2">
               <div className="flex items-center text-[#7a7b9f] space-x-2">
                 <MapPin className="h-4 w-4" />
-                <span>{voucher.establishment.address.city}/{voucher.establishment.address.state}</span>
+                <span>
+                  {voucher.establishment?.address?.city || "Cidade"}/
+                  {voucher.establishment?.address?.state || "Estado"}
+                </span>
               </div>
               <div className="flex items-center text-[#7a7b9f] space-x-2">
                 <Clock className="h-4 w-4" />
-                <span>Expira em: {new Date(voucher.expiresAt).toLocaleDateString("pt-BR")}</span>
+                <span>
+                  Expira em: {timeLeft[voucher.id] || "Calculando..."}
+                </span>
               </div>
             </div>
 
@@ -114,7 +167,9 @@ export default function CouponsPage() {
 
             <div className="mt-4">
               <p className="text-sm text-[#7a7b9f]">Desconto:</p>
-              <p className="text-lg font-semibold text-emerald-500">{voucher.establishment.discountValue}</p>
+              <p className="text-lg font-semibold text-emerald-500">
+                {voucher.establishment?.discountValue || "Não disponível"}
+              </p>
             </div>
 
             {voucher.status === "used" && voucher.usedAt && (
