@@ -4,8 +4,9 @@ import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
+import { ChevronRight } from "lucide-react"
 import type { Establishment } from "@/types/establishment"
 
 interface EstablishmentLinkModalProps {
@@ -21,8 +22,9 @@ export function EstablishmentLinkModal({
   userId,
   userName
 }: EstablishmentLinkModalProps) {
-  const [establishments, setEstablishments] = useState<Establishment[]>([])
-  const [selectedEstablishment, setSelectedEstablishment] = useState<string>("")
+  const [availableEstablishments, setAvailableEstablishments] = useState<Establishment[]>([])
+  const [selectedEstablishments, setSelectedEstablishments] = useState<Establishment[]>([])
+  const [selectedToAdd, setSelectedToAdd] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
 
   const loadData = useCallback(async () => {
@@ -31,21 +33,45 @@ export function EstablishmentLinkModal({
     setLoading(true)
     try {
       // Carregar estabelecimentos disponíveis
-      const response = await fetch("/api/establishments/available")
+      const response = await fetch("/api/establishments/available", {
+        headers: {
+          "x-session-token": localStorage.getItem("sessionToken") || "",
+        },
+      })
       if (!response.ok) {
         throw new Error("Erro ao carregar estabelecimentos")
       }
-      const data = await response.json()
-      setEstablishments(data)
-
-      // Carregar vínculo atual
-      const userResponse = await fetch(`/api/users/${userId}`)
-      if (userResponse.ok) {
-        const userData = await userResponse.json()
-        if (userData.establishmentId) {
-          setSelectedEstablishment(userData.establishmentId)
-        }
+      const availableData = await response.json()
+      
+      // Carregar dados do usuário
+      const userResponse = await fetch(`/api/users/${userId}`, {
+        headers: {
+          "x-session-token": localStorage.getItem("sessionToken") || "",
+        },
+      })
+      
+      if (!userResponse.ok) {
+        throw new Error("Erro ao carregar dados do usuário")
       }
+      
+      const userData = await userResponse.json()
+      
+      // Inicializar todos os estabelecimentos como disponíveis
+      let availableEstablishments = [...availableData]
+      let selectedEstabs: typeof availableData = []
+
+      // Se o usuário já tem estabelecimentos vinculados
+      if (userData.establishmentIds?.length > 0 || userData.establishmentId) {
+        const linkedIds = userData.establishmentIds || [userData.establishmentId]
+        
+        // Separar estabelecimentos vinculados e disponíveis
+        selectedEstabs = availableData.filter(est => linkedIds.includes(est.id))
+        availableEstablishments = availableData.filter(est => !linkedIds.includes(est.id))
+      }
+
+      setAvailableEstablishments(availableEstablishments)
+      setSelectedEstablishments(selectedEstabs)
+
     } catch (error) {
       console.error("Erro ao carregar dados:", error)
       toast.error("Erro ao carregar dados")
@@ -60,84 +86,173 @@ export function EstablishmentLinkModal({
 
   useEffect(() => {
     if (!isOpen) {
-      setSelectedEstablishment("")
-      setEstablishments([])
+      setSelectedToAdd([])
+      setSelectedEstablishments([])
     }
   }, [isOpen])
 
-  const handleSave = async () => {
+  const handleAddSelected = () => {
+    const establishmentsToAdd = availableEstablishments.filter(est => 
+      selectedToAdd.includes(est.id)
+    )
+    setSelectedEstablishments(prev => [...prev, ...establishmentsToAdd])
+    setSelectedToAdd([])
+  }
+
+  const handleRemoveEstablishment = async (establishmentId: string) => {
     try {
-      const response = await fetch(`/api/users/${userId}/establishment/`, {
+      setLoading(true)
+      
+      // Remover o estabelecimento da lista atual
+      const updatedSelected = selectedEstablishments.filter(est => est.id !== establishmentId)
+      
+      // Adicionar o estabelecimento removido de volta à lista de disponíveis
+      const removedEstablishment = selectedEstablishments.find(est => est.id === establishmentId)
+      if (removedEstablishment) {
+        setAvailableEstablishments(prev => [...prev, removedEstablishment])
+      }
+
+      // Atualizar no banco de dados
+      const response = await fetch(`/api/users/${userId}/establishment`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "x-session-token": localStorage.getItem("sessionToken") || "",
         },
         body: JSON.stringify({
-          establishmentId: selectedEstablishment
+          establishmentIds: updatedSelected.map(est => est.id),
+          removeAll: updatedSelected.length === 0 // Indica se está removendo todos
         }),
-        credentials: "include"
       })
 
       if (!response.ok) {
-        throw new Error("Erro ao vincular estabelecimento")
+        throw new Error("Erro ao remover estabelecimento")
       }
 
-      onClose()
-      toast.success("Estabelecimento vinculado com sucesso")
+      // Atualizar o estado local apenas se a requisição for bem-sucedida
+      setSelectedEstablishments(updatedSelected)
+      toast.success("Estabelecimento removido com sucesso")
+
     } catch (error) {
-      console.error("Erro ao vincular estabelecimento:", error)
-      toast.error("Erro ao vincular estabelecimento")
+      console.error("Erro ao remover estabelecimento:", error)
+      toast.error("Erro ao remover estabelecimento")
+      
+      // Reverter mudanças locais em caso de erro
+      await loadData()
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSave = async () => {
+    try {
+      setLoading(true)
+
+      const response = await fetch(`/api/users/${userId}/establishment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": localStorage.getItem("sessionToken") || "",
+        },
+        body: JSON.stringify({
+          establishmentIds: selectedEstablishments.map(est => est.id)
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error("Erro ao salvar estabelecimentos")
+      }
+
+      toast.success("Estabelecimentos salvos com sucesso")
+      onClose()
+
+    } catch (error) {
+      console.error("Erro ao salvar estabelecimentos:", error)
+      toast.error("Erro ao salvar estabelecimentos")
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#131320] text-[#e5e2e9] border-[#1a1b2d] max-w-lg">
+      <DialogContent className="bg-[#131320] text-[#e5e2e9] border-[#1a1b2d] max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Vincular Estabelecimento - {userName}</DialogTitle>
+          <DialogTitle>Vincular Estabelecimentos - {userName}</DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-6">
-          <div>
-            <Label>Estabelecimento</Label>
-            <div className="mt-2">
-              <Select
-                value={selectedEstablishment}
-                onValueChange={setSelectedEstablishment}
-                disabled={loading}
-              >
-                <SelectTrigger className="bg-[#1a1b2d] border-[#131320]">
-                  <SelectValue placeholder="Selecione um estabelecimento" />
-                </SelectTrigger>
-                <SelectContent className="bg-[#1a1b2d] border-[#131320]">
-                  {establishments.map((establishment) => (
-                    <SelectItem
-                      key={establishment.id}
-                      value={establishment.id}
-                      className="text-[#e5e2e9]"
-                    >
-                      {establishment.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+        <div className="grid grid-cols-2 gap-6">
+          {/* Coluna 1 - Estabelecimentos Disponíveis */}
+          <div className="space-y-4">
+            <Label>Estabelecimentos Disponíveis</Label>
+            <div className="border border-[#1a1b2d] rounded-md p-4 h-[300px] overflow-y-auto">
+              {availableEstablishments
+                .filter(est => !selectedEstablishments.some(s => s.id === est.id))
+                .map((establishment) => (
+                  <div key={establishment.id} className="flex items-center space-x-2 py-2">
+                    <Checkbox
+                      checked={selectedToAdd.includes(establishment.id)}
+                      onCheckedChange={(checked) => {
+                        if (checked) {
+                          setSelectedToAdd(prev => [...prev, establishment.id])
+                        } else {
+                          setSelectedToAdd(prev => prev.filter(id => id !== establishment.id))
+                        }
+                      }}
+                    />
+                    <span>{establishment.name}</span>
+                  </div>
+                ))}
+            </div>
+            <Button
+              onClick={handleAddSelected}
+              disabled={selectedToAdd.length === 0}
+              className="w-full bg-[#1a1b2d] hover:bg-[#282940]"
+            >
+              Adicionar Selecionados <ChevronRight className="ml-2 h-4 w-4" />
+            </Button>
+          </div>
+
+          {/* Coluna 2 - Estabelecimentos Selecionados */}
+          <div className="space-y-4">
+            <Label>Estabelecimentos Selecionados</Label>
+            <div className="border border-[#1a1b2d] rounded-md p-4 h-[300px] overflow-y-auto">
+              {selectedEstablishments.map((establishment) => (
+                <div key={establishment.id} className="flex items-center justify-between py-2">
+                  <span>{establishment.name}</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleRemoveEstablishment(establishment.id)}
+                    disabled={loading}
+                    className="text-red-500 hover:text-red-600"
+                  >
+                    Remover
+                  </Button>
+                </div>
+              ))}
             </div>
           </div>
         </div>
 
         <div className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={onClose} className="bg-[#1a1b2d] border-[#131320]">
+          <Button 
+            variant="outline" 
+            onClick={onClose} 
+            disabled={loading}
+            className="bg-[#1a1b2d] border-[#131320]"
+          >
             Cancelar
           </Button>
           <Button
             onClick={handleSave}
             className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
-            disabled={!selectedEstablishment || loading}
+            disabled={loading}
           >
-            Salvar
+            {loading ? "Salvando..." : "Salvar"}
           </Button>
         </div>
       </DialogContent>
     </Dialog>
   )
-}
+} 

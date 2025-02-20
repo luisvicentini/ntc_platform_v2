@@ -1,8 +1,56 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { doc, updateDoc, deleteDoc } from "firebase/firestore"
+import { doc, updateDoc, deleteDoc, getDoc } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
+
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const sessionToken = request.headers.get("x-session-token")
+    
+    if (!sessionToken) {
+      return NextResponse.json(
+        { error: "Sessão inválida" },
+        { status: 403 }
+      )
+    }
+
+    const session = jwtDecode<SessionToken>(sessionToken)
+
+    if (session.userType !== "master") {
+      return NextResponse.json(
+        { error: "Acesso não autorizado" },
+        { status: 403 }
+      )
+    }
+
+    const userDoc = await getDoc(doc(db, "users", params.id))
+    
+    if (!userDoc.exists()) {
+      return NextResponse.json(
+        { error: "Usuário não encontrado" },
+        { status: 404 }
+      )
+    }
+
+    const userData = userDoc.data()
+
+    return NextResponse.json({
+      id: userDoc.id,
+      ...userData
+    })
+
+  } catch (error) {
+    console.error("Erro ao buscar usuário:", error)
+    return NextResponse.json(
+      { error: "Erro ao buscar usuário" },
+      { status: 500 }
+    )
+  }
+}
 
 export async function PATCH(
   request: Request,

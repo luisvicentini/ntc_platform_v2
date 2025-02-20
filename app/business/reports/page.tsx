@@ -20,26 +20,28 @@ import { format, parseISO } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { toast } from "sonner"
 
+interface Member {
+  id: string
+  name: string
+  phone: string
+  photoURL?: string
+}
+
+interface Establishment {
+  id: string
+  name: string
+}
+
 interface Voucher {
   id: string
   code: string
-  status: string
-  createdAt: string | { seconds: number, nanoseconds: number }
-  expiresAt: string | { seconds: number, nanoseconds: number }
-  usedAt?: string | { seconds: number, nanoseconds: number }
-  discount: string
-  conditions: string
-  member: {
-    id: string
-    name: string
-    phone: string
-    photoURL?: string
-  }
-  establishment: {
-    id: string
-    name: string
-    photoURL?: string
-  }
+  status: "pending" | "verified" | "used" | "expired"
+  createdAt: string
+  expiresAt: string
+  usedAt?: string
+  member: Member
+  establishment: Establishment
+  discount: number
 }
 
 export default function ReportsPage() {
@@ -57,18 +59,25 @@ export default function ReportsPage() {
     try {
       setLoading(true)
       const sessionToken = localStorage.getItem("sessionToken")
-      const response = await fetch("/api/vouchers/business", {
+      console.log("Iniciando busca de vouchers")
+      
+      const response = await fetch("/api/business/reports", {
         headers: {
           "x-session-token": sessionToken || "",
         },
       })
       
+      console.log("Status da resposta:", response.status)
+      
       if (!response.ok) {
-        throw new Error("Erro ao carregar vouchers")
+        throw new Error(`Erro ao carregar vouchers: ${response.status}`)
       }
       
       const data = await response.json()
-      setVouchers(data)
+      console.log("Total de vouchers recebidos:", data.vouchers?.length || 0)
+      console.log("Primeiro voucher:", data.vouchers?.[0])
+      
+      setVouchers(data.vouchers)
     } catch (error) {
       console.error("Erro ao buscar vouchers:", error)
       toast.error("Erro ao carregar vouchers")

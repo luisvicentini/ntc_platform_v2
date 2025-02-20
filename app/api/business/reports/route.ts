@@ -1,98 +1,128 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, query, where, getDocs, Timestamp } from "firebase/firestore"
+import { collection, query, where, getDocs, getDoc, doc } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
-import type { Voucher } from "@/types/voucher"
-
-interface Member {
-  displayName?: string
-  phone?: string
-  partnerId?: string
-}
-
-interface Partner {
-  name?: string
-}
 
 export async function GET(request: Request) {
   try {
     const sessionToken = request.headers.get("x-session-token")
+    
     if (!sessionToken) {
-      return NextResponse.json({ error: "Sessão inválida" }, { status: 403 })
+      return NextResponse.json(
+        { error: "Sessão inválida" },
+        { status: 403 }
+      )
     }
 
     const session = jwtDecode<SessionToken>(sessionToken)
-    if (session.userType !== "business") {
-      return NextResponse.json({ error: "Acesso não autorizado" }, { status: 403 })
+    console.log("[DEBUG] ID do usuário business:", session.uid)
+
+    // Buscar usuário na coleção users usando query
+    const usersRef = collection(db, "users")
+    const userQuery = query(
+      usersRef,
+      where("firebaseUid", "==", session.uid)
+    )
+    
+    const userSnap = await getDocs(userQuery)
+    
+    if (userSnap.empty) {
+      console.log("[DEBUG] Usuário não encontrado usando firebaseUid")
+      return NextResponse.json({ vouchers: [] })
     }
 
-    // Buscar todos os vouchers do estabelecimento
+    const userData = userSnap.docs[0].data()
+    console.log("[DEBUG] Dados do usuário:", userData)
+
+    // Verificar se é um usuário business
+    if (userData.userType !== "business") {
+      console.log("[DEBUG] Usuário não é do tipo business")
+      return NextResponse.json(
+        { error: "Acesso não autorizado" },
+        { status: 403 }
+      )
+    }
+
+    // Pegar os IDs dos estabelecimentos vinculados
+    const establishmentIds = userData.establishmentIds || []
+    console.log("[DEBUG] IDs dos estabelecimentos:", establishmentIds)
+
+    if (establishmentIds.length === 0) {
+      console.log("[DEBUG] Nenhum estabelecimento vinculado ao usuário")
+      return NextResponse.json({ vouchers: [] })
+    }
+
+    // Buscar vouchers de todos os estabelecimentos
     const vouchersRef = collection(db, "vouchers")
-    const vouchersQuery = query(
-      vouchersRef,
-      where("establishmentId", "==", session.uid)
-    )
-    const vouchersSnapshot = await getDocs(vouchersQuery)
-    const vouchers = vouchersSnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Voucher[]
+    const allVouchers = []
 
-    // Buscar informações dos membros e parceiros
-    const usersRef = collection(db, "users")
-    const partnersRef = collection(db, "partners")
+    for (const establishmentId of establishmentIds) {
+      console.log("[DEBUG] Buscando vouchers do estabelecimento:", establishmentId)
+      
+      const vouchersQuery = query(
+        vouchersRef,
+        where("establishmentId", "==", establishmentId)
+      )
+      
+      const vouchersSnap = await getDocs(vouchersQuery)
+      console.log(`[DEBUG] Vouchers encontrados para ${establishmentId}:`, vouchersSnap.size)
+      
+      vouchersSnap.docs.forEach(doc => {
+        console.log("[DEBUG] Voucher encontrado:", doc.id, doc.data())
+      })
+      
+      const establishmentVouchers = await Promise.all(
+        vouchersSnap.docs.map(async (docSnapshot) => {
+          const data = docSnapshot.data()
+          
+          // Buscar dados do membro usando query
+          const membersRef = collection(db, "users")
+          const memberQuery = query(
+            membersRef,
+            where("firebaseUid", "==", data.memberId)
+          )
+          const memberSnap = await getDocs(memberQuery)
+          const memberData = !memberSnap.empty ? memberSnap.docs[0].data() : {}
+          
+          // Buscar dados do estabelecimento
+          const establishmentRef = doc(db, "establishments", data.establishmentId)
+          const establishmentDoc = await getDoc(establishmentRef)
+          const establishmentData = establishmentDoc.exists() ? establishmentDoc.data() : {}
+          
+          return {
+            id: docSnapshot.id,
+            ...data,
+            member: {
+              id: data.memberId,
+              name: memberData.displayName || "Usuário não encontrado",
+              phone: memberData.phone || "Não informado",
+              photoURL: memberData.photoURL
+            },
+            establishment: {
+              id: data.establishmentId,
+              name: establishmentData.name || "Estabelecimento não encontrado"
+            }
+          }
+        })
+      )
+      
+      allVouchers.push(...establishmentVouchers)
+    }
 
-    // Processar cada voucher para incluir informações do membro e parceiro
-    const reports = await Promise.all(vouchers.map(async voucher => {
-      // Buscar informações do membro
-      const memberQuery = query(usersRef, where("__name__", "==", voucher.memberId))
-      const memberSnapshot = await getDocs(memberQuery)
-      const memberData = memberSnapshot.docs[0]?.data() as Member || {}
+    console.log("[DEBUG] Total de vouchers encontrados:", allVouchers.length)
+    console.log("[DEBUG] Resposta final:", { vouchers: allVouchers })
 
-      // Buscar informações do parceiro do membro
-      let partnerName = "Não Tem Chef"
-      if (memberData.partnerId) {
-        const partnerQuery = query(partnersRef, where("__name__", "==", memberData.partnerId))
-        const partnerSnapshot = await getDocs(partnerQuery)
-        const partnerData = partnerSnapshot.docs[0]?.data() as Partner
-        if (partnerData) {
-          partnerName = partnerData.name || "Não Tem Chef"
-        }
-      }
-
-      // Verificar status do voucher
-      let status = "Check-in Pendente"
-      if (voucher.status === "used") {
-        status = "Check-in Realizado"
-      } else if (voucher.expiresAt && new Date(voucher.expiresAt) < new Date()) {
-        status = "Voucher Expirado"
-      }
-
-      // Formatar data do check-in
-      const checkInDate = voucher.usedAt 
-        ? new Date(voucher.usedAt).toLocaleDateString('pt-BR')
-        : voucher.createdAt 
-          ? new Date(voucher.createdAt).toLocaleDateString('pt-BR')
-          : '-'
-
-      return {
-        id: voucher.id,
-        customerName: memberData.displayName || "Cliente não identificado",
-        customerPhone: memberData.phone || "Telefone não cadastrado",
-        associatedBusiness: partnerName,
-        checkInDate,
-        status,
-        voucherCode: voucher.code || voucher.id
-      }
-    }))
-
-    return NextResponse.json(reports)
+    return NextResponse.json({ 
+      vouchers: allVouchers.sort((a, b) => 
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      )
+    })
 
   } catch (error) {
-    console.error("Erro ao buscar relatórios:", error)
+    console.error("[DEBUG] Erro ao buscar vouchers:", error)
     return NextResponse.json(
-      { error: "Erro ao buscar relatórios" },
+      { error: "Erro ao buscar vouchers" },
       { status: 500 }
     )
   }

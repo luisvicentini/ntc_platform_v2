@@ -26,27 +26,20 @@ export async function GET(request: Request) {
       )
     }
 
-    // Buscar estabelecimentos que não estão vinculados a nenhum usuário
-    const usersRef = collection(db, "users")
-    const usersQuery = query(usersRef, where("userType", "==", "business"))
-    const usersSnapshot = await getDocs(usersQuery)
-
-    // Pegar IDs dos estabelecimentos já vinculados
-    const linkedEstablishmentIds = usersSnapshot.docs
-      .map(doc => doc.data().establishmentId)
-      .filter(Boolean)
-
-    // Buscar todos os estabelecimentos
+    // Buscar todos os estabelecimentos ativos
     const establishmentsRef = collection(db, "establishments")
-    const establishmentsSnapshot = await getDocs(establishmentsRef)
+    const establishmentsQuery = query(
+      establishmentsRef, 
+      where("status", "!=", "inactive")
+    )
+    const establishmentsSnapshot = await getDocs(establishmentsQuery)
 
-    // Filtrar apenas os estabelecimentos não vinculados
-    const availableEstablishments = establishmentsSnapshot.docs
-      .filter(doc => !linkedEstablishmentIds.includes(doc.id))
-      .map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      }))
+    const availableEstablishments = establishmentsSnapshot.docs.map(doc => ({
+      id: doc.id,
+      name: doc.data().name,
+      address: doc.data().address,
+      // Adicione outros campos necessários aqui
+    }))
 
     return NextResponse.json(availableEstablishments)
 

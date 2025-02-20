@@ -1,47 +1,64 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, addDoc, Timestamp } from "firebase/firestore"
+import { collection, addDoc, doc, getDoc } from "firebase/firestore"
+import { jwtDecode } from "jwt-decode"
+import type { SessionToken } from "@/types/session"
+import { generateVoucherCode } from "@/app/utils/voucher"
+import { addDays } from "date-fns"
 
 export async function POST(request: Request) {
   try {
-    const { establishmentId, uid } = await request.json()
-
-    if (!establishmentId || !uid) {
-      return NextResponse.json({ 
-        error: "Dados inválidos" 
-      }, { status: 400 })
+    const sessionToken = request.headers.get("x-session-token")
+    
+    if (!sessionToken) {
+      return NextResponse.json(
+        { error: "Sessão inválida" },
+        { status: 403 }
+      )
     }
 
-    // Gerar código único
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase()
+    const session = jwtDecode<SessionToken>(sessionToken)
+    const { establishmentId } = await request.json()
 
-    // Criar voucher com todos os campos necessários para a listagem
-    const voucher = {
-      code,
+    // Buscar dados do estabelecimento
+    const establishmentRef = doc(db, "establishments", establishmentId)
+    const establishmentDoc = await getDoc(establishmentRef)
+
+    if (!establishmentDoc.exists()) {
+      return NextResponse.json(
+        { error: "Estabelecimento não encontrado" },
+        { status: 404 }
+      )
+    }
+
+    const establishmentData = establishmentDoc.data()
+
+    // Criar o voucher
+    const voucherData = {
+      code: generateVoucherCode(),
+      memberId: session.uid,
       establishmentId,
-      memberId: uid,
+      partnerId: establishmentData.partnerId,
       status: "pending",
-      createdAt: Timestamp.now(),
-      expiresAt: Timestamp.fromDate(new Date(Date.now() + 24 * 60 * 60 * 1000)),
+      createdAt: new Date(),
+      expiresAt: addDays(new Date(), 7),
       usedAt: null,
-      validUntil: "24h", // Campo usado na listagem
-      voucherAvailability: "unlimited", // Campo usado na listagem
-      voucherCooldown: "1" // Campo usado na listagem
+      discount: establishmentData.discountValue || 10
     }
 
     const vouchersRef = collection(db, "vouchers")
-    const docRef = await addDoc(vouchersRef, voucher)
+    const docRef = await addDoc(vouchersRef, voucherData)
 
     return NextResponse.json({
       id: docRef.id,
-      code,
-      ...voucher
+      ...voucherData
     })
 
   } catch (error) {
     console.error("Erro ao gerar voucher:", error)
-    return NextResponse.json({ 
-      error: "Erro ao gerar voucher" 
-    }, { status: 500 })
+    return NextResponse.json(
+      { error: "Erro ao gerar voucher" },
+      { status: 500 }
+    )
   }
 }
