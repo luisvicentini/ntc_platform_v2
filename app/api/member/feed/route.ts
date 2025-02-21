@@ -78,6 +78,7 @@ export async function GET(request: Request) {
           id: doc.id,
           ...data,
           partnerId: data.partnerId,
+          partnerName: partnerData.displayName,
           status: data.status || "active",
           isFeatured: data.isFeatured || false,
           rating: data.rating || 0,

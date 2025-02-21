@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Search, Filter } from "lucide-react"
@@ -14,28 +14,89 @@ import { EstablishmentSheet } from "@/components/establishment-sheet"
 import { useEstablishment } from "@/contexts/EstablishmentContext"
 import { FeaturedBadge } from "@/components/ui/featured-badge"
 import type { AvailableEstablishment } from "@/types/establishment"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export default function FeedPage() {
   const { establishments } = useEstablishment()
   const [searchTerm, setSearchTerm] = useState("")
   const [filters, setFilters] = useState({
-    cities: [] as string[],
-    types: [] as string[],
-    foodTypes: [] as string[],
-    partners: [] as string[],
+    city: "all",
+    category: "all",
+    type: "all",
+    partnerId: "all",
     minRating: 0,
   })
   const [selectedEstablishment, setSelectedEstablishment] = useState<AvailableEstablishment | null>(null)
   const [activeTab, setActiveTab] = useState("explore")
+  const [partners, setPartners] = useState<{ id: string, displayName: string }[]>([])
 
+  useEffect(() => {
+    const loadPartners = async () => {
+      try {
+        const response = await fetch("/api/member/feed")
+        if (!response.ok) throw new Error("Erro ao carregar estabelecimentos")
+        const data = await response.json()
+        
+        // Extrair parceiros únicos dos estabelecimentos
+        const uniquePartners = Array.from(
+          new Set(data.establishments.map((e: any) => e.partnerId))
+        ).map(partnerId => {
+          const establishment = data.establishments.find((e: any) => e.partnerId === partnerId)
+          return {
+            id: partnerId,
+            displayName: establishment?.partnerName || partnerId
+          }
+        })
+        
+        setPartners(uniquePartners)
+      } catch (error) {
+        console.error("Erro ao carregar parceiros:", error)
+      }
+    }
+    loadPartners()
+  }, [])
+
+  // Funções para extrair dados únicos dos estabelecimentos
+  const getUniqueCities = () => {
+    return Array.from(new Set(establishments.map(e => e.address.city)))
+      .sort()
+      .map(city => ({ id: city, label: city }))
+  }
+
+  const getUniqueCategories = () => {
+    return Array.from(new Set(establishments.map(e => e.type.category)))
+      .sort()
+      .map(category => ({ id: category, label: category }))
+  }
+
+  const getUniqueTypes = () => {
+    return Array.from(new Set(establishments.map(e => e.type.type)))
+      .sort()
+      .map(type => ({ id: type, label: type }))
+  }
+
+  const getUniquePartners = () => {
+    const uniquePartnerIds = Array.from(new Set(establishments.map(e => e.partnerId)))
+    return uniquePartnerIds
+      .map(partnerId => {
+        const partner = partners.find(p => p.id === partnerId)
+        return partner ? { id: partnerId, label: partner.displayName } : null
+      })
+      .filter(Boolean)
+      .sort((a, b) => a!.label.localeCompare(b!.label))
+  }
+
+  // Filtro modificado para usar os novos campos
   const filteredEstablishments = establishments.filter((establishment) => {
     const matchesSearch =
       establishment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       establishment.type.type.toLowerCase().includes(searchTerm.toLowerCase())
 
     const matchesFilters =
-      (filters.cities.length === 0 || filters.cities.includes(establishment.address.city)) &&
-      (filters.types.length === 0 || filters.types.includes(establishment.type.type)) &&
+      (filters.city === "all" || establishment.address.city === filters.city) &&
+      (filters.category === "all" || establishment.type.category === filters.category) &&
+      (filters.type === "all" || establishment.type.type === filters.type) &&
+      (filters.partnerId === "all" || establishment.partnerId === filters.partnerId) &&
       establishment.rating >= filters.minRating
 
     return matchesSearch && matchesFilters
@@ -125,95 +186,96 @@ export default function FeedPage() {
               </SheetHeader>
 
               <div className="space-y-6 py-4">
-                <div className="space-y-4">
-                  <Label>Cidade</Label>
-                  {cities.map((city) => (
-                    <div key={city} className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={filters.cities.includes(city)}
-                        onCheckedChange={(checked) => {
-                          setFilters((prev) => ({
-                            ...prev,
-                            cities: checked ? [...prev.cities, city] : prev.cities.filter((c) => c !== city),
-                          }))
-                        }}
-                      />
-                      <span>{city}</span>
-                    </div>
-                  ))}
+                <div className="space-y-2">
+                  <Label className="text-[#7a7b9f]">Cidade</Label>
+                  <Select
+                    value={filters.city}
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, city: value }))}
+                  >
+                    <SelectTrigger className="bg-[#1a1b2d] border-[#282942] text-[#e5e2e9]">
+                      <SelectValue placeholder="Selecione uma cidade" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {getUniqueCities().map((city) => (
+                        <SelectItem key={city.id} value={city.id}>
+                          {city.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[#7a7b9f]">Categoria</Label>
+                  <Select
+                    value={filters.category}
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
+                  >
+                    <SelectTrigger className="bg-[#1a1b2d] border-[#282942] text-[#e5e2e9]">
+                      <SelectValue placeholder="Selecione uma categoria" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {getUniqueCategories().map((category) => (
+                        <SelectItem key={category.id} value={category.id}>
+                          {category.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[#7a7b9f]">Tipo</Label>
+                  <Select
+                    value={filters.type}
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
+                  >
+                    <SelectTrigger className="bg-[#1a1b2d] border-[#282942] text-[#e5e2e9]">
+                      <SelectValue placeholder="Selecione um tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {getUniqueTypes().map((type) => (
+                        <SelectItem key={type.id} value={type.id}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-[#7a7b9f]">Partner</Label>
+                  <Select
+                    value={filters.partnerId}
+                    onValueChange={(value) => setFilters(prev => ({ ...prev, partnerId: value }))}
+                  >
+                    <SelectTrigger className="bg-[#1a1b2d] border-[#282942] text-[#e5e2e9]">
+                      <SelectValue placeholder="Selecione um partner" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {getUniquePartners().map((partner) => (
+                        <SelectItem key={partner.id} value={partner.id}>
+                          {partner.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-4">
-                  <Label>Tipo de Estabelecimento</Label>
-                  {establishmentTypes.map((type) => (
-                    <div key={type} className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={filters.types.includes(type)}
-                        onCheckedChange={(checked) => {
-                          setFilters((prev) => ({
-                            ...prev,
-                            types: checked ? [...prev.types, type] : prev.types.filter((t) => t !== type),
-                          }))
-                        }}
-                      />
-                      <span>{type}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="space-y-4">
-                  <Label>Tipo de Comida</Label>
-                  {foodTypes.map((type) => (
-                    <div key={type} className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={filters.foodTypes.includes(type)}
-                        onCheckedChange={(checked) => {
-                          setFilters((prev) => ({
-                            ...prev,
-                            foodTypes: checked ? [...prev.foodTypes, type] : prev.foodTypes.filter((t) => t !== type),
-                          }))
-                        }}
-                      />
-                      <span>{type}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="space-y-4">
-                  <Label>Partner</Label>
-                  {partners.map((partner) => (
-                    <div key={partner} className="flex items-center space-x-2">
-                      <Checkbox
-                        checked={filters.partners.includes(partner)}
-                        onCheckedChange={(checked) => {
-                          setFilters((prev) => ({
-                            ...prev,
-                            partners: checked
-                              ? [...prev.partners, partner]
-                              : prev.partners.filter((p) => p !== partner),
-                          }))
-                        }}
-                      />
-                      <span>{partner}</span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="space-y-4">
-                  <Label>Avaliação Mínima</Label>
+                  <Label className="text-[#7a7b9f]">Avaliação Mínima</Label>
                   <Slider
                     min={0}
                     max={5}
                     step={0.5}
                     value={[filters.minRating]}
-                    onValueChange={([value]) => {
-                      setFilters((prev) => ({
-                        ...prev,
-                        minRating: value,
-                      }))
-                    }}
+                    onValueChange={([value]) => setFilters(prev => ({ ...prev, minRating: value }))}
                   />
-                  <div className="text-right">{filters.minRating} estrelas</div>
+                  <div className="text-right text-[#7a7b9f]">{filters.minRating} estrelas</div>
                 </div>
               </div>
             </SheetContent>
@@ -242,8 +304,3 @@ export default function FeedPage() {
     </div>
   )
 }
-
-const cities = ["Limeira/SP", "Campinas/SP", "Piracicaba/SP"]
-const establishmentTypes = ["Restaurante", "Lanchonete", "Bar", "Cafeteria"]
-const foodTypes = ["Lanches", "Porções", "Pizza", "Japonês", "Brasileira"]
-const partners = ["Rede Food", "Best Foods", "Food Express"]
