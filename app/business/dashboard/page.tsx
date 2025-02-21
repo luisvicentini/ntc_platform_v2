@@ -15,81 +15,13 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell,
+  ResponsiveContainer
 } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Ticket, CheckSquare, TrendingUp, Search, Filter, MoreVertical } from "lucide-react"
-import { subDays } from "date-fns"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-
-const voucherData = [
-  { name: "Jan", vouchers: 400, checkins: 300 },
-  { name: "Feb", vouchers: 300, checkins: 250 },
-  { name: "Mar", vouchers: 200, checkins: 180 },
-  { name: "Apr", vouchers: 278, checkins: 240 },
-  { name: "May", vouchers: 189, checkins: 160 },
-  { name: "Jun", vouchers: 239, checkins: 220 },
-]
-
-const conversionData = [
-  { name: "Jan", rate: 75 },
-  { name: "Feb", rate: 83 },
-  { name: "Mar", rate: 90 },
-  { name: "Apr", rate: 86 },
-  { name: "May", rate: 85 },
-  { name: "Jun", rate: 92 },
-]
-
-const customerTypeData = [
-  { name: "Novos", value: 400 },
-  { name: "Recorrentes", value: 300 },
-  { name: "VIP", value: 100 },
-]
-
-const COLORS = ["#7435db", "#a85fdd", "#2dd4bf"]
-
-const predefinedRanges = [
-  { label: "Hoje", value: [new Date(), new Date()] },
-  { label: "Ontem", value: [subDays(new Date(), 1), subDays(new Date(), 1)] },
-  { label: "Última semana", value: [subDays(new Date(), 7), new Date()] },
-  { label: "Último mês", value: [subDays(new Date(), 30), new Date()] },
-  { label: "Últimos 60 dias", value: [subDays(new Date(), 60), new Date()] },
-  { label: "Último ano", value: [subDays(new Date(), 365), new Date()] },
-]
-
-const checkIns = [
-  {
-    id: "1",
-    customerName: "Luis Henrique Vicentini",
-    customerPhone: "+55 (19) 98430-5001",
-    associatedBusiness: "Não Tem Chef",
-    checkInDate: "02/02/2025",
-    status: "completed",
-    voucherCode: "123456",
-  },
-  {
-    id: "2",
-    customerName: "Maria Silva",
-    customerPhone: "+55 (19) 99999-8888",
-    associatedBusiness: "Não Tem Chef",
-    checkInDate: "03/02/2025",
-    status: "completed",
-    voucherCode: "234567",
-  },
-  {
-    id: "3",
-    customerName: "João Santos",
-    customerPhone: "+55 (19) 97777-6666",
-    associatedBusiness: "Não Tem Chef",
-    checkInDate: "04/02/2025",
-    status: "expired",
-    voucherCode: "345678",
-  },
-]
+import { Search, Filter } from "lucide-react"
+import { subDays, isToday } from "date-fns"
+import { DateRange } from "react-day-picker"
 
 interface DashboardData {
   todayMetrics: {
@@ -102,7 +34,7 @@ interface DashboardData {
     name: string
     vouchers: number
     checkins: number
-    rate: number
+    conversionRate: number
   }>
   recentCheckins: Array<{
     id: string
@@ -114,190 +46,177 @@ interface DashboardData {
   }>
 }
 
-export default function BusinessDashboardPage() {
-  const [dateRange, setDateRange] = useState({ from: subDays(new Date(), 30), to: new Date() })
+const predefinedRanges = [
+  { label: "Hoje", value: [new Date(), new Date()] },
+  { label: "Ontem", value: [subDays(new Date(), 1), subDays(new Date(), 1)] },
+  { label: "Última semana", value: [subDays(new Date(), 7), new Date()] },
+  { label: "Último mês", value: [subDays(new Date(), 30), new Date()] },
+  { label: "Últimos 60 dias", value: [subDays(new Date(), 60), new Date()] },
+  { label: "Último ano", value: [subDays(new Date(), 365), new Date()] },
+]
+
+// Componente para o conteúdo dinâmico
+function DashboardContent({ dateRange }: { dateRange: DateRange }) {
   const [dashboardData, setDashboardData] = useState<DashboardData | null>(null)
   const [isLoading, setIsLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setIsLoading(true)
-        const response = await fetch(`/api/dashboard/business?from=${dateRange.from.toISOString()}&to=${dateRange.to.toISOString()}`, {
-          headers: {
-            'x-session-token': localStorage.getItem('session_token') || ''
-          }
-        })
+        const sessionToken = localStorage.getItem("sessionToken") || ""
         
-        if (!response.ok) throw new Error('Falha ao carregar dados')
+        const response = await fetch(
+          `/api/dashboard/business?from=${dateRange.from?.toISOString()}&to=${dateRange.to?.toISOString()}`,
+          {
+            headers: {
+              "x-session-token": sessionToken,
+            },
+          }
+        )
+
+        if (!response.ok) throw new Error("Falha ao carregar dados")
         
         const data = await response.json()
         setDashboardData(data)
       } catch (error) {
-        console.error('Erro ao carregar dashboard:', error)
+        console.error("Erro ao carregar dashboard:", error)
       } finally {
         setIsLoading(false)
       }
     }
 
-    fetchDashboardData()
+    if (dateRange.from && dateRange.to) {
+      fetchDashboardData()
+    }
   }, [dateRange])
 
-  if (isLoading) {
-    return <div>Carregando...</div>
+  const getTitleSuffix = () => {
+    if (isToday(dateRange.from) && isToday(dateRange.to)) {
+      return "hoje"
+    }
+    return "no período"
   }
-
-  const filteredCheckins = dashboardData?.recentCheckins.filter((checkIn) =>
-    checkIn.customerName.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || []
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "completed":
-        return <Badge className="bg-[#042f2e] text-[#2dd4bf] hover:bg-[#042f2e]">Check-in Realizado</Badge>
+        return (
+          <Badge className="bg-[#042f2e] text-[#2dd4bf] hover:bg-[#042f2e]">
+            Check-in Realizado
+          </Badge>
+        )
+      case "verified":
+        return (
+          <Badge className="bg-blue-900/50 text-blue-500">
+            Verificado
+          </Badge>
+        )
+      case "used":
+        return (
+          <Badge className="bg-green-900/50 text-green-500">
+            Utilizado
+          </Badge>
+        )
       case "expired":
         return (
-          <Badge variant="secondary" className="bg-yellow-900/50 text-yellow-500">
+          <Badge className="bg-yellow-900/50 text-yellow-500">
             Voucher Expirado
           </Badge>
         )
       default:
         return (
-          <Badge variant="secondary" className="bg-gray-900/50 text-gray-400">
+          <Badge className="bg-gray-900/50 text-gray-400">
             Desconhecido
           </Badge>
         )
     }
   }
 
+  if (isLoading) return <div>Carregando...</div>
+  if (!dashboardData) return null
+
   return (
-    <div className="container py-6">
-      <h2 className="text-3xl font-bold tracking-tight text-[#e5e2e9] mb-6">Dashboard</h2>
+    <div className="space-y-6">
+      <div className="grid grid-cols-3 gap-6">
+        {/* Card de Vouchers */}
+        <div className="bg-[#131320] border border-[#1a1b2d] p-6 rounded-lg">
+          <h3>Vouchers Gerados no período</h3>
+          <div className="text-3xl font-bold">{dashboardData.todayMetrics.vouchers}</div>
+          <div className="text-sm text-muted-foreground">
+            {dashboardData.todayMetrics.voucherGrowth > 0 ? "+" : ""}
+            {dashboardData.todayMetrics.voucherGrowth}% em relação ao período anterior
+          </div>
+        </div>
 
-      <div className="mb-6">
-        <DateRangePicker
-          dateRange={dateRange}
-          onDateRangeChange={(newRange) => {
-            setDateRange(newRange)
-            console.log("Novo intervalo de datas:", newRange)
-          }}
-          predefinedRanges={predefinedRanges}
-        />
+        {/* Card de Check-ins */}
+        <div className="bg-[#131320] border border-[#1a1b2d] p-6 rounded-lg">
+          <h3>Check-ins Realizados no período</h3>
+          <div className="text-3xl font-bold">{dashboardData.todayMetrics.checkins}</div>
+          <div className="text-sm text-muted-foreground">
+            {dashboardData.todayMetrics.vouchers > 0 
+              ? `${dashboardData.todayMetrics.checkins / dashboardData.todayMetrics.vouchers * 100}% dos vouchers gerados`
+              : "0% dos vouchers gerados"}
+          </div>
+        </div>
+
+        {/* Card de Taxa de Conversão */}
+        <div className="bg-[#131320] border border-[#1a1b2d] p-6 rounded-lg">
+          <h3>Taxa de Conversão no período</h3>
+          <div className="text-3xl font-bold">
+            {dashboardData.todayMetrics.conversionRate}%
+          </div>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mb-8">
-        <Card className="bg-[#131320] border-[#1a1b2d]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-[#7a7b9f]">Vouchers Gerados Hoje</CardTitle>
-            <Ticket className="h-4 w-4 text-[#7a7b9f]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">{dashboardData?.todayMetrics.vouchers}</div>
-            <p className="text-xs text-[#7a7b9f]">
-              {dashboardData?.todayMetrics.voucherGrowth > 0 ? '+' : ''}
-              {dashboardData?.todayMetrics.voucherGrowth.toFixed(1)}% em relação a ontem
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="bg-[#131320] border-[#1a1b2d]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-[#7a7b9f]">Check-ins Realizados Hoje</CardTitle>
-            <CheckSquare className="h-4 w-4 text-[#7a7b9f]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">{dashboardData?.todayMetrics.checkins}</div>
-            <p className="text-xs text-[#7a7b9f]">77% dos vouchers gerados</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-[#131320] border-[#1a1b2d]">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-[#7a7b9f]">Taxa de Conversão</CardTitle>
-            <TrendingUp className="h-4 w-4 text-[#7a7b9f]" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">{dashboardData?.todayMetrics.conversionRate.toFixed(2)}%</div>
-            <p className="text-xs text-[#7a7b9f]">+5% em relação à média semanal</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-4 md:grid-cols-2 mb-8">
-        <Card className="bg-[#131320] border-[#1a1b2d]">
-          <CardHeader>
-            <CardTitle className="text-[#e5e2e9]">Vouchers e Check-ins</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={dashboardData?.monthlyData || []}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a1b2d" />
-                <XAxis dataKey="name" stroke="#7a7b9f" />
-                <YAxis stroke="#7a7b9f" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: "#131320", border: "1px solid #1a1b2d" }}
-                  labelStyle={{ color: "#e5e2e9" }}
-                />
-                <Legend wrapperStyle={{ color: "#7a7b9f" }} />
-                <Bar dataKey="vouchers" fill="#7435db" name="Vouchers" />
-                <Bar dataKey="checkins" fill="#a85fdd" name="Check-ins" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-        <Card className="bg-[#131320] border-[#1a1b2d]">
-          <CardHeader>
-            <CardTitle className="text-[#e5e2e9]">Taxa de Conversão</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={conversionData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1a1b2d" />
-                <XAxis dataKey="name" stroke="#7a7b9f" />
-                <YAxis stroke="#7a7b9f" />
-                <Tooltip
-                  contentStyle={{ backgroundColor: "#131320", border: "1px solid #1a1b2d" }}
-                  labelStyle={{ color: "#e5e2e9" }}
-                />
-                <Legend wrapperStyle={{ color: "#7a7b9f" }} />
-                <Line type="monotone" dataKey="rate" stroke="#2dd4bf" name="Taxa de Conversão (%)" />
-              </LineChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+      {/* Gráficos */}
+      <div className="grid grid-cols-2 gap-6">
+        <div className="bg-[#131320] border border-[#1a1b2d] p-6 rounded-lg">
+          <h3>Vouchers e Check-ins</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={dashboardData.monthlyData || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#282942" />
+              <XAxis dataKey="name" stroke="#7a7b9f" />
+              <YAxis stroke="#7a7b9f" />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#1a1b2d',
+                  border: '1px solid #282942'
+                }}
+              />
+              <Legend />
+              <Bar dataKey="vouchers" name="Vouchers" fill="#2563eb" />
+              <Bar dataKey="checkins" name="Check-ins" fill="#16a34a" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="bg-[#131320] border border-[#1a1b2d] p-6 rounded-lg">
+          <h3>Taxa de Conversão</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <LineChart data={dashboardData.monthlyData || []}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#282942" />
+              <XAxis dataKey="name" stroke="#7a7b9f" />
+              <YAxis stroke="#7a7b9f" />
+              <Tooltip 
+                contentStyle={{ 
+                  backgroundColor: '#1a1b2d',
+                  border: '1px solid #282942'
+                }}
+              />
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="conversionRate" 
+                name="Taxa de Conversão (%)" 
+                stroke="#8b5cf6" 
+                strokeWidth={2}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       <Card className="bg-[#131320] border-[#1a1b2d] mb-8">
-        <CardHeader>
-          <CardTitle className="text-[#e5e2e9]">Tipos de Clientes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={customerTypeData}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
-              >
-                {customerTypeData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{ backgroundColor: "#131320", border: "1px solid #1a1b2d" }}
-                labelStyle={{ color: "#e5e2e9" }}
-              />
-              <Legend wrapperStyle={{ color: "#7a7b9f" }} />
-            </PieChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-[#131320] border-[#1a1b2d]">
         <CardHeader>
           <CardTitle className="text-[#e5e2e9]">Relatório de Check-ins</CardTitle>
         </CardHeader>
@@ -307,8 +226,6 @@ export default function BusinessDashboardPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7a7b9f]" />
               <Input
                 placeholder="Pesquisar clientes"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10 bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
               />
             </div>
@@ -321,47 +238,82 @@ export default function BusinessDashboardPage() {
             </Button>
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow className="border-[#1a1b2d] hover:bg-[#1a1b2d]">
-                <TableHead className="text-[#7a7b9f]">Cliente</TableHead>
-                <TableHead className="text-[#7a7b9f]">Data do Check-in</TableHead>
-                <TableHead className="text-[#7a7b9f]">Status</TableHead>
-                <TableHead className="text-[#7a7b9f]">Código do Cupom</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredCheckins.map((checkIn) => (
-                <TableRow key={checkIn.id} className="border-[#1a1b2d] hover:bg-[#1a1b2d]">
-                  <TableCell>
-                    <div className="flex flex-col">
-                      <span className="font-medium text-[#e5e2e9]">{checkIn.customerName}</span>
-                      <span className="text-sm text-[#7a7b9f]">{checkIn.customerPhone}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-[#7a7b9f]">{checkIn.checkInDate}</TableCell>
-                  <TableCell>{getStatusBadge(checkIn.status)}</TableCell>
-                  <TableCell className="font-medium text-[#e5e2e9]">{checkIn.voucherCode}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0 text-[#7a7b9f] hover:text-[#e5e2e9]">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]">
-                        <DropdownMenuItem className="hover:bg-[#1a1b2d]">Ver detalhes</DropdownMenuItem>
-                        <DropdownMenuItem className="hover:bg-[#1a1b2d]">Exportar PDF</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <div className="space-y-6">
+            <Card className="bg-[#131320] border-[#1a1b2d]">
+              <CardHeader>
+                <CardTitle className="text-[#e5e2e9]">Últimos Check-ins</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[#7a7b9f]">Cliente</TableHead>
+                      <TableHead className="text-[#7a7b9f]">Telefone</TableHead>
+                      <TableHead className="text-[#7a7b9f]">Data</TableHead>
+                      <TableHead className="text-[#7a7b9f]">Status</TableHead>
+                      <TableHead className="text-[#7a7b9f]">Código do Voucher</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dashboardData.recentCheckins.map((checkIn) => (
+                      <TableRow key={checkIn.id}>
+                        <TableCell className="font-medium text-[#e5e2e9]">
+                          {checkIn.customerName}
+                        </TableCell>
+                        <TableCell className="text-[#7a7b9f]">
+                          {checkIn.customerPhone}
+                        </TableCell>
+                        <TableCell className="text-[#7a7b9f]">
+                          {checkIn.checkInDate}
+                        </TableCell>
+                        <TableCell>
+                          {getStatusBadge(checkIn.status)}
+                        </TableCell>
+                        <TableCell className="font-medium text-[#e5e2e9]">
+                          {checkIn.voucherCode}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!dashboardData.recentCheckins || dashboardData.recentCheckins.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-[#7a7b9f]">
+                          Nenhum check-in encontrado no período
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </div>
         </CardContent>
       </Card>
+    </div>
+  )
+}
+
+// Componente principal
+export default function DashboardPage() {
+  const [dateRange, setDateRange] = useState<DateRange>({
+    from: subDays(new Date(), 30),
+    to: new Date(),
+  })
+
+  return (
+    <div className="p-8">
+      {/* Parte estática - não será re-renderizada com os dados */}
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <DateRangePicker
+          date={dateRange}
+          onDateChange={(date) => {
+            if (date) setDateRange(date)
+          }}
+        />
+      </div>
+
+      {/* Parte dinâmica - será re-renderizada quando os dados mudarem */}
+      <DashboardContent dateRange={dateRange} />
     </div>
   )
 }

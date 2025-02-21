@@ -3,7 +3,7 @@ import { db } from "@/lib/firebase"
 import { collection, query, where, getDocs, Timestamp } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
-import { subDays, startOfDay, endOfDay } from "date-fns"
+import { startOfDay, endOfDay, subDays } from "date-fns"
 
 export async function GET(request: Request) {
   try {
@@ -13,136 +13,115 @@ export async function GET(request: Request) {
     }
 
     const session = jwtDecode<SessionToken>(sessionToken)
-    if (session.userType !== "business") {
-      return NextResponse.json({ error: "Acesso não autorizado" }, { status: 403 })
+    
+    // Buscar usuário e seus estabelecimentos vinculados
+    const usersRef = collection(db, "users")
+    const userQuery = query(
+      usersRef,
+      where("firebaseUid", "==", session.uid)
+    )
+    const userSnap = await getDocs(userQuery)
+    
+    if (userSnap.empty) {
+      return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
     }
 
+    const userData = userSnap.docs[0].data()
+    const establishmentIds = userData.establishmentIds || []
+
+    // Parâmetros de data da requisição
     const { searchParams } = new URL(request.url)
-    const fromDate = new Date(searchParams.get("from") || subDays(new Date(), 30))
+    const fromDate = new Date(searchParams.get("from") || new Date())
     const toDate = new Date(searchParams.get("to") || new Date())
 
     // Buscar vouchers do período
     const vouchersRef = collection(db, "vouchers")
-    // Primeiro filtramos por establishmentId
-    const vouchersQuery = query(
-      vouchersRef,
-      where("establishmentId", "==", session.uid)
+    const vouchersPromises = establishmentIds.map(establishmentId => 
+      getDocs(query(vouchersRef, 
+        where("establishmentId", "==", establishmentId),
+        where("createdAt", ">=", Timestamp.fromDate(fromDate)),
+        where("createdAt", "<=", Timestamp.fromDate(toDate))
+      ))
     )
-    const vouchersSnapshot = await getDocs(vouchersQuery)
-    const vouchers = vouchersSnapshot.docs
-      .map(doc => {
-        const data = doc.data()
-        return {
-          id: doc.id,
-          ...data,
-          createdAt: data.createdAt?.toDate() || new Date()
-        }
-      })
-      // Depois filtramos por data em memória
-      .filter(voucher => 
-        voucher.createdAt >= fromDate && 
-        voucher.createdAt <= toDate
-      )
-
-    // Buscar check-ins do período
-    const checkinsRef = collection(db, "checkins")
-    // Mesmo processo para checkins
-    const checkinsQuery = query(
-      checkinsRef,
-      where("establishmentId", "==", session.uid)
-    )
-    const checkinsSnapshot = await getDocs(checkinsQuery)
-    const checkins = await Promise.all(checkinsSnapshot.docs
-      // Filtramos por data em memória
-      .filter(doc => {
-        const data = doc.data()
-        const createdAt = data.createdAt?.toDate() || new Date()
-        return createdAt >= fromDate && createdAt <= toDate
-      })
-      .map(async doc => {
-      const checkinData = doc.data()
-      const userRef = collection(db, "users")
-      const userQuery = query(userRef, where("__name__", "==", checkinData.userId))
-      const userSnapshot = await getDocs(userQuery)
-      const userData = userSnapshot.docs[0]?.data() || {}
-
-      return {
+    const vouchersSnapshots = await Promise.all(vouchersPromises)
+    const vouchers = vouchersSnapshots.flatMap(snapshot => 
+      snapshot.docs.map(doc => ({
         id: doc.id,
-        ...checkinData,
-        createdAt: checkinData.createdAt?.toDate() || new Date(),
-        user: userData
-      }
-    }))
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        usedAt: doc.data().usedAt ? new Date(doc.data().usedAt) : null
+      }))
+    )
 
-    // Calcular métricas diárias
-    const today = new Date()
-    const todayStart = startOfDay(today)
-    const todayEnd = endOfDay(today)
-    const yesterdayStart = startOfDay(subDays(today, 1))
-    const yesterdayEnd = endOfDay(subDays(today, 1))
+    // Calcular métricas do período
+    const vouchersInPeriod = vouchers.length
+    const checkinsInPeriod = vouchers.filter(v => v.status === "used").length
+    const conversionRate = vouchersInPeriod > 0 
+      ? (checkinsInPeriod / vouchersInPeriod) * 100 
+      : 0
 
-    const todayVouchers = vouchers.filter(v => 
-      v.createdAt >= todayStart && v.createdAt <= todayEnd
-    ).length
-
-    const todayCheckins = checkins.filter(c => 
-      c.createdAt >= todayStart && c.createdAt <= todayEnd
-    ).length
-
-    const yesterdayVouchers = vouchers.filter(v => 
-      v.createdAt >= yesterdayStart && v.createdAt <= yesterdayEnd
-    ).length
-
-    // Calcular dados mensais
-    const monthlyData = []
-    let currentDate = fromDate
-    while (currentDate <= toDate) {
-      const monthStart = startOfDay(currentDate)
-      const monthEnd = endOfDay(currentDate)
+    // Calcular dados mensais incluindo taxa de conversão
+    const monthlyData = Array.from({ length: 12 }, (_, i) => {
+      const date = new Date()
+      date.setMonth(date.getMonth() - i)
+      const monthStart = new Date(date.getFullYear(), date.getMonth(), 1)
+      const monthEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0)
 
       const monthVouchers = vouchers.filter(v => 
         v.createdAt >= monthStart && v.createdAt <= monthEnd
-      ).length
+      )
+      
+      const monthCheckins = monthVouchers.filter(v => v.status === "used")
+      const monthConversionRate = monthVouchers.length > 0
+        ? (monthCheckins.length / monthVouchers.length) * 100
+        : 0
 
-      const monthCheckins = checkins.filter(c => 
-        c.createdAt >= monthStart && c.createdAt <= monthEnd
-      ).length
+      return {
+        name: date.toLocaleString('pt-BR', { month: 'short' }),
+        vouchers: monthVouchers.length,
+        checkins: monthCheckins.length,
+        conversionRate: monthConversionRate
+      }
+    }).reverse()
 
-      monthlyData.push({
-        name: currentDate.toLocaleString('default', { month: 'short' }),
-        vouchers: monthVouchers,
-        checkins: monthCheckins,
-        rate: monthVouchers > 0 ? (monthCheckins / monthVouchers) * 100 : 0
-      })
+    // Calcular crescimento em relação ao dia anterior
+    const yesterday = subDays(fromDate, 1)
+    const yesterdayVouchers = vouchers.filter(v => 
+      v.createdAt >= startOfDay(yesterday) && 
+      v.createdAt <= endOfDay(yesterday)
+    ).length
 
-      currentDate = new Date(currentDate.setMonth(currentDate.getMonth() + 1))
-    }
+    const voucherGrowth = yesterdayVouchers > 0
+      ? ((vouchersInPeriod - yesterdayVouchers) / yesterdayVouchers) * 100
+      : 0
 
-    // Formatar check-ins recentes
-    const recentCheckins = checkins.map(checkin => ({
-      id: checkin.id,
-      customerName: checkin.user?.displayName || 'Cliente não identificado',
-      customerPhone: checkin.user?.phone || 'Telefone não cadastrado',
-      checkInDate: checkin.createdAt.toLocaleDateString(),
-      status: checkin.status,
-      voucherCode: checkin.voucherId
-    }))
+    // Buscar os últimos check-ins
+    const recentCheckins = vouchers
+      .filter(v => v.status === "used" && v.usedAt)
+      .sort((a, b) => (b.usedAt?.getTime() || 0) - (a.usedAt?.getTime() || 0))
+      .slice(0, 10)
+      .map(voucher => ({
+        id: voucher.id,
+        customerName: voucher.memberName || "Cliente não identificado",
+        customerPhone: voucher.memberPhone || "Telefone não cadastrado",
+        checkInDate: voucher.usedAt?.toLocaleDateString('pt-BR') || "",
+        status: voucher.status,
+        voucherCode: voucher.code
+      }))
 
     return NextResponse.json({
       todayMetrics: {
-        vouchers: todayVouchers,
-        checkins: todayCheckins,
-        conversionRate: todayVouchers > 0 ? (todayCheckins / todayVouchers) * 100 : 0,
-        voucherGrowth: yesterdayVouchers > 0 
-          ? ((todayVouchers - yesterdayVouchers) / yesterdayVouchers) * 100 
-          : 0
+        vouchers: vouchersInPeriod,
+        checkins: checkinsInPeriod,
+        conversionRate: Number(conversionRate.toFixed(1)),
+        voucherGrowth: Number(voucherGrowth.toFixed(1))
       },
       monthlyData,
       recentCheckins
     })
 
   } catch (error) {
-    console.error("Erro ao buscar dados do dashboard do estabelecimento:", error)
+    console.error("Erro ao buscar dados do dashboard:", error)
     return NextResponse.json(
       { error: "Erro ao buscar dados do dashboard" },
       { status: 500 }

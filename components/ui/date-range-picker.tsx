@@ -1,73 +1,124 @@
 "use client"
-import { CalendarIcon } from "@radix-ui/react-icons"
-import { format } from "date-fns"
-import type { DateRange } from "react-day-picker"
 
+import * as React from "react"
+import { format, subDays } from "date-fns"
+import { ptBR } from "date-fns/locale"
+import { Calendar as CalendarIcon } from "lucide-react"
+import { DateRange } from "react-day-picker"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 interface DateRangePickerProps {
-  dateRange: DateRange
-  onDateRangeChange: (range: DateRange) => void
-  predefinedRanges?: { label: string; value: Date[] }[]
+  date?: DateRange
+  onDateChange: (date: DateRange | undefined) => void
 }
 
-export function DateRangePicker({ dateRange, onDateRangeChange, predefinedRanges = [] }: DateRangePickerProps) {
+export function DateRangePicker({ date, onDateChange }: DateRangePickerProps) {
+  const [isOpen, setIsOpen] = React.useState(false)
+  
+  const presets = [
+    { label: "Hoje", value: "today" },
+    { label: "Ontem", value: "yesterday" },
+    { label: "Últimos 7 dias", value: "last7" },
+    { label: "Últimos 30 dias", value: "last30" },
+    { label: "Últimos 60 dias", value: "last60" },
+    { label: "Último ano", value: "last365" },
+  ]
+
+  const handleSelect = (value: string) => {
+    const today = new Date()
+    let range: DateRange | undefined
+
+    switch (value) {
+      case "today":
+        range = { from: today, to: today }
+        break
+      case "yesterday":
+        const yesterday = subDays(today, 1)
+        range = { from: yesterday, to: yesterday }
+        break
+      case "last7":
+        range = { from: subDays(today, 7), to: today }
+        break
+      case "last30":
+        range = { from: subDays(today, 30), to: today }
+        break
+      case "last60":
+        range = { from: subDays(today, 60), to: today }
+        break
+      case "last365":
+        range = { from: subDays(today, 365), to: today }
+        break
+    }
+
+    onDateChange(range)
+    setIsOpen(false)
+  }
+
   return (
-    <div className="grid gap-2">
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            id="date"
-            variant={"outline"}
-            className={cn(
-              "w-[300px] justify-start text-left font-normal bg-[#1a1b2d] text-[#e5e2e9] border-[#7435db]",
-              !dateRange && "text-[#7a7b9f]",
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {dateRange?.from ? (
-              dateRange.to ? (
-                <>
-                  {format(dateRange.from, "LLL dd, y")} - {format(dateRange.to, "LLL dd, y")}
-                </>
-              ) : (
-                format(dateRange.from, "LLL dd, y")
-              )
-            ) : (
-              <span>Pick a date</span>
-            )}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0 bg-[#131320]" align="start">
-          <Calendar
-            initialFocus
-            mode="range"
-            defaultMonth={dateRange?.from}
-            selected={dateRange}
-            onSelect={onDateRangeChange}
-            numberOfMonths={2}
-            className="bg-[#131320]"
-          />
-          {predefinedRanges && predefinedRanges.length > 0 && (
-            <div className="grid grid-cols-2 gap-2 p-2">
-              {predefinedRanges.map((range) => (
-                <Button
-                  key={range.label}
-                  variant="outline"
-                  className="text-xs bg-[#1a1b2d] text-[#e5e2e9] hover:bg-[#7435db] hover:text-[#e5e2e9]"
-                  onClick={() => onDateRangeChange({ from: range.value[0], to: range.value[1] })}
-                >
-                  {range.label}
-                </Button>
-              ))}
-            </div>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger>
+        <Button
+          variant="outline"
+          className={cn(
+            "w-[300px] justify-start text-left font-normal",
+            !date && "text-muted-foreground"
           )}
-        </PopoverContent>
-      </Popover>
-    </div>
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {date?.from ? (
+            date.to ? (
+              <>
+                {format(date.from, "dd/MM/yyyy", { locale: ptBR })} -{" "}
+                {format(date.to, "dd/MM/yyyy", { locale: ptBR })}
+              </>
+            ) : (
+              format(date.from, "dd/MM/yyyy", { locale: ptBR })
+            )
+          ) : (
+            <span>Selecione um período</span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-auto p-4">
+        <div className="space-y-4">
+          <Select onValueChange={handleSelect}>
+            <SelectTrigger>
+              <SelectValue placeholder="Selecione um período predefinido" />
+            </SelectTrigger>
+            <SelectContent position="popper">
+              {presets.map((preset) => (
+                <SelectItem key={preset.value} value={preset.value}>
+                  {preset.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="rounded-md border">
+            <Calendar
+              mode="range"
+              selected={date}
+              onSelect={onDateChange}
+              numberOfMonths={2}
+              locale={ptBR}
+              initialFocus
+            />
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
   )
-}
-
+} 
