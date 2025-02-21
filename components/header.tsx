@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
-import type React from "react"
+import React from "react"
 import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
 
@@ -46,6 +46,7 @@ interface UserDropdownProps {
 
 const UserDropdown: React.FC<UserDropdownProps> = ({ userData, user, theme = "dark", setTheme }) => {
   const { signOut } = useAuth();
+  const [isOpen, setIsOpen] = React.useState(false)
   
   const handleLogout = async () => {
     try {
@@ -57,8 +58,8 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userData, user, theme = "da
   
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+      <DropdownMenuTrigger>
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full mt-2">
           <Avatar className="h-8 w-8">
             <AvatarImage 
               src={userData.photoURL || user?.photoURL || undefined} 
