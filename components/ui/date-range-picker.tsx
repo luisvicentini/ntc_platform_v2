@@ -74,7 +74,7 @@ export function DateRangePicker({ date, onDateChange }: DateRangePickerProps) {
         <Button
           variant="outline"
           className={cn(
-            "w-[300px] justify-start text-left font-normal",
+            "bg-[#1a1b2d] hover:bg-[#282942] border-[#282942] text-[#e5e2e9] w-[330px] justify-start text-left font-normal",
             !date && "text-muted-foreground"
           )}
         >

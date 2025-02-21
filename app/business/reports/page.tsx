@@ -23,6 +23,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { DateRangePicker } from "@/components/ui/date-range-picker"
 
 interface Member {
   id: string
@@ -111,6 +112,28 @@ const FilterSidebar = ({
         </SheetHeader>
         
         <div className="space-y-6 mt-6">
+
+        <div className="space-y-2">
+            <Label className="text-[#7a7b9f] w-full">Período</Label>
+            <DateRangePicker
+              date={{
+                from: localFilters.dateRange.start || undefined,
+                to: localFilters.dateRange.end || undefined
+              }}
+              onDateChange={(date) => 
+                setLocalFilters(prev => ({
+                  ...prev,
+                  period: 'custom',
+                  dateRange: {
+                    start: date?.from || null,
+                    end: date?.to || null
+                  }
+                }))
+              }
+            />
+          </div>
+
+
           <div className="space-y-4">
             <div className="space-y-2">
               <Label className="text-[#7a7b9f]">Código do Cupom</Label>
@@ -170,7 +193,7 @@ const FilterSidebar = ({
                 <Button
                   key={status}
                   variant="outline"
-                  className={`border-[#1a1b2d] ${
+                  className={`bg-[#1a1b2d] hover:bg-[#282942] border-[#282942] text-[#e5e2e9] ${
                     localFilters.status.includes(status) 
                       ? "bg-[#7435db] text-white" 
                       : "text-[#7a7b9f]"
@@ -189,73 +212,6 @@ const FilterSidebar = ({
               ))}
             </div>
           </div>
-
-          <div className="space-y-2">
-            <Label className="text-[#7a7b9f]">Período</Label>
-            <RadioGroup
-              value={localFilters.period}
-              onValueChange={(value) => {
-                setLocalFilters(prev => ({
-                  ...prev,
-                  period: value,
-                  dateRange: { start: null, end: null }
-                }))
-              }}
-              className="space-y-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="all" id="all" />
-                <Label htmlFor="all" className="text-[#e5e2e9]">Todos</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="7days" id="7days" />
-                <Label htmlFor="7days" className="text-[#e5e2e9]">Últimos 7 dias</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="30days" id="30days" />
-                <Label htmlFor="30days" className="text-[#e5e2e9]">Últimos 30 dias</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="90days" id="90days" />
-                <Label htmlFor="90days" className="text-[#e5e2e9]">Últimos 90 dias</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="custom" id="custom" />
-                <Label htmlFor="custom" className="text-[#e5e2e9]">Personalizado</Label>
-              </div>
-            </RadioGroup>
-          </div>
-
-          {localFilters.period === 'custom' && (
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-[#7a7b9f]">Data Inicial</Label>
-                <DatePicker
-                  date={localFilters.dateRange.start}
-                  onSelect={(date) => 
-                    setLocalFilters(prev => ({
-                      ...prev,
-                      dateRange: { ...prev.dateRange, start: date }
-                    }))
-                  }
-                  placeholder="Selecione a data inicial"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-[#7a7b9f]">Data Final</Label>
-                <DatePicker
-                  date={localFilters.dateRange.end}
-                  onSelect={(date) => 
-                    setLocalFilters(prev => ({
-                      ...prev,
-                      dateRange: { ...prev.dateRange, end: date }
-                    }))
-                  }
-                  placeholder="Selecione a data final"
-                />
-              </div>
-            </div>
-          )}
 
           <Button
             className="w-full bg-[#7435db] hover:bg-[#5a2ba7]"
