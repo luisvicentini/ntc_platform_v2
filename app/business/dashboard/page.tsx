@@ -216,78 +216,55 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
         </div>
       </div>
 
-      <Card className="bg-[#131320] border-[#1a1b2d] mb-8">
-        <CardHeader>
-          <CardTitle className="text-[#e5e2e9]">Relatório de Check-ins</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between mb-6 gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7a7b9f]" />
-              <Input
-                placeholder="Pesquisar clientes"
-                className="pl-10 bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
-              />
-            </div>
-            <Button
-              variant="outline"
-              className="bg-[#1a1b2d] text-[#e5e2e9] border-[#131320] hover:bg-[#131320] hover:text-[#e5e2e9]"
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Filtrar
-            </Button>
-          </div>
-
-          <div className="space-y-6">
-            <Card className="bg-[#131320] border-[#1a1b2d]">
-              <CardHeader>
-                <CardTitle className="text-[#e5e2e9]">Últimos Check-ins</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="text-[#7a7b9f]">Cliente</TableHead>
-                      <TableHead className="text-[#7a7b9f]">Telefone</TableHead>
-                      <TableHead className="text-[#7a7b9f]">Data</TableHead>
-                      <TableHead className="text-[#7a7b9f]">Status</TableHead>
-                      <TableHead className="text-[#7a7b9f]">Código do Voucher</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {dashboardData.recentCheckins.map((checkIn) => (
-                      <TableRow key={checkIn.id}>
-                        <TableCell className="font-medium text-[#e5e2e9]">
-                          {checkIn.customerName}
-                        </TableCell>
-                        <TableCell className="text-[#7a7b9f]">
-                          {checkIn.customerPhone}
-                        </TableCell>
-                        <TableCell className="text-[#7a7b9f]">
-                          {checkIn.checkInDate}
-                        </TableCell>
-                        <TableCell>
-                          {getStatusBadge(checkIn.status)}
-                        </TableCell>
-                        <TableCell className="font-medium text-[#e5e2e9]">
-                          {checkIn.voucherCode}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {(!dashboardData.recentCheckins || dashboardData.recentCheckins.length === 0) && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center text-[#7a7b9f]">
-                          Nenhum check-in encontrado no período
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-        </CardContent>
-      </Card>
+      
+      <CardContent className="p-0">
+        <Card className="bg-[#131320] border-[#1a1b2d]">
+          <CardHeader>
+            <CardTitle className="text-[#e5e2e9]">Últimos Check-ins</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-[#7a7b9f]">Cliente</TableHead>
+                  <TableHead className="text-[#7a7b9f]">Telefone</TableHead>
+                  <TableHead className="text-[#7a7b9f]">Data</TableHead>
+                  <TableHead className="text-[#7a7b9f]">Status</TableHead>
+                  <TableHead className="text-[#7a7b9f]">Código do Voucher</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {dashboardData.recentCheckins.map((checkIn) => (
+                  <TableRow key={checkIn.id}>
+                    <TableCell className="font-medium text-[#e5e2e9]">
+                      {checkIn.customerName}
+                    </TableCell>
+                    <TableCell className="text-[#7a7b9f]">
+                      {checkIn.customerPhone}
+                    </TableCell>
+                    <TableCell className="text-[#7a7b9f]">
+                      {checkIn.checkInDate}
+                    </TableCell>
+                    <TableCell>
+                      {getStatusBadge(checkIn.status)}
+                    </TableCell>
+                    <TableCell className="font-medium text-[#e5e2e9]">
+                      {checkIn.voucherCode}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(!dashboardData.recentCheckins || dashboardData.recentCheckins.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center text-[#7a7b9f]">
+                      Nenhum check-in encontrado no período
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </CardContent>
     </div>
   )
 }

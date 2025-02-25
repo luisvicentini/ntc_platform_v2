@@ -1,141 +1,311 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Search } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Search, User, LayoutGrid, List } from "lucide-react"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 import { toast } from "sonner"
-import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { useAuth } from "@/contexts/auth-context"
+import { MemberSheet } from "@/components/member-sheet"
+import { MemberFilter } from "@/components/member-filter"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
+import { DateRange } from "react-day-picker"
+import { MemberFilterSheet } from "@/components/member-filter-sheet"
+import { MemberFilterModal } from "@/components/member-filter-modal"
 
 interface Member {
   id: string
   displayName: string
   email: string
+  phone: string
   photoURL?: string
-  status: "active" | "pending" | "blocked"
-  expiresAt?: string
-  createdAt: string
-  updatedAt: string
+  subscription: {
+    createdAt: string
+    expiresAt: string
+    status: string
+  }
+  subscriptions?: Array<{
+    createdAt: string
+    expiresAt: string
+    status: string
+  }>
 }
 
 export default function MembersPage() {
-  const { user } = useAuth()
   const [members, setMembers] = useState<Member[]>([])
   const [searchTerm, setSearchTerm] = useState("")
+  const [viewMode, setViewMode] = useState<"grid" | "list">("grid")
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [dateRange, setDateRange] = useState<DateRange>()
   const [loading, setLoading] = useState(true)
 
+  // Função para verificar se há filtros ativos
+  const hasActiveFilters = statusFilter !== "all" || (dateRange?.from && dateRange?.to)
+
+  // Função para limpar os filtros
+  const handleClearFilters = () => {
+    setStatusFilter("all")
+    setDateRange(undefined)
+  }
+
   useEffect(() => {
-    const loadMembers = async () => {
-      try {
-        const response = await fetch(`/api/partners/${user?.uid}/members`)
-        if (!response.ok) {
-          throw new Error("Erro ao carregar membros")
+    fetchMembers()
+  }, [])
+
+  const fetchMembers = async () => {
+    try {
+      const response = await fetch("/api/partner/members", {
+        headers: {
+          "x-session-token": localStorage.getItem("session_token") || ""
         }
-        const data = await response.json()
-        setMembers(data)
-      } catch (error: any) {
-        toast.error(error.message)
-      } finally {
-        setLoading(false)
+      })
+
+      if (!response.ok) {
+        throw new Error("Falha ao carregar membros")
       }
-    }
 
-    if (user?.uid) {
-      loadMembers()
+      const data = await response.json()
+      setMembers(data.members)
+    } catch (error) {
+      console.error("Erro ao carregar membros:", error)
+      toast.error("Erro ao carregar membros")
+    } finally {
+      setLoading(false)
     }
-  }, [user?.uid])
+  }
 
-  const filteredMembers = members.filter(
-    (member) =>
-      member.displayName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      member.email.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredMembers = members.filter((member) => {
+    const searchLower = searchTerm.toLowerCase()
+    const matchesSearch = 
+      member.displayName?.toLowerCase().includes(searchLower) ||
+      member.email?.toLowerCase().includes(searchLower) ||
+      member.phone?.includes(searchTerm)
 
-  // Função para gerar as iniciais do nome
-  const getInitials = (name: string) => {
-    const names = name.split(" ")
-    if (names.length >= 2) {
-      return `${names[0][0]}${names[names.length - 1][0]}`.toUpperCase()
+    const matchesStatus = 
+      statusFilter === "all" ||
+      member.subscription?.status === statusFilter
+
+    const matchesDate = 
+      !dateRange?.from || !dateRange?.to ||
+      (new Date(member.subscription?.expiresAt) >= dateRange.from &&
+       new Date(member.subscription?.expiresAt) <= dateRange.to)
+
+    return matchesSearch && matchesStatus && matchesDate
+  })
+
+  const handleEditMember = async (member: Member) => {
+    try {
+      const response = await fetch(`/api/partner/members/${member.id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": localStorage.getItem("session_token") || ""
+        },
+        body: JSON.stringify({
+          displayName: member.displayName,
+          phone: member.phone,
+          subscription: {
+            status: member.subscription.status
+          }
+        })
+      })
+
+      if (!response.ok) {
+        throw new Error("Falha ao atualizar membro")
+      }
+
+      toast.success("Membro atualizado com sucesso")
+      fetchMembers() // Recarrega a lista de membros
+    } catch (error) {
+      console.error("Erro ao atualizar membro:", error)
+      toast.error("Erro ao atualizar membro")
     }
-    return name.substring(0, 2).toUpperCase()
+  }
+
+  if (loading) {
+    return (
+      <div className="container mx-auto p-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7435db]"></div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div className="container py-6">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#e5e2e9]">Meus Membros</h1>
-
-        <div className="flex items-center space-x-4">
-          <div className="relative w-[400px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7a7b9f]" />
-            <Input
-              placeholder="Pesquisar membro"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
-            />
+    <div className="container mx-auto p-6">
+      <div className="flex flex-col space-y-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <h1 className="text-2xl font-bold text-[#e5e2e9]">Membros</h1>
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="flex items-center space-x-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#7a7b9f]" />
+                <Input
+                  placeholder="Buscar membro..."
+                  className="pl-8 bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <MemberFilterModal
+                statusFilter={statusFilter}
+                onStatusChange={setStatusFilter}
+                dateRange={dateRange}
+                onDateRangeChange={setDateRange}
+                onClearFilters={handleClearFilters}
+                hasActiveFilters={hasActiveFilters}
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
+              className="bg-[#131320] border-[#1a1b2d]"
+            >
+              {viewMode === "grid" ? (
+                <List className="h-4 w-4 text-[#7a7b9f]" />
+              ) : (
+                <LayoutGrid className="h-4 w-4 text-[#7a7b9f]" />
+              )}
+            </Button>
           </div>
         </div>
-      </div>
 
-      <div className="rounded-md border border-[#1a1b2d] bg-[#131320]">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-[#1a1b2d] hover:bg-[#1a1b2d]">
-              <TableHead className="text-[#7a7b9f] w-[50px]"></TableHead>
-              <TableHead className="text-[#7a7b9f]">Nome</TableHead>
-              <TableHead className="text-[#7a7b9f]">Email</TableHead>
-              <TableHead className="text-[#7a7b9f]">Status</TableHead>
-              <TableHead className="text-[#7a7b9f]">Expira em</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-[#7a7b9f]">
-                  Carregando...
-                </TableCell>
-              </TableRow>
-            ) : filteredMembers.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-[#7a7b9f]">
-                  Nenhum membro encontrado
-                </TableCell>
-              </TableRow>
-            ) : (
-              filteredMembers.map((member) => (
-                <TableRow key={member.id} className="border-[#1a1b2d]">
-                  <TableCell>
-                    <Avatar>
-                      {member.photoURL ? (
-                        <AvatarImage src={member.photoURL} alt={member.displayName} />
-                      ) : (
-                        <AvatarFallback>{getInitials(member.displayName)}</AvatarFallback>
-                      )}
-                    </Avatar>
-                  </TableCell>
-                  <TableCell className="font-medium text-[#e5e2e9]">
-                    {member.displayName}
-                  </TableCell>
-                  <TableCell className="text-[#7a7b9f]">{member.email}</TableCell>
-                  <TableCell className="text-[#7a7b9f]">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs ${
-                        member.status === "active" ? "bg-green-500/20 text-green-500" : "bg-red-500/20 text-red-500"
-                      }`}
-                    >
-                      {member.status === "active" ? "Ativo" : "Bloqueado"}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-[#7a7b9f]">
-                    {member.expiresAt ? new Date(member.expiresAt).toLocaleDateString("pt-BR") : "Sem data"}
-                  </TableCell>
+        {viewMode === "grid" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredMembers.map((member) => (
+              <Card
+                key={member.id}
+                className="bg-[#131320] border-[#1a1b2d] cursor-pointer hover:border-[#7435db] transition-colors"
+                onClick={() => setSelectedMember(member)}
+              >
+                <CardHeader className="flex flex-row items-center space-y-0 pb-2">
+                  <div className="flex items-center space-x-4">
+                    {member.photoURL ? (
+                      <img
+                        src={member.photoURL}
+                        alt={member.displayName}
+                        className="h-10 w-10 rounded-full"
+                      />
+                    ) : (
+                      <div className="h-10 w-10 rounded-full bg-[#1a1b2d] flex items-center justify-center">
+                        <User className="h-6 w-6 text-[#7a7b9f]" />
+                      </div>
+                    )}
+                    <CardTitle className="text-sm font-medium text-[#e5e2e9]">
+                      {member.displayName}
+                    </CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2 text-sm text-[#7a7b9f]">
+                    <p>{member.email}</p>
+                    <p>{member.phone || "Telefone não informado"}</p>
+                    <div className="flex justify-between items-center">
+                      <span>Status:</span>
+                      <Badge
+                        variant={member.subscription?.status === "active" ? "success" : "destructive"}
+                        className="bg-emerald-500/30 text-emerald-200 border-emerald-500"
+                      >
+                        {member.subscription?.status === "active" ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </div>
+                    {member.subscription?.expiresAt && (
+                      <p>
+                        Expira em:{" "}
+                        {format(new Date(member.subscription.expiresAt), "dd/MM/yyyy", { locale: ptBR })}
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-md border border-[#1a1b2d]">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-[#1a1b2d]">
+                  <TableHead className="text-[#7a7b9f]">Membro</TableHead>
+                  <TableHead className="text-[#7a7b9f]">Email</TableHead>
+                  <TableHead className="text-[#7a7b9f]">Telefone</TableHead>
+                  <TableHead className="text-[#7a7b9f]">Status</TableHead>
+                  <TableHead className="text-[#7a7b9f]">Expira em</TableHead>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              </TableHeader>
+              <TableBody>
+                {filteredMembers.map((member) => (
+                  <TableRow
+                    key={member.id}
+                    className="border-[#1a1b2d] cursor-pointer hover:bg-[#1a1b2d]"
+                    onClick={() => setSelectedMember(member)}
+                  >
+                    <TableCell className="font-medium text-[#e5e2e9]">
+                      <div className="flex items-center space-x-3">
+                        {member.photoURL ? (
+                          <img
+                            src={member.photoURL}
+                            alt={member.displayName}
+                            className="h-8 w-8 rounded-full"
+                          />
+                        ) : (
+                          <div className="h-8 w-8 rounded-full bg-[#1a1b2d] flex items-center justify-center">
+                            <User className="h-4 w-4 text-[#7a7b9f]" />
+                          </div>
+                        )}
+                        <span>{member.displayName}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-[#7a7b9f]">{member.email}</TableCell>
+                    <TableCell className="text-[#7a7b9f]">
+                      {member.phone || "Não informado"}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={member.subscription?.status === "active" ? "success" : "destructive"}
+                        className="bg-opacity-15"
+                      >
+                        {member.subscription?.status === "active" ? "Ativo" : "Inativo"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-[#7a7b9f]">
+                      {member.subscription?.expiresAt
+                        ? format(new Date(member.subscription.expiresAt), "dd/MM/yyyy", {
+                            locale: ptBR,
+                          })
+                        : "N/A"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+
+        {filteredMembers.length === 0 && (
+          <div className="text-center text-[#7a7b9f] py-10">
+            {searchTerm ? "Nenhum membro encontrado" : "Nenhum membro cadastrado"}
+          </div>
+        )}
+
+        <MemberSheet
+          member={selectedMember}
+          isOpen={!!selectedMember}
+          onClose={() => setSelectedMember(null)}
+          onEdit={handleEditMember}
+        />
       </div>
     </div>
   )

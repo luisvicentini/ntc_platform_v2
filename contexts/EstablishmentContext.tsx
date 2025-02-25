@@ -37,7 +37,14 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
       setLoading(true)
       let url = "/api/member/feed"
 
+      if (auth.user?.userType === "partner") {
+        url = "/api/establishments"
+      }
+
       const response = await fetch(url, {
+        headers: {
+          "x-session-token": localStorage.getItem("session_token") || ""
+        },
         credentials: "include"
       })
       
@@ -45,18 +52,21 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
         throw new Error("Erro ao carregar estabelecimentos")
       }
 
-      const { establishments } = await response.json()
-      setEstablishments(establishments)
+      const data = await response.json()
+      setEstablishments(auth.user?.userType === "partner" ? data : data.establishments)
     } catch (error: any) {
+      console.error("Erro ao carregar estabelecimentos:", error)
       toast.error(error.message)
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [auth.user?.userType])
 
   useEffect(() => {
-    refreshEstablishments()
-  }, [refreshEstablishments])
+    if (auth.user) {
+      refreshEstablishments()
+    }
+  }, [refreshEstablishments, auth.user])
 
   const addEstablishment = useCallback(async (establishment: Omit<Establishment, "id" | "partnerId" | "status" | "createdAt" | "updatedAt" | "rating" | "totalRatings" | "isFeatured">) => {
     try {

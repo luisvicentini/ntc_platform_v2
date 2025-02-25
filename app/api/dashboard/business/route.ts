@@ -3,7 +3,8 @@ import { db } from "@/lib/firebase"
 import { collection, query, where, getDocs, Timestamp } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
-import { startOfDay, endOfDay, subDays } from "date-fns"
+import { startOfDay, endOfDay, subDays, format } from "date-fns"
+import { ptBR } from "date-fns/locale/pt-BR"
 
 export async function GET(request: Request) {
   try {
@@ -13,13 +14,11 @@ export async function GET(request: Request) {
     }
 
     const session = jwtDecode<SessionToken>(sessionToken)
-    
+    console.log("[DEBUG] Session:", session)
+
     // Buscar usuário e seus estabelecimentos vinculados
     const usersRef = collection(db, "users")
-    const userQuery = query(
-      usersRef,
-      where("firebaseUid", "==", session.uid)
-    )
+    const userQuery = query(usersRef, where("firebaseUid", "==", session.uid))
     const userSnap = await getDocs(userQuery)
     
     if (userSnap.empty) {
@@ -28,11 +27,13 @@ export async function GET(request: Request) {
 
     const userData = userSnap.docs[0].data()
     const establishmentIds = userData.establishmentIds || []
+    console.log("[DEBUG] EstablishmentIds:", establishmentIds)
 
     // Parâmetros de data da requisição
     const { searchParams } = new URL(request.url)
     const fromDate = new Date(searchParams.get("from") || new Date())
     const toDate = new Date(searchParams.get("to") || new Date())
+    console.log("[DEBUG] Date range:", { fromDate, toDate })
 
     // Buscar vouchers do período
     const vouchersRef = collection(db, "vouchers")
@@ -43,15 +44,20 @@ export async function GET(request: Request) {
         where("createdAt", "<=", Timestamp.fromDate(toDate))
       ))
     )
+
     const vouchersSnapshots = await Promise.all(vouchersPromises)
-    const vouchers = vouchersSnapshots.flatMap(snapshot => 
-      snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        createdAt: doc.data().createdAt?.toDate(),
-        usedAt: doc.data().usedAt ? new Date(doc.data().usedAt) : null
-      }))
-    )
+    const vouchers = vouchersSnapshots.flatMap(snapshot => {
+      return snapshot.docs.map(doc => {
+        const data = doc.data()
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : data.createdAt,
+          usedAt: data.usedAt instanceof Timestamp ? data.usedAt.toDate() : data.usedAt
+        }
+      })
+    })
+    console.log("[DEBUG] Vouchers found:", vouchers.length)
 
     // Calcular métricas do período
     const vouchersInPeriod = vouchers.length
@@ -96,20 +102,49 @@ export async function GET(request: Request) {
       : 0
 
     // Buscar os últimos check-ins
-    const recentCheckins = vouchers
-      .filter(v => v.status === "used" && v.usedAt)
-      .sort((a, b) => (b.usedAt?.getTime() || 0) - (a.usedAt?.getTime() || 0))
-      .slice(0, 10)
-      .map(voucher => ({
-        id: voucher.id,
-        customerName: voucher.memberName || "Cliente não identificado",
-        customerPhone: voucher.memberPhone || "Telefone não cadastrado",
-        checkInDate: voucher.usedAt?.toLocaleDateString('pt-BR') || "",
-        status: voucher.status,
-        voucherCode: voucher.code
-      }))
+    const recentCheckins = await Promise.all(
+      vouchers
+        .filter(v => v.status === "used" && v.usedAt)
+        .sort((a, b) => {
+          const dateA = a.usedAt instanceof Date ? a.usedAt : new Date(a.usedAt)
+          const dateB = b.usedAt instanceof Date ? b.usedAt : new Date(b.usedAt)
+          return dateB.getTime() - dateA.getTime()
+        })
+        .slice(0, 10)
+        .map(async voucher => {
+          try {
+            const memberRef = collection(db, "users")
+            const memberQuery = query(memberRef, where("firebaseUid", "==", voucher.memberId))
+            const memberSnap = await getDocs(memberQuery)
+            const memberData = !memberSnap.empty ? memberSnap.docs[0].data() : null
+            
+            const checkInDate = voucher.usedAt instanceof Date 
+              ? voucher.usedAt 
+              : new Date(voucher.usedAt)
 
-    return NextResponse.json({
+            return {
+              id: voucher.id,
+              customerName: memberData?.displayName || "Cliente não identificado",
+              customerPhone: memberData?.phone || "Telefone não cadastrado",
+              checkInDate: format(checkInDate, "dd/MM/yyyy", { locale: ptBR }),
+              status: voucher.status,
+              voucherCode: voucher.code
+            }
+          } catch (error) {
+            console.error("[DEBUG] Error processing voucher:", voucher.id, error)
+            return {
+              id: voucher.id,
+              customerName: "Cliente não identificado",
+              customerPhone: "Telefone não cadastrado",
+              checkInDate: "Data inválida",
+              status: voucher.status,
+              voucherCode: voucher.code
+            }
+          }
+        })
+    )
+
+    const response = {
       todayMetrics: {
         vouchers: vouchersInPeriod,
         checkins: checkinsInPeriod,
@@ -118,10 +153,13 @@ export async function GET(request: Request) {
       },
       monthlyData,
       recentCheckins
-    })
+    }
+    console.log("[DEBUG] Final response:", response)
+
+    return NextResponse.json(response)
 
   } catch (error) {
-    console.error("Erro ao buscar dados do dashboard:", error)
+    console.error("[DEBUG] Main error:", error)
     return NextResponse.json(
       { error: "Erro ao buscar dados do dashboard" },
       { status: 500 }
