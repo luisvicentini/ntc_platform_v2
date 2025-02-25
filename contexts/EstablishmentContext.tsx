@@ -4,6 +4,8 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
 import type { Establishment, AvailableEstablishment } from "@/types/establishment"
+import { doc, runTransaction } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
 interface EstablishmentContextType {
   establishments: (Establishment | AvailableEstablishment)[]
@@ -15,6 +17,7 @@ interface EstablishmentContextType {
   getNextVoucherTime: (establishmentId: string, userId: string) => Promise<Date | null>
   toggleFeatured: (id: string) => Promise<void>
   refreshEstablishments: () => Promise<void>
+  updateEstablishmentRating: (establishmentId: string, newRating: number) => Promise<boolean>
 }
 
 const EstablishmentContext = createContext<EstablishmentContextType | undefined>(undefined)
@@ -226,6 +229,51 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [establishments])
 
+  const updateEstablishmentRating = useCallback(async (
+    establishmentId: string, 
+    newRating: number
+  ) => {
+    try {
+      const establishmentRef = doc(db, "establishments", establishmentId)
+      
+      await runTransaction(db, async (transaction) => {
+        const establishmentDoc = await transaction.get(establishmentRef)
+        
+        if (!establishmentDoc.exists()) {
+          throw new Error("Estabelecimento não encontrado")
+        }
+
+        const data = establishmentDoc.data()
+        const newTotalRatings = (data.totalRatings || 0) + 1
+        const currentRating = data.rating || 0
+        const averageRating = ((currentRating * (newTotalRatings - 1)) + newRating) / newTotalRatings
+
+        transaction.update(establishmentRef, {
+          rating: Number(averageRating.toFixed(1)),
+          totalRatings: newTotalRatings,
+        })
+
+        // Atualiza o estado local
+        setEstablishments(prev => 
+          prev.map(est => 
+            est.id === establishmentId 
+              ? { 
+                  ...est, 
+                  rating: Number(averageRating.toFixed(1)), 
+                  totalRatings: newTotalRatings 
+                }
+              : est
+          )
+        )
+      })
+
+      return true
+    } catch (error) {
+      console.error("Erro ao atualizar avaliação:", error)
+      return false
+    }
+  }, [])
+
   return (
     <EstablishmentContext.Provider
       value={{
@@ -238,6 +286,7 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
         getNextVoucherTime,
         toggleFeatured,
         refreshEstablishments,
+        updateEstablishmentRating
       }}
     >
       {children}

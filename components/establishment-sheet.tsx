@@ -28,7 +28,8 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const { generateVoucher } = useEstablishment()
   const [voucherStates, setVoucherStates] = useState<Record<string, VoucherState>>({})
-  const { timeLeft, startCountdown } = useCountdown(24 * 60 * 60)
+  const [countdownSeconds, setCountdownSeconds] = useState(0)
+  const { timeLeft, startCountdown } = useCountdown(countdownSeconds)
   const { addNotification } = useNotification()
   const { user } = useAuth()
 
@@ -67,13 +68,16 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
     if (savedState) {
       try {
         const { code, expiresAt } = JSON.parse(savedState)
-        if (new Date(expiresAt) > new Date()) {
+        const expirationDate = new Date(expiresAt)
+        
+        if (expirationDate > new Date()) {
           setVoucherStates(prev => ({
             ...prev,
-            [establishment.id]: { code, expiresAt: new Date(expiresAt) }
+            [establishment.id]: { code, expiresAt: expirationDate }
           }))
-          const secondsLeft = Math.floor((new Date(expiresAt).getTime() - Date.now()) / 1000)
-          startCountdown(secondsLeft)
+          
+          const secondsLeft = Math.floor((expirationDate.getTime() - Date.now()) / 1000)
+          setCountdownSeconds(secondsLeft)
         } else {
           localStorage.removeItem(`voucher_${establishment.id}`)
         }
@@ -82,7 +86,7 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
         localStorage.removeItem(`voucher_${establishment.id}`)
       }
     }
-  }, [establishment])
+  }, [establishment, user])
 
   const handleGenerateVoucher = async () => {
     if (!establishment) return
@@ -90,7 +94,10 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
     try {
       const code = await generateVoucher(establishment.id)
       if (code) {
-        const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000)
+        const expirationHours = Number(establishment.voucherExpiration) || 24
+        console.log('Tempo de expiração em horas:', expirationHours)
+
+        const expiresAt = new Date(Date.now() + (expirationHours * 60 * 60 * 1000))
         const newState = { code, expiresAt }
         
         setVoucherStates(prev => ({
@@ -103,9 +110,12 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
           JSON.stringify(newState)
         )
         
-        startCountdown(24 * 60 * 60)
+        const secondsToExpire = expirationHours * 60 * 60
+        console.log('Segundos para expirar:', secondsToExpire)
+        setCountdownSeconds(secondsToExpire)
       }
     } catch (error: any) {
+      console.error('Erro ao gerar voucher:', error)
       toast.error(error.message)
     }
   }
@@ -123,9 +133,12 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
   }
 
   const formatTimeLeft = () => {
+    if (timeLeft <= 0) return ''
+    
     const hours = Math.floor(timeLeft / 3600)
     const minutes = Math.floor((timeLeft % 3600) / 60)
     const seconds = timeLeft % 60
+    
     return `${hours}h ${minutes}m ${seconds}s`
   }
 
@@ -227,9 +240,9 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             <Card className="bg-[#1a1b2d] border-[#a85fdd]">
               <CardContent className="p-6 text-center">
                 <h3 className="text-lg font-semibold text-[#e1e1e6] mb-2">Seu Voucher</h3>
-                <p className="text-3xl font-bold text-[#a85fdd]">{currentVoucher.code}</p>
+                <p className="text-3xl font-bold text-[#a85fdd] mb-2">{currentVoucher.code}</p>
                 {timeLeft > 0 && (
-                  <p className="text-sm text-muted-foreground mt-2">
+                  <p className="text-sm text-muted-foreground">
                     Expira em: {formatTimeLeft()}
                   </p>
                 )}

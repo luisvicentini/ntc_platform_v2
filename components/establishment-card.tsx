@@ -25,6 +25,17 @@ export function EstablishmentCard({ establishment, onEdit }: EstablishmentCardPr
             <FeaturedBadge />
           </div>
         )}
+        <div className="absolute top-2 right-2 bg-[#1a1b2d] px-2 py-1 rounded-full flex items-center gap-1">
+          <Star className="h-4 w-4 text-yellow-400" />
+          <span className="text-sm text-[#e5e2e9]">
+            {establishment.rating?.toFixed(1) || "Novo"}
+          </span>
+          {establishment.totalRatings > 0 && (
+            <span className="text-xs text-[#7a7b9f]">
+              ({establishment.totalRatings})
+            </span>
+          )}
+        </div>
       </div>
       <CardHeader className="p-4">
         <div className="flex justify-between items-start">

@@ -3,74 +3,81 @@
 import { useState } from "react"
 import { Star } from "lucide-react"
 import { useEstablishment } from "@/contexts/EstablishmentContext"
+import { doc, updateDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { toast } from "sonner"
 
 interface RatingCardProps {
   establishmentId: string
   establishmentName: string
   onRate: () => void
+  notificationId: string
 }
 
-export function RatingCard({ establishmentId, establishmentName, onRate }: RatingCardProps) {
+export function RatingCard({ establishmentId, establishmentName, onRate, notificationId }: RatingCardProps) {
   const [rating, setRating] = useState(0)
   const [hoveredRating, setHoveredRating] = useState(0)
-  const [hasRated, setHasRated] = useState(false)
-  const { updateEstablishment, establishments } = useEstablishment()
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const { updateEstablishmentRating } = useEstablishment()
 
-  const handleRate = (selectedRating: number) => {
-    setRating(selectedRating)
-    setHasRated(true)
+  const handleRate = async (selectedRating: number) => {
+    try {
+      setIsSubmitting(true)
+      console.log("Enviando avaliação:", {
+        establishmentId,
+        selectedRating,
+        notificationId
+      })
 
-    const establishment = establishments.find((e) => e.id === establishmentId)
-    if (!establishment) return
+      // Atualizar a avaliação do estabelecimento
+      const success = await updateEstablishmentRating(establishmentId, selectedRating)
 
-    const newTotalRatings = establishment.totalRatings + 1
-    const newRating = (establishment.rating * establishment.totalRatings + selectedRating) / newTotalRatings
+      if (!success) {
+        throw new Error("Falha ao atualizar avaliação")
+      }
 
-    updateEstablishment(establishmentId, {
-      rating: newRating,
-      totalRatings: newTotalRatings,
-    })
+      // Atualizar o status da notificação
+      const notificationRef = doc(db, "notifications", notificationId)
+      await updateDoc(notificationRef, {
+        status: "completed",
+        rating: selectedRating,
+        ratedAt: new Date()
+      })
 
-    // Don't call onRate to keep the notification
-  }
+      setRating(selectedRating)
+      toast.success("Avaliação enviada com sucesso!")
+      onRate() // Remove a notificação da lista
 
-  if (hasRated) {
-    return (
-      <div className="bg-[#1a1b2d] p-4 rounded-lg space-y-2">
-        <h4 className="font-medium text-lg text-[#e5e2e9]">Obrigado pelo feedback!</h4>
-        <p className="text-[#7a7b9f]">
-          Você avaliou {establishmentName} com {rating} estrelas
-        </p>
-        <div className="flex justify-center gap-1 py-2">
-          {[1, 2, 3, 4, 5].map((star) => (
-            <Star
-              key={star}
-              className={`w-6 h-6 ${star <= rating ? "fill-yellow-400 text-yellow-400" : "text-[#7a7b9f]"}`}
-            />
-          ))}
-        </div>
-      </div>
-    )
+    } catch (error) {
+      console.error("Erro ao salvar avaliação:", error)
+      toast.error("Erro ao enviar avaliação. Tente novamente.")
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   return (
-    <div className="bg-[#1a1b2d] p-4 rounded-lg space-y-2">
-      <h4 className="font-medium text-lg text-[#e5e2e9]">Avalie sua experiência</h4>
-      <p className="text-[#7a7b9f]">
-        Você gerou um voucher para {establishmentName}. Que tal avaliar o estabelecimento?
+    <div className="bg-[#1a1b2d] p-4 rounded-lg">
+      <h3 className="font-medium mb-2">Avalie sua experiência</h3>
+      <p className="text-sm text-[#7a7b9f] mb-4">
+        Como foi sua experiência em {establishmentName}?
       </p>
-      <div className="flex justify-center gap-1 py-2">
+      <div className="flex gap-2 justify-center" role="group" aria-label="Avaliação em estrelas">
         {[1, 2, 3, 4, 5].map((star) => (
           <button
             key={star}
-            className="focus:outline-none"
+            className="focus:outline-none disabled:opacity-50"
             onMouseEnter={() => setHoveredRating(star)}
             onMouseLeave={() => setHoveredRating(0)}
             onClick={() => handleRate(star)}
+            disabled={isSubmitting}
+            aria-label={`${star} estrelas`}
           >
             <Star
               className={`w-8 h-8 transition-colors ${
-                star <= (hoveredRating || rating) ? "fill-yellow-400 text-yellow-400" : "text-[#7a7b9f]"
+                star <= (hoveredRating || rating) 
+                  ? "fill-yellow-400 text-yellow-400" 
+                  : "text-[#7a7b9f]"
               }`}
             />
           </button>

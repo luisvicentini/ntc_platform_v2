@@ -33,6 +33,10 @@ export async function POST(request: Request) {
 
     const establishmentData = establishmentDoc.data()
 
+    // Usar o tempo de expiração em horas definido no estabelecimento
+    const expirationHours = Number(establishmentData.voucherExpiration) || 24
+    const expiresAt = new Date(Date.now() + (expirationHours * 60 * 60 * 1000))
+
     // Criar o voucher
     const voucherData = {
       code: generateVoucherCode(),
@@ -41,9 +45,12 @@ export async function POST(request: Request) {
       partnerId: establishmentData.partnerId,
       status: "pending",
       createdAt: new Date(),
-      expiresAt: addDays(new Date(), 7),
+      expiresAt,
       usedAt: null,
-      discount: establishmentData.discountValue || 10
+      discount: establishmentData.discountValue || 10,
+      establishmentName: establishmentData.name,
+      voucherDescription: establishmentData.voucherDescription || "",
+      usageLimit: establishmentData.usageLimit || null
     }
 
     const vouchersRef = collection(db, "vouchers")

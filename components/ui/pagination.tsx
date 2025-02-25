@@ -2,6 +2,33 @@
 
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+interface PaginationProps {
+  onPageChange?: (page: number) => void
+  currentPage: number
+  className?: string
+}
+
+export function PaginationPrevious({
+  onPageChange,
+  currentPage,
+  className,
+  ...props
+}: PaginationProps) {
+  return (
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={() => onPageChange?.(currentPage - 1)}
+      disabled={currentPage === 1}
+      className={cn("bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]", className)}
+      {...props}
+    >
+      <ChevronLeft className="h-4 w-4" />
+    </Button>
+  )
+}
 
 interface PaginationProps {
   currentPage: number
@@ -47,15 +74,11 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
 
   return (
     <div className="flex items-center space-x-2">
-      <Button
-        variant="outline"
-        size="icon"
-        onClick={() => onPageChange(currentPage - 1)}
-        disabled={currentPage === 1}
+      <PaginationPrevious
+        onPageChange={onPageChange}
+        currentPage={currentPage}
         className="bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
+      />
 
       {renderPageNumbers().map((page, index) => (
         typeof page === "number" ? (

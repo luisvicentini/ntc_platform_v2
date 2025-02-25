@@ -7,6 +7,7 @@ import "@/styles/globals.css"
 import type { Metadata } from "next"
 import { Poppins } from "next/font/google"
 import type React from "react"
+import { VoucherNotificationProvider } from "@/contexts/VoucherNotificationContext"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -36,7 +37,9 @@ export default function RootLayout({
         >
           <AuthProvider>
             <NotificationProvider>
-              <EstablishmentProvider>{children}</EstablishmentProvider>
+              <VoucherNotificationProvider>
+                <EstablishmentProvider>{children}</EstablishmentProvider>
+              </VoucherNotificationProvider>
             </NotificationProvider>
           </AuthProvider>
         </ThemeProvider>

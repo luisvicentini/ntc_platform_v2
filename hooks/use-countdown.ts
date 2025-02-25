@@ -1,34 +1,25 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 
-export function useCountdown(initialSeconds: number) {
-  const [timeLeft, setTimeLeft] = useState(0)
-  const [isRunning, setIsRunning] = useState(false)
+export function useCountdown(initialSeconds: number = 0) {
+  const [timeLeft, setTimeLeft] = useState(initialSeconds)
 
   useEffect(() => {
-    if (!isRunning || timeLeft === 0) return
+    setTimeLeft(initialSeconds)
+  }, [initialSeconds])
+
+  useEffect(() => {
+    if (timeLeft <= 0) return
 
     const timer = setInterval(() => {
-      setTimeLeft((time) => {
-        if (time <= 1) {
-          setIsRunning(false)
-          clearInterval(timer)
-          return 0
-        }
-        return time - 1
-      })
+      setTimeLeft((prev) => prev - 1)
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [isRunning, timeLeft])
+  }, [timeLeft])
 
-  const startCountdown = (seconds?: number) => {
-    setTimeLeft(seconds || initialSeconds)
-    setIsRunning(true)
-  }
+  const startCountdown = useCallback((seconds: number) => {
+    setTimeLeft(seconds)
+  }, [])
 
-  return {
-    timeLeft,
-    isRunning,
-    startCountdown
-  }
+  return { timeLeft, startCountdown }
 } 

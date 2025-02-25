@@ -21,6 +21,8 @@ import { useTheme } from "next-themes"
 import React from "react"
 import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
+import { collection, query, where, onSnapshot, doc, getDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
 interface MenuItem {
   href: string
@@ -121,6 +123,7 @@ const NotificationButton: React.FC<{ isOpen: boolean; onOpenChange: (open: boole
             key={notification.id}
             establishmentId={notification.establishmentId}
             establishmentName={notification.establishmentName}
+            notificationId={notification.id}
             onRate={() => removeNotification(notification.id)}
           />
         ))}
@@ -144,20 +147,22 @@ export function Header({ menuItems = [] }: HeaderProps) {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      if (user?.uid) {
-        try {
-          const response = await fetch(`/api/user/profile?userId=${user.uid}`)
-          if (response.ok) {
-            const data = await response.json()
-            setUserData({
-              displayName: data.displayName || user.displayName || "",
-              email: data.email || user.email || "",
-              photoURL: data.photoURL || user.photoURL || "",
-            })
-          }
-        } catch (error) {
-          console.error("Error fetching user data:", error)
+      if (!user) return
+
+      try {
+        const userRef = doc(db, "users", user.uid)
+        const userSnap = await getDoc(userRef)
+
+        if (userSnap.exists()) {
+          const data = userSnap.data()
+          setUserData({
+            displayName: data.name || "",
+            email: data.email || "",
+            photoURL: data.photoURL || "",
+          })
         }
+      } catch (error) {
+        console.error("Erro ao buscar dados do usuário:", error)
       }
     }
 

@@ -2,7 +2,7 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { User, Calendar, Ticket, Percent, AlertCircle } from "lucide-react"
+import { User, Calendar, Ticket, Percent, AlertCircle, Info, Users } from "lucide-react"
 
 interface VoucherTicketProps {
   customerName: string
@@ -13,6 +13,8 @@ interface VoucherTicketProps {
   conditions: string
   status: string
   establishmentImage: string
+  voucherDescription: string
+  usageLimit: string
 }
 
 export function VoucherTicket({
@@ -23,7 +25,9 @@ export function VoucherTicket({
   discount,
   conditions,
   status,
-  establishmentImage
+  establishmentImage,
+  voucherDescription,
+  usageLimit
 }: VoucherTicketProps) {
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -61,7 +65,7 @@ export function VoucherTicket({
   return (
     <div className="relative bg-white rounded-lg overflow-hidden">
       {/* Imagem do estabelecimento */}
-      <div className="h-32 w-full">
+      <div className="h-48 w-full">
         <img
           src={establishmentImage}
           alt="Estabelecimento"
@@ -70,7 +74,7 @@ export function VoucherTicket({
       </div>
 
       {/* Linha pontilhada decorativa */}
-      <div className="absolute left-0 right-0 h-4 flex justify-between items-center left-[-10px] right-[-10px]" style={{ top: "120px" }}>
+      <div className="absolute left-0 right-0 h-4 flex justify-between items-center left-[-10px] right-[-10px]" style={{ top: "184px" }}>
         <div className="w-4 h-4 bg-[#131320] rounded-full" />
         <div className="flex-1 border-t-2 border-dashed border-[#131320] mx-2" />
         <div className="w-4 h-4 bg-[#131320] rounded-full" />
@@ -109,18 +113,33 @@ export function VoucherTicket({
         <div className="space-y-3 pt-2">
           <div className="flex items-center space-x-2 text-[#7a7b9f]">
             <Calendar className="h-4 w-4" />
-            <span>{status === "used" ? "Data do Check-in:" : "Data da Verificação:"} {checkInDate}</span>
+            <div className="flex-1">
+              <h4 className="text-sm">Data da Verificação:</h4>
+              <p>{checkInDate}</p>
+            </div>
           </div>
 
           <div className="flex items-center space-x-2 text-[#7a7b9f]">
             <Percent className="h-4 w-4" />
-            <span>Desconto: {discount}</span>
+            <div className="flex-1">
+              <h4 className="text-sm">Desconto:</h4>
+              <p>{discount}</p>
+            </div>
           </div>
 
-          <div className="flex items-start space-x-2 text-[#7a7b9f]">
-            <AlertCircle className="h-4 w-4 mt-1" />
+          <div className="flex items-center space-x-2 text-[#7a7b9f]">
+            <Info className="h-4 w-4" />
             <div className="flex-1">
-              <span>Condições: {conditions}</span>
+              <h4 className="text-sm">Regras do Desconto:</h4>
+              <p>{voucherDescription}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2 text-[#7a7b9f]">
+            <Users className="h-4 w-4" />
+            <div className="flex-1">
+              <h4 className="text-sm">Limite de Uso:</h4>
+              <p>{usageLimit}</p>
             </div>
           </div>
         </div>

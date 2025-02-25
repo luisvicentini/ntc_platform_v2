@@ -1,47 +1,70 @@
 "use client"
 
-import type React from "react"
-import { createContext, useContext, useState, useCallback } from "react"
+import { createContext, useContext, useEffect, useState } from "react"
+import { collection, query, where, onSnapshot, doc, updateDoc } from "firebase/firestore"
+import { db } from "@/lib/firebase"
+import { useAuth } from "./auth-context"
 
 interface Notification {
   id: string
-  message: string
-  type: "vote"
+  type: string
+  memberId: string
   establishmentId: string
   establishmentName: string
+  voucherId: string
+  status: string
+  createdAt: any
 }
 
 interface NotificationContextType {
   notifications: Notification[]
-  addNotification: (notification: Omit<Notification, "id">) => void
-  removeNotification: (id: string) => void
+  removeNotification: (notificationId: string) => Promise<void>
 }
 
-const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
+export const NotificationContext = createContext({} as NotificationContextType)
 
-export const useNotification = () => {
-  const context = useContext(NotificationContext)
-  if (!context) {
-    throw new Error("useNotification must be used within a NotificationProvider")
-  }
-  return context
-}
-
-export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const { user } = useAuth()
 
-  const addNotification = useCallback((notification: Omit<Notification, "id">) => {
-    setNotifications((prev) => [...prev, { ...notification, id: Date.now().toString() }])
-  }, [])
+  useEffect(() => {
+    if (!user?.uid) return
 
-  const removeNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((notification) => notification.id !== id))
-  }, [])
+    const notificationsRef = collection(db, "notifications")
+    const q = query(
+      notificationsRef,
+      where("memberId", "==", user.uid),
+      where("status", "==", "pending")
+    )
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const notificationsData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Notification[]
+      setNotifications(notificationsData)
+    })
+
+    return () => unsubscribe()
+  }, [user?.uid])
+
+  const removeNotification = async (notificationId: string) => {
+    try {
+      const notificationRef = doc(db, "notifications", notificationId)
+      await updateDoc(notificationRef, {
+        status: "completed"
+      })
+    } catch (error) {
+      console.error("Erro ao remover notificação:", error)
+    }
+  }
 
   return (
-    <NotificationContext.Provider value={{ notifications, addNotification, removeNotification }}>
+    <NotificationContext.Provider value={{ notifications, removeNotification }}>
       {children}
     </NotificationContext.Provider>
   )
 }
+
+export const useNotification = () => useContext(NotificationContext)
 

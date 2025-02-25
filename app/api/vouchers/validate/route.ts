@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, getDocs, query, where, doc, updateDoc, getDoc, Timestamp } from "firebase/firestore"
+import { collection, getDocs, query, where, doc, updateDoc, getDoc, Timestamp, addDoc, runTransaction } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
 import type { Voucher } from "@/types/voucher"
@@ -147,17 +147,56 @@ export async function PATCH(request: Request) {
       )
     }
 
-    // Realizar check-in
-    await updateDoc(doc(db, "vouchers", voucherDoc.id), {
-      status: "used",
-      usedAt: Timestamp.now(),
-      usedBy: session.uid
-    })
+    // Buscar dados do estabelecimento para incluir na notificação
+    const establishmentRef = doc(db, "establishments", voucher.establishmentId)
+    const establishmentSnap = await getDoc(establishmentRef)
+    
+    if (!establishmentSnap.exists()) {
+      return NextResponse.json(
+        { error: "Estabelecimento não encontrado" },
+        { status: 404 }
+      )
+    }
 
-    return NextResponse.json({
-      success: true,
-      message: "Check-in realizado com sucesso"
-    })
+    const establishment = establishmentSnap.data()
+
+    try {
+      // Realizar check-in e criar notificação em uma transação
+      await runTransaction(db, async (transaction) => {
+        // Atualiza o status do voucher
+        transaction.update(doc(db, "vouchers", voucherDoc.id), {
+          status: "used",
+          usedAt: Timestamp.now(),
+          usedBy: session.uid
+        })
+        
+        // Cria a notificação de avaliação
+        const notificationsRef = collection(db, "notifications")
+        const notificationData = {
+          type: "rating",
+          memberId: voucher.memberId,
+          establishmentId: voucher.establishmentId,
+          establishmentName: establishment.name,
+          voucherId: voucherDoc.id,
+          createdAt: Timestamp.now(),
+          status: "pending"
+        }
+        
+        transaction.set(doc(notificationsRef), notificationData)
+      })
+
+      return NextResponse.json({
+        success: true,
+        message: "Check-in realizado com sucesso"
+      })
+
+    } catch (error) {
+      console.error("Erro na transação:", error)
+      return NextResponse.json(
+        { error: "Erro ao realizar check-in" },
+        { status: 500 }
+      )
+    }
 
   } catch (error) {
     console.error("Erro ao realizar check-in:", error)

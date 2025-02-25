@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 import { VoucherTicket } from "@/components/voucher-ticket"
+import { Info, Users } from "lucide-react"
 
 interface VoucherValidationResult {
   isValid: boolean
@@ -19,6 +20,8 @@ interface VoucherValidationResult {
   conditions?: string
   establishmentImage?: string
   code?: string
+  voucherDescription?: string
+  usageLimit?: string
 }
 
 // Simulated validation function - in a real app this would call your API
@@ -161,6 +164,8 @@ export default function ValidateVoucherPage() {
           customerAvatar: data.voucher.member.photoURL,
           checkInDate: new Date().toLocaleDateString(),
           discount: data.voucher.discount,
+          voucherDescription: data.voucher.voucherDescription || "Sem descrição específica",
+          usageLimit: data.voucher.usageLimit || "Sem limite específico",
           conditions: data.voucher.conditions || "Sem condições especiais",
           establishmentImage: data.voucher.establishmentImage || "/placeholder.svg",
         })
@@ -324,11 +329,11 @@ export default function ValidateVoucherPage() {
   }
 
   return (
-    <div className="container py-6">
-      <h1 className="text-2xl font-bold text-[#e5e2e9] mb-6">Validar Voucher</h1>
+    <div className="container mx-auto p-4 max-w-4xl">
+      <h1 className="text-2xl font-bold text-[#e5e2e9] mb-6 text-center">Validar Voucher</h1>
 
       <Card className="bg-[#131320] border-[#1a1b2d] p-6">
-        <h2 className="text-xl text-[#e5e2e9] mb-4">
+        <h2 className="text-xl text-[#e5e2e9] mb-4 text-center">
           Digite o código do cupom para validar e fazer Check-in
         </h2>
 
@@ -342,7 +347,7 @@ export default function ValidateVoucherPage() {
               onChange={(e) => handleInputChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
-              className="w-16 h-16 text-center text-3xl bg-[#0f0f1a] text-[#e5e2e9] border-[#a85fdd] focus:ring-[#a85fdd] focus:border-[#a85fdd]"
+              className="w-full h-24 text-center text-3xl bg-[#0f0f1a] text-[#e5e2e9] border-[#a85fdd] focus:ring-[#a85fdd] focus:border-[#a85fdd]"
               maxLength={index === 0 ? 6 : 1}
             />
           ))}
@@ -351,14 +356,15 @@ export default function ValidateVoucherPage() {
         {!validationResult && (
           <Button
             onClick={validateVoucher}
-            className="w-full bg-[#7435db] hover:bg-[#6229c5]"
+            className="w-full bg-[#7435db] hover:bg-[#6229c5] text-lg text-white transition-all duration-300"
             disabled={voucherCode.some(v => !v)}
+            size="xl"
           >
             Verificar
           </Button>
         )}
 
-        {validationResult && (
+        {validationResult && validationResult.isValid && (
           <div className="space-y-6">
             <VoucherTicket
               customerName={validationResult.customerName}
@@ -369,12 +375,15 @@ export default function ValidateVoucherPage() {
               conditions={validationResult.conditions}
               status={validationResult.status}
               establishmentImage={validationResult.establishmentImage}
+              voucherDescription={validationResult.voucherDescription}
+              usageLimit={validationResult.usageLimit}
             />
 
             {validationResult.status === "verified" && !checkInDone && (
               <Button
                 onClick={performCheckIn}
-                className="w-full bg-emerald-600 hover:bg-emerald-700"
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-lg text-white"
+                size="xl"
               >
                 Confirmar Check-in
               </Button>
@@ -387,7 +396,8 @@ export default function ValidateVoucherPage() {
                 setCheckInDone(false)
               }}
               variant="outline"
-              className="w-full border-[#1a1b2d] text-[#7a7b9f] hover:bg-[#1a1b2d]"
+              className="w-full bg-[#1a1b2d] hover:bg-[#7a7b9f] border-[#1a1b2d] text-[#7a7b9f] hover:text-[#1a1b2d] text-lg transition-all duration-300"
+              size="xl"
             >
               Inserir outro voucher
             </Button>
