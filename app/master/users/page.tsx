@@ -14,10 +14,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Pagination } from "@/components/ui/pagination"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Building2, User, Users, Crown, MoreVertical, Grid, List, Check, X } from "lucide-react"
+import { Building2, User, Users, Crown, MoreVertical, Grid, List, Check, X, Edit, Mail, Trash, Link } from "lucide-react"
 import type { UserProfile, UserListResponse } from "@/types/user"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { PopoverArrow } from "@radix-ui/react-popover"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 const ITEMS_PER_PAGE = 10
 
@@ -44,6 +45,7 @@ function UsersContent() {
   const [showAddUserModal, setShowAddUserModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null)
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
 
   useEffect(() => {
     fetchUsers()
@@ -57,6 +59,17 @@ function UsersContent() {
     const total = filteredUsers.length
     setTotalPages(Math.ceil(total / ITEMS_PER_PAGE))
   }, [filteredUsers])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (openDropdownId && !(event.target as Element).closest('.dropdown-container')) {
+        setOpenDropdownId(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [openDropdownId])
 
   const fetchUsers = async () => {
     try {
@@ -351,36 +364,83 @@ function UsersContent() {
                   </span>
                 </Badge>
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-[#1a1b2d] border-[#131320]">
-                  <DropdownMenuItem onClick={() => handleEdit(user)} className="text-[#e5e2e9]">
-                    Editar
-                  </DropdownMenuItem>
-                  {(user.status === "inactive" || user.status === "expired") && (
-                    <DropdownMenuItem onClick={() => handleResendActivation(user)} className="text-[#e5e2e9]">
-                      Reenviar Email de Ativação
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuItem onClick={() => handleDeleteClick(user)} className="text-red-500">
-                    Excluir
-                  </DropdownMenuItem>
-                  {user.userType === "member" && (
-                    <DropdownMenuItem onClick={() => handleLinkSubscription(user)} className="text-[#e5e2e9]">
-                      Vincular Assinatura
-                    </DropdownMenuItem>
-                  )}
-                  {user.userType === "business" && (
-                    <DropdownMenuItem onClick={() => handleLinkEstablishment(user)} className="text-[#e5e2e9]">
-                      Vincular Estabelecimento
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <div className="dropdown-container relative">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setOpenDropdownId(openDropdownId === user.id ? null : user.id)}
+                  className="relative z-10"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </Button>
+                
+                {openDropdownId === user.id && (
+                  <div className="absolute right-0 top-full mt-1 min-w-[200px] rounded-md bg-[#1a1b2d] p-2 shadow-md border border-[#131320] z-50">
+                    <div className="flex flex-col space-y-1">
+                      <button
+                        className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                        onClick={() => {
+                          handleEdit(user)
+                          setOpenDropdownId(null)
+                        }}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Editar
+                      </button>
+                      
+                      {(user.status === "inactive" || user.status === "expired") && (
+                        <button
+                          className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                          onClick={() => {
+                            handleResendActivation(user)
+                            setOpenDropdownId(null)
+                          }}
+                        >
+                          <Mail className="h-4 w-4 mr-2" />
+                          Reenviar Email de Ativação
+                        </button>
+                      )}
+                      
+                      <button
+                        className="text-left px-2 py-1.5 text-sm text-red-500 hover:bg-[#131320] rounded-sm flex items-center"
+                        onClick={() => {
+                          handleDeleteClick(user)
+                          setOpenDropdownId(null)
+                        }}
+                      >
+                        <Trash className="h-4 w-4 mr-2" />
+                        Excluir
+                      </button>
+                      
+                      {user.userType === "member" && (
+                        <button
+                          className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                          onClick={() => {
+                            handleLinkSubscription(user)
+                            setOpenDropdownId(null)
+                          }}
+                        >
+                          <Link className="h-4 w-4 mr-2" />
+                          Vincular Assinatura
+                        </button>
+                      )}
+                      
+                      {user.userType === "business" && (
+                        <button
+                          className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                          onClick={() => {
+                            handleLinkEstablishment(user)
+                            setOpenDropdownId(null)
+                          }}
+                        >
+                          <Building2 className="h-4 w-4 mr-2" />
+                          Vincular Estabelecimento
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="mt-4">
               <h3 className="text-[#e5e2e9] font-semibold truncate">{user.displayName}</h3>
@@ -492,36 +552,83 @@ function UsersContent() {
                 )}
               </TableCell>
               <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-[#1a1b2d] border-[#131320]">
-                    <DropdownMenuItem onClick={() => handleEdit(user)} className="text-[#e5e2e9]">
-                      Editar
-                    </DropdownMenuItem>
-                    {(user.status === "inactive" || user.status === "expired") && (
-                      <DropdownMenuItem onClick={() => handleResendActivation(user)} className="text-[#e5e2e9]">
-                        Reenviar Email de Ativação
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuItem onClick={() => handleDeleteClick(user)} className="text-red-500">
-                      Excluir
-                    </DropdownMenuItem>
-                    {user.userType === "member" && (
-                      <DropdownMenuItem onClick={() => handleLinkSubscription(user)} className="text-[#e5e2e9]">
-                        Vincular Assinatura
-                      </DropdownMenuItem>
-                    )}
-                    {user.userType === "business" && (
-                      <DropdownMenuItem onClick={() => handleLinkEstablishment(user)} className="text-[#e5e2e9]">
-                        Vincular Estabelecimento
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="dropdown-container relative">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setOpenDropdownId(openDropdownId === user.id ? null : user.id)}
+                    className="relative z-10"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                  
+                  {openDropdownId === user.id && (
+                    <div className="absolute right-0 top-full mt-1 min-w-[200px] rounded-md bg-[#1a1b2d] p-2 shadow-md border border-[#131320] z-50">
+                      <div className="flex flex-col space-y-1">
+                        <button
+                          className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                          onClick={() => {
+                            handleEdit(user)
+                            setOpenDropdownId(null)
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Editar
+                        </button>
+                        
+                        {(user.status === "inactive" || user.status === "expired") && (
+                          <button
+                            className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                            onClick={() => {
+                              handleResendActivation(user)
+                              setOpenDropdownId(null)
+                            }}
+                          >
+                            <Mail className="h-4 w-4 mr-2" />
+                            Reenviar Email de Ativação
+                          </button>
+                        )}
+                        
+                        <button
+                          className="text-left px-2 py-1.5 text-sm text-red-500 hover:bg-[#131320] rounded-sm flex items-center"
+                          onClick={() => {
+                            handleDeleteClick(user)
+                            setOpenDropdownId(null)
+                          }}
+                        >
+                          <Trash className="h-4 w-4 mr-2" />
+                          Excluir
+                        </button>
+                        
+                        {user.userType === "member" && (
+                          <button
+                            className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                            onClick={() => {
+                              handleLinkSubscription(user)
+                              setOpenDropdownId(null)
+                            }}
+                          >
+                            <Link className="h-4 w-4 mr-2" />
+                            Vincular Assinatura
+                          </button>
+                        )}
+                        
+                        {user.userType === "business" && (
+                          <button
+                            className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                            onClick={() => {
+                              handleLinkEstablishment(user)
+                              setOpenDropdownId(null)
+                            }}
+                          >
+                            <Building2 className="h-4 w-4 mr-2" />
+                            Vincular Estabelecimento
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </TableCell>
             </TableRow>
           ))}

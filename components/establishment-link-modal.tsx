@@ -207,7 +207,7 @@ export function EstablishmentLinkModal({
             <Button
               onClick={handleAddSelected}
               disabled={selectedToAdd.length === 0}
-              className="w-full bg-[#1a1b2d] hover:bg-[#282940]"
+              className="w-full"
             >
               Adicionar Selecionados <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
