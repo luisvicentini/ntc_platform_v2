@@ -88,6 +88,19 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
     }
   }, [establishment, user])
 
+  // Efeito para transição automática
+  useEffect(() => {
+    if (!establishment) return
+    
+    const timer = setInterval(() => {
+      setCurrentImageIndex((prev) => 
+        prev === establishment.images.length - 1 ? 0 : prev + 1
+      )
+    }, 3000) // 3 segundos
+
+    return () => clearInterval(timer)
+  }, [establishment])
+
   const handleGenerateVoucher = async () => {
     if (!establishment) return
 
@@ -160,15 +173,20 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           <div className="relative aspect-video rounded-lg overflow-hidden">
-            <img
-              src={establishment.images[currentImageIndex] || "/placeholder.svg"}
-              alt={establishment.name}
-              className="object-cover w-full h-full"
-            />
+            {establishment.images.map((image, index) => (
+              <img
+                key={index}
+                src={image || "/placeholder.svg"}
+                alt={`${establishment.name} - Imagem ${index + 1}`}
+                className={`absolute top-0 left-0 w-full h-full object-cover transition-opacity duration-500 ${
+                  currentImageIndex === index ? "opacity-100" : "opacity-0"
+                }`}
+              />
+            ))}
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/70"
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-white bg-black/0 hover:bg-black/80"
               onClick={prevImage}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -176,11 +194,27 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/20 hover:bg-black/70"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-white bg-black/0 hover:bg-black/80"
               onClick={nextImage}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
+            
+            {/* Indicadores */}
+            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-2">
+              {establishment.images.map((_, index) => (
+                <button
+                  key={index}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    currentImageIndex === index 
+                      ? "bg-white w-4" 
+                      : "bg-white/50 hover:bg-white/75"
+                  }`}
+                  onClick={() => setCurrentImageIndex(index)}
+                />
+              ))}
+            </div>
+
             <div className="absolute top-2 left-2 flex flex-col space-y-2 items-start">
               <div className="bg-black/75 text-white pl-2 pr-1 py-1 rounded-full text-sm flex items-center space-x-2">
                 <svg

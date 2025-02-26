@@ -6,24 +6,34 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { establishmentTypes } from "@/lib/establishment-types"
 
 interface EstablishmentTypeSelectProps {
-  value: { type: string; category: string }
-  onChange: (value: { type: string; category: string }) => void
-  label?: string
+  value?: {
+    type: string;
+    category: string;
+  };
+  onChange: (value: { type: string; category: string }) => void;
+  label?: string;
 }
 
-export function EstablishmentTypeSelect({ 
-  value, 
-  onChange, 
+export function EstablishmentTypeSelect({
+  value = { type: "", category: "" },
+  onChange,
   label = "Tipo de Estabelecimento" 
 }: EstablishmentTypeSelectProps) {
-  const [selectedType, setSelectedType] = useState(value.type)
-  const [selectedCategory, setSelectedCategory] = useState(value.category)
+  const [selectedType, setSelectedType] = useState(value?.type || "")
+  const [selectedCategory, setSelectedCategory] = useState(value?.category || "")
 
   // Obter as categorias do tipo selecionado
   const getCategories = () => {
     const type = establishmentTypes.find(t => t.id === selectedType)
     return type?.categories || []
   }
+
+  useEffect(() => {
+    if (value) {
+      setSelectedType(value.type || "")
+      setSelectedCategory(value.category || "")
+    }
+  }, [value])
 
   const handleTypeChange = (typeId: string) => {
     setSelectedType(typeId)

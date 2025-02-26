@@ -18,6 +18,9 @@ import { BusinessHours } from "@/components/business-hours"
 import { DiscountInput } from "@/components/discount-input"
 import { EstablishmentTypeSelect } from "@/components/establishment-type-select"
 import type { Establishment } from "@/types/establishment"
+import { ref, uploadBytes, getDownloadURL, uploadBytesResumable } from "firebase/storage"
+import { storage } from "@/lib/firebase"
+import { toast } from "sonner"
 
 type EstablishmentFormData = Omit<
   Establishment,
@@ -61,16 +64,36 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
     lastVoucherGenerated: {},
     businessUserId: ""
   })
+  const [uploadingImages, setUploadingImages] = useState(false)
+  const [imageFiles, setImageFiles] = useState<File[]>([])
+  const [currentTab, setCurrentTab] = useState("details")
 
   useEffect(() => {
-    if (establishment) {
-      const { 
-        id, partnerId, status, createdAt, updatedAt, rating, totalRatings, isFeatured,
-        ...rest 
-      } = establishment
-      setFormData({ ...rest, businessUserId: "" })
+    if (!isOpen) {
+      setFormData({
+        name: "",
+        description: "",
+        address: "",
+        phone: "",
+        businessUserId: "",
+        images: [],
+        voucherAvailability: false
+      })
+      setImageFiles([])
+      setCurrentTab("details")
+    } else if (establishment) {
+      setFormData({
+        name: establishment.name || "",
+        description: establishment.description || "",
+        address: establishment.address || "",
+        phone: establishment.phone || "",
+        businessUserId: establishment.businessUserId || "",
+        images: establishment.images || [],
+        voucherAvailability: establishment.voucherAvailability || false
+      })
+      setImageFiles([])
     }
-  }, [establishment])
+  }, [isOpen, establishment])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -84,8 +107,14 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files
     if (files && formData.images.length < 5) {
-      const newImages = Array.from(files).map((file) => URL.createObjectURL(file))
-      setFormData((prev) => ({ ...prev, images: [...prev.images, ...newImages].slice(0, 5) }))
+      const newFiles = Array.from(files)
+      setImageFiles(prev => [...prev, ...newFiles].slice(0, 5))
+      
+      const newImages = newFiles.map((file) => URL.createObjectURL(file))
+      setFormData((prev) => ({ 
+        ...prev, 
+        images: [...prev.images, ...newImages].slice(0, 5) 
+      }))
     }
   }
 
@@ -96,12 +125,39 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
     }))
   }
 
+  const handleClose = () => {
+    setFormData({
+      name: "",
+      description: "",
+      address: "",
+      phone: "",
+      businessUserId: "",
+      images: [],
+      voucherAvailability: false
+    })
+    setImageFiles([])
+    setCurrentTab("details")
+    onClose()
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
-    // Atualizar usuário business com o ID do estabelecimento
-    if (formData.businessUserId) {
-      try {
+    setUploadingImages(true)
+
+    try {
+      let imageUrls = formData.images
+      if (imageFiles.length > 0) {
+        console.log(`Iniciando upload de ${imageFiles.length} imagens...`)
+        imageUrls = await uploadImagesToFirebase(imageFiles)
+        console.log("URLs das imagens:", imageUrls)
+      }
+
+      const finalData = {
+        ...formData,
+        images: imageUrls
+      }
+
+      if (formData.businessUserId) {
         const response = await fetch(`/api/users/${formData.businessUserId}`, {
           method: "PATCH",
           headers: {
@@ -116,25 +172,66 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
         if (!response.ok) {
           throw new Error("Erro ao vincular usuário ao estabelecimento")
         }
-      } catch (error) {
-        console.error("Erro ao vincular usuário:", error)
-        return
       }
-    }
 
-    // Remover businessUserId antes de salvar o estabelecimento
-    const { businessUserId, ...establishmentData } = formData
+      if (establishment) {
+        await updateEstablishment(establishment.id, finalData)
+      } else {
+        await addEstablishment(finalData)
+      }
 
-    if (establishment) {
-      updateEstablishment(establishment.id, establishmentData)
-    } else {
-      addEstablishment(establishmentData)
+      handleClose()
+      toast.success(establishment ? 'Estabelecimento atualizado com sucesso!' : 'Estabelecimento cadastrado com sucesso!')
+    } catch (error) {
+      console.error("Erro no submit:", error)
+      toast.error('Erro ao salvar estabelecimento. Por favor, tente novamente.')
+    } finally {
+      setUploadingImages(false)
     }
-    onClose()
+  }
+
+  const uploadImagesToFirebase = async (files: File[]): Promise<string[]> => {
+    const uploadPromises = files.map(async (file) => {
+      const fileName = `establishments/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.]/g, '')}`
+      const storageRef = ref(storage, fileName)
+      
+      try {
+        const uploadTask = uploadBytesResumable(storageRef, file)
+        
+        return new Promise((resolve, reject) => {
+          uploadTask.on(
+            "state_changed",
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100
+              console.log(`Progresso do upload ${fileName}: ${progress.toFixed(2)}%`)
+            },
+            (error) => {
+              console.error(`Erro no upload de ${fileName}:`, error)
+              reject(error)
+            },
+            async () => {
+              try {
+                const downloadURL = await getDownloadURL(uploadTask.snapshot.ref)
+                console.log(`Upload concluído para ${fileName}`)
+                resolve(downloadURL)
+              } catch (error) {
+                console.error(`Erro ao obter URL para ${fileName}:`, error)
+                reject(error)
+              }
+            }
+          )
+        })
+      } catch (error) {
+        console.error(`Erro no processo de upload de ${fileName}:`, error)
+        throw error
+      }
+    })
+
+    return Promise.all(uploadPromises)
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={handleClose}>
       <DialogContent className="bg-[#131320] text-[#e5e2e9] border-[#1a1b2d] max-w-3xl">
         <DialogHeader>
           <DialogTitle>{establishment ? "Editar Estabelecimento" : "Novo Estabelecimento"}</DialogTitle>
@@ -353,8 +450,12 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
             </TabsContent>
           </Tabs>
           <DialogFooter>
-            <Button type="submit" className="bg-[#7435db] hover:bg-[#a85fdd] text-white">
-              Salvar
+            <Button 
+              type="submit" 
+              className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
+              disabled={uploadingImages}
+            >
+              {uploadingImages ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
         </form>

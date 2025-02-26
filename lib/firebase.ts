@@ -1,7 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app"
 import { getAuth } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
-import { getStorage } from "firebase/storage"
+import { getStorage, connectStorageEmulator } from "firebase/storage"
 
 // Verificar se as variáveis de ambiente estão definidas
 if (!process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET) {
@@ -18,29 +18,16 @@ const firebaseConfig = {
 }
 
 // Initialize Firebase
-let app: any;
-let storage: ReturnType<typeof getStorage>;
+const app = getApps().length ? getApp() : initializeApp(firebaseConfig)
+const storage = getStorage(app)
 
-try {
-  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-  storage = getStorage(app);
-  
-  // Verificar se o storage foi inicializado corretamente
-  if (!storage.app) {
-    throw new Error('Storage não foi inicializado corretamente');
+// Se estiver em desenvolvimento e usando emulador
+if (process.env.NEXT_PUBLIC_USE_FIREBASE_EMULATOR === "true") {
+  const emulatorHost = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_EMULATOR_HOST
+  if (emulatorHost) {
+    const [host, port] = emulatorHost.split(":")
+    connectStorageEmulator(storage, host, Number(port))
   }
-  
-  // Verificar se o bucket está configurado
-  if (!storage.app.options.storageBucket) {
-    throw new Error('Storage bucket não está configurado');
-  }
-  
-  console.log('Firebase Storage inicializado com sucesso. Bucket:', storage.app.options.storageBucket);
-} catch (error) {
-  console.error('Erro ao inicializar Firebase:', error);
-  // Reinicializar o app se houver erro
-  app = initializeApp(firebaseConfig);
-  storage = getStorage(app);
 }
 
 const auth = getAuth(app)

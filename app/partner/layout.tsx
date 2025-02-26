@@ -27,11 +27,6 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
       icon: <Users className="h-4 w-4" />,
       label: "Members"
     },
-    {
-      href: "/partner/reports",
-      icon: <FileText className="h-4 w-4" />,
-      label: "Relatórios"
-    }
   ]
 
   return (

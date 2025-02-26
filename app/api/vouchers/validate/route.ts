@@ -42,6 +42,19 @@ export async function POST(request: Request) {
     const voucherDoc = voucherSnap.docs[0]
     const voucher = { id: voucherDoc.id, ...voucherDoc.data() }
 
+    // Buscar dados do estabelecimento para pegar a imagem
+    const establishmentRef = doc(db, "establishments", voucher.establishmentId)
+    const establishmentSnap = await getDoc(establishmentRef)
+
+    if (!establishmentSnap.exists()) {
+      return NextResponse.json({
+        valid: false,
+        message: "Estabelecimento não encontrado"
+      })
+    }
+
+    const establishmentData = establishmentSnap.data()
+
     // Verificar se o voucher está expirado
     const expirationTime = voucher.expiresAt?.seconds ? 
       new Date(voucher.expiresAt.seconds * 1000) : 
@@ -106,7 +119,8 @@ export async function POST(request: Request) {
         member: {
           name: memberData.displayName,
           phone: memberData.phone
-        }
+        },
+        establishmentImage: establishmentData.images?.[0] || "/placeholder.svg"
       }
     })
 
