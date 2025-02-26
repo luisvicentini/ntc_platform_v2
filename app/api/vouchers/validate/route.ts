@@ -47,7 +47,24 @@ export async function POST(request: Request) {
       new Date(voucher.expiresAt.seconds * 1000) : 
       new Date(voucher.expiresAt)
 
-    if (expirationTime < new Date()) {
+    if (expirationTime < new Date() && 
+        voucher.status !== "verified" && 
+        voucher.status !== "used") {
+      // Se estiver expirado e não estiver verificado ou utilizado, 
+      // atualizar o status no banco
+      const voucherRef = doc(db, "vouchers", voucherDoc.id)
+      await updateDoc(voucherRef, {
+        status: "expired"
+      })
+
+      return NextResponse.json({
+        valid: false,
+        message: "Este voucher está expirado"
+      })
+    }
+
+    // Verificar se o voucher já está marcado como expirado
+    if (voucher.status === "expired") {
       return NextResponse.json({
         valid: false,
         message: "Este voucher está expirado"

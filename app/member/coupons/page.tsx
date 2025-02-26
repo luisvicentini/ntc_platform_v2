@@ -23,6 +23,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { db } from "@/lib/firebase"
+import { doc, updateDoc } from "firebase/firestore"
+import { collection, addDoc } from "firebase/firestore"
 
 export default function CouponsPage() {
   const [vouchers, setVouchers] = useState<any[]>([])
@@ -58,48 +61,84 @@ export default function CouponsPage() {
     fetchVouchers()
   }, [])
 
-  // Atualizar countdown para cada voucher
-  useEffect(() => {
-    const calculateTimeLeft = (expiresAt: any) => {
-      try {
-        // Converter Timestamp do Firestore para milissegundos
-        const expirationTime = expiresAt?.seconds ? 
-          new Date(expiresAt.seconds * 1000).getTime() : 
-          new Date(expiresAt).getTime()
-        
-        const diff = expirationTime - Date.now()
-        
-        if (diff <= 0) return "Expirado"
-        
-        // Ajustando para mostrar no máximo 24 horas
-        const totalHours = Math.floor(diff / (1000 * 60 * 60))
-        const hours = totalHours % 24
-        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
-        const seconds = Math.floor((diff % (1000 * 60)) / 1000)
-        
-        if (totalHours >= 24) {
-          const days = Math.floor(totalHours / 24)
-          return `${days}d ${hours}h ${minutes}m`
-        }
-        
-        return `${hours}h ${minutes}m ${seconds}s`
-      } catch (error) {
-        console.error("Erro ao calcular tempo restante:", error)
-        return "Erro no cálculo"
+  const calculateTimeLeft = (expiresAt: any) => {
+    try {
+      const expirationTime = expiresAt?.seconds ? 
+        new Date(expiresAt.seconds * 1000).getTime() : 
+        new Date(expiresAt).getTime()
+      
+      const diff = expirationTime - Date.now()
+      
+      if (diff <= 0) {
+        // Atualizar status para expirado quando o tempo acabar
+        return "Expirado"
       }
+      
+      // Ajustando para mostrar no máximo 24 horas
+      const totalHours = Math.floor(diff / (1000 * 60 * 60))
+      const hours = totalHours % 24
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000)
+      
+      if (totalHours >= 24) {
+        const days = Math.floor(totalHours / 24)
+        return `${days}d ${hours}h ${minutes}m`
+      }
+      
+      return `${hours}h ${minutes}m ${seconds}s`
+    } catch (error) {
+      console.error("Erro ao calcular tempo restante:", error)
+      return "Erro no cálculo"
     }
+  }
 
-    const timer = setInterval(() => {
+  useEffect(() => {
+    const timer = setInterval(async () => {
       const newTimeLeft: Record<string, string> = {}
       
-      vouchers.forEach(voucher => {
+      for (const voucher of vouchers) {
         if (voucher.expiresAt) {
-          newTimeLeft[voucher.id] = calculateTimeLeft(voucher.expiresAt)
+          const timeLeft = calculateTimeLeft(voucher.expiresAt)
+          newTimeLeft[voucher.id] = timeLeft
+          
+          if (timeLeft === "Expirado" && 
+              voucher.status !== "expired" && 
+              voucher.status !== "verified" && 
+              voucher.status !== "used") {
+            try {
+              // Atualizar status no Firestore
+              const voucherRef = doc(db, "vouchers", voucher.id)
+              await updateDoc(voucherRef, {
+                status: "expired"
+              })
+              
+              // Criar notificação de expiração
+              const notificationsRef = collection(db, "notifications")
+              await addDoc(notificationsRef, {
+                type: "voucher_expired",
+                memberId: voucher.memberId,
+                establishmentId: voucher.establishmentId,
+                establishmentName: voucher.establishmentName,
+                voucherId: voucher.id,
+                createdAt: new Date(),
+                status: "pending",
+                title: "Voucher Expirado",
+                message: `Seu voucher para ${voucher.establishmentName} expirou.`
+              })
+              
+              // Atualizar estado local
+              setVouchers(prev => prev.map(v => 
+                v.id === voucher.id ? { ...v, status: "expired" } : v
+              ))
+            } catch (error) {
+              console.error("Erro ao atualizar status do voucher:", error)
+            }
+          }
         }
-      })
+      }
       
       setTimeLeft(newTimeLeft)
-    }, 1000) // Atualiza a cada segundo
+    }, 1000)
 
     // Calcular tempo inicial
     vouchers.forEach(voucher => {

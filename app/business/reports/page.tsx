@@ -24,6 +24,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"
+import { db } from "@/lib/firebase"
 
 interface Member {
   id: string
@@ -38,6 +40,7 @@ interface Establishment {
 }
 
 interface Voucher {
+  conditions: ReactNode
   id: string
   code: string
   status: "pending" | "verified" | "used" | "expired"
@@ -47,6 +50,10 @@ interface Voucher {
   member: Member
   establishment: Establishment
   discount: number
+  partnerId?: string
+  voucherDescription?: string
+  usageLimit?: number
+  discountRules?: string
 }
 
 interface FilterOptions {
@@ -543,6 +550,158 @@ export default function ReportsPage() {
     setCurrentPage(1)
   }
 
+  const VoucherDetails = ({ voucher, onClose, onCheckIn }: VoucherDetailsProps) => {
+    const [partnerName, setPartnerName] = useState<string>("")
+    const [partnerPhone, setPartnerPhone] = useState<string>("")
+    const [partnerPhoto, setPartnerPhoto] = useState<string>("")
+
+    useEffect(() => {
+      const fetchPartnerData = async () => {
+        if (selectedVoucher?.partnerId) {
+          try {
+            const usersRef = collection(db, "users")
+            const q = query(
+              usersRef,
+              where("firebaseUid", "==", selectedVoucher.partnerId),
+              where("userType", "==", "partner")
+            )
+            const userSnap = await getDocs(q)
+            
+            if (!userSnap.empty) {
+              const partnerData = userSnap.docs[0].data()
+              setPartnerName(partnerData.displayName)
+              setPartnerPhone(partnerData.phone || "Não informado")
+              setPartnerPhoto(partnerData.photoURL || "")
+            }
+          } catch (error) {
+            console.error("Erro ao buscar dados do partner:", error)
+          }
+        }
+      }
+
+      fetchPartnerData()
+    }, [selectedVoucher])
+
+    return (
+      <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
+        <SheetContent className="bg-[#131320] border-l-[#1a1b2d]">
+          <SheetHeader>
+            <SheetTitle className="text-[#e5e2e9]">Detalhes do Voucher</SheetTitle>
+          </SheetHeader>
+          {selectedVoucher && (
+            <div className="space-y-6 mt-6">
+              {/* Código do Voucher em destaque */}
+              <div className="bg-[#1a1b2d] p-6 rounded-lg text-center">
+                <h3 className="text-sm font-medium text-[#7a7b9f] mb-2">Código do Voucher</h3>
+                <p className="text-2xl font-bold text-[#e5e2e9]">{selectedVoucher.code}</p>
+              </div>
+              
+              {/* Informações do Cliente */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-[#7a7b9f]">Informações do Cliente</h3>
+                <div className="flex items-center space-x-3">
+                  <Avatar>
+                    {selectedVoucher.member.photoURL && (
+                      <AvatarImage src={selectedVoucher.member.photoURL} />
+                    )}
+                    <AvatarFallback>
+                      {selectedVoucher.member.name.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-[#e5e2e9]">{selectedVoucher.member.name}</p>
+                    <p className="text-sm text-[#7a7b9f]">{selectedVoucher.member.phone}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Informações do Parceiro */}
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-[#7a7b9f]">Parceiro de origem</h3>
+                <div className="flex items-center space-x-3">
+                  <Avatar>
+                    {partnerPhoto && (
+                      <AvatarImage src={partnerPhoto} />
+                    )}
+                    <AvatarFallback>
+                      {partnerName?.slice(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div>
+                    <p className="text-[#e5e2e9]">{partnerName}</p>
+                    <p className="text-sm text-[#7a7b9f]">{partnerPhone}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-[#7a7b9f]">Status do voucher</h3>
+                <Badge className={getStatusColor(selectedVoucher.status)}>
+                  {getStatusText(selectedVoucher.status)}
+                </Badge>
+              </div>
+
+              <div className="space-y-2">
+                <div className="space-y-1 text-[#e5e2e9]">
+                  <span className="text-[#7a7b9f]">Data criação do voucher:</span> <p className="pb-4">{formatFirebaseDate(selectedVoucher.createdAt)}</p>
+                  <span className="text-[#7a7b9f]">Data de expiração do voucher:</span> <p className="pb-4">{formatFirebaseDate(selectedVoucher.expiresAt)}</p>
+                  {selectedVoucher.usedAt && (
+                    <><span className="text-[#7a7b9f]">Data de utilização do voucher:</span><p className="pb-4">{formatFirebaseDate(selectedVoucher.usedAt)}</p></>
+                  )}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-[#7a7b9f]">Desconto</h3>
+                <p className="text-[#e5e2e9]">{selectedVoucher.discount}</p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-[#7a7b9f]">Descrição do Voucher</h3>
+                <p className="text-[#e5e2e9]">{selectedVoucher.voucherDescription}</p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-[#7a7b9f]">Limite de Uso</h3>
+                <p className="text-[#e5e2e9]">{selectedVoucher.usageLimit}</p>
+              </div>
+
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium text-[#7a7b9f]">Regras do Desconto</h3>
+                <p className="text-[#e5e2e9]">{selectedVoucher.discountRules}</p>
+              </div>
+
+              {selectedVoucher.status === "expired" ? (
+                <Button 
+                  className="w-full" 
+                  variant="secondary" 
+                  disabled
+                >
+                  Voucher Expirado
+                </Button>
+              ) : selectedVoucher.status === "used" ? (
+                <Button 
+                  className="w-full" 
+                  variant="secondary" 
+                  disabled
+                >
+                  Voucher Utilizado
+                </Button>
+              ) : (
+                <Button
+                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                  onClick={() => performCheckIn(selectedVoucher.code)}
+                >
+                  Realizar Check-in
+                </Button>
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
+    )
+  }
+
   if (loading) {
     return (
       <div className="container py-6">
@@ -695,76 +854,11 @@ export default function ReportsPage() {
         onApplyFilters={applyFilters}
       />
 
-      <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <SheetContent className="bg-[#131320] border-l-[#1a1b2d]">
-          <SheetHeader>
-            <SheetTitle className="text-[#e5e2e9]">Detalhes do Voucher</SheetTitle>
-          </SheetHeader>
-          {selectedVoucher && (
-            <div className="space-y-6 mt-6">
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-[#7a7b9f]">Código</h3>
-                <p className="text-[#e5e2e9]">{selectedVoucher.code}</p>
-              </div>
-              
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-[#7a7b9f]">Cliente</h3>
-                <div className="flex items-center space-x-3">
-                  <Avatar>
-                    {selectedVoucher.member.photoURL && (
-                      <AvatarImage src={selectedVoucher.member.photoURL} />
-                    )}
-                    <AvatarFallback>
-                      {selectedVoucher.member.name.slice(0, 2).toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-[#e5e2e9]">{selectedVoucher.member.name}</p>
-                    <p className="text-sm text-[#7a7b9f]">{selectedVoucher.member.phone}</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-[#7a7b9f]">Status</h3>
-                <Badge className={getStatusColor(selectedVoucher.status)}>
-                  {getStatusText(selectedVoucher.status)}
-                </Badge>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-[#7a7b9f]">Datas</h3>
-                <div className="space-y-1 text-[#e5e2e9]">
-                  <p>Criação: {formatFirebaseDate(selectedVoucher.createdAt)}</p>
-                  <p>Expiração: {formatFirebaseDate(selectedVoucher.expiresAt)}</p>
-                  {selectedVoucher.usedAt && (
-                    <p>Utilização: {formatFirebaseDate(selectedVoucher.usedAt)}</p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-[#7a7b9f]">Desconto</h3>
-                <p className="text-[#e5e2e9]">{selectedVoucher.discount}</p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-sm font-medium text-[#7a7b9f]">Condições</h3>
-                <p className="text-[#e5e2e9]">{selectedVoucher.conditions}</p>
-              </div>
-
-              {selectedVoucher.status !== "used" && (
-                <Button
-                  className="w-full bg-emerald-600 hover:bg-emerald-700"
-                  onClick={() => performCheckIn(selectedVoucher.code)}
-                >
-                  Realizar Check-in
-                </Button>
-              )}
-            </div>
-          )}
-        </SheetContent>
-      </Sheet>
+      <VoucherDetails
+        voucher={selectedVoucher}
+        onClose={() => setIsDetailsOpen(false)}
+        onCheckIn={performCheckIn}
+      />
     </div>
   )
 }

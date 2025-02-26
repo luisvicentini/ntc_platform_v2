@@ -34,19 +34,20 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     const q = query(
       notificationsRef,
       where("memberId", "==", user.uid),
-      where("status", "==", "pending")
+      where("status", "==", "pending"),
+      where("type", "in", ["rating", "voucher_expired"])
     )
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const notificationsData = snapshot.docs.map(doc => ({
+      const newNotifications = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Notification[]
-      setNotifications(notificationsData)
+      setNotifications(newNotifications)
     })
 
     return () => unsubscribe()
-  }, [user?.uid])
+  }, [user])
 
   const removeNotification = async (notificationId: string) => {
     try {
