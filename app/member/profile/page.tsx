@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
 import { Coins, Receipt, ChevronRight } from "lucide-react"
+import { PhoneNumberInput } from "@/components/ui/phone-input"
 
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -31,15 +32,19 @@ export default function ProfilePage() {
           const response = await fetch(`/api/user/profile?userId=${user.uid}`)
           if (response.ok) {
             const data = await response.json()
+            console.log('Dados do perfil:', data) // Para debug
+            
             setProfile({
               name: data.displayName || user.displayName || "",
               email: data.email || user.email || "",
-              phone: data.phoneNumber || user.phoneNumber || "",
+              phone: data.phoneNumber || data.phone || user.phoneNumber || "", // Adicionado data.phone como fallback
               city: data.city || "",
             })
+          } else {
+            console.error("Erro ao buscar perfil:", response.statusText)
           }
         } catch (error) {
-          console.error("Error fetching profile:", error)
+          console.error("Erro ao buscar perfil:", error)
         }
       }
     }
@@ -317,12 +322,12 @@ export default function ProfilePage() {
 
                 <div className="grid gap-2">
                   <Label htmlFor="phone">Telefone</Label>
-                  <Input
-                    id="phone"
+                  <PhoneNumberInput
+                    defaultCountry="BR"
                     value={profile.phone}
+                    onChange={(value) => setProfile({ ...profile, phone: value || "" })}
                     disabled={!isEditing}
-                    onChange={(e) => setProfile({ ...profile, phone: e.target.value })}
-                    className="bg-[#1a1b2d] border-[#131320] text-[#e5e2e9]"
+                    className="bg-[#1a1b2d] text-[#e5e2e9]"
                   />
                 </div>
 

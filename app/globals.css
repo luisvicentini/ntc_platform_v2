@@ -114,3 +114,45 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+.PhoneInput {
+  /* Container */
+  --PhoneInputCountryFlag-height: 15px;
+  --PhoneInputCountrySelectArrow-width: 8px;
+  --PhoneInputCountrySelect-marginRight: 0.3em;
+}
+
+.PhoneInputCountry {
+  /* País selecionado */
+  background: transparent;
+  padding: 4px;
+}
+
+.PhoneInputCountrySelect {
+  /* Select do país */
+  background: transparent;
+  border: none;
+}
+
+.PhoneInputCountryIcon {
+  /* Ícone da bandeira */
+  opacity: 0.8;
+}
+
+.PhoneInputInput {
+  /* Input do telefone */
+  background: transparent !important;
+  border: none !important;
+  padding-left: 8px !important;
+  color: #e5e2e9 !important;
+  outline: none !important;
+}
+
+.PhoneInputInput::placeholder {
+  color: #7a7b9f;
+}
+
+.PhoneInputInput:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

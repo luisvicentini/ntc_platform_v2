@@ -26,6 +26,8 @@ import {
 import { db } from "@/lib/firebase"
 import { doc, updateDoc } from "firebase/firestore"
 import { collection, addDoc } from "firebase/firestore"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
 export default function CouponsPage() {
   const [vouchers, setVouchers] = useState<any[]>([])
@@ -262,6 +264,44 @@ export default function CouponsPage() {
     }
   }
 
+  const formatUsedDate = (dateString: any) => {
+    try {
+      let date;
+      
+      // Se for um timestamp do Firestore
+      if (dateString?.seconds) {
+        date = new Date(dateString.seconds * 1000);
+      }
+      // Se for um timestamp numérico
+      else if (typeof dateString === 'number') {
+        date = new Date(dateString);
+      }
+      // Se for uma string de data
+      else if (typeof dateString === 'string') {
+        date = new Date(dateString);
+      }
+      // Se já for um objeto Date
+      else if (dateString instanceof Date) {
+        date = dateString;
+      }
+      else {
+        return "Data não disponível";
+      }
+
+      // Verifica se a data é válida
+      if (isNaN(date.getTime())) {
+        return "Data inválida";
+      }
+
+      return format(date, "dd/MM 'às' HH:mm", {
+        locale: ptBR,
+      });
+    } catch (error) {
+      console.error("Erro ao formatar data:", error);
+      return "Data inválida";
+    }
+  };
+
   if (loading) {
     return (
       <div className="container py-6">
@@ -360,52 +400,69 @@ export default function CouponsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center text-[#7a7b9f] space-x-2">
+                  <div className="flex items-center text-[#7a7b9f] space-x-4">
                     <MapPin className="h-4 w-4" />
-                    <span>
+                    <span className="text-sm">
                       {voucher.establishment?.address?.city || "Cidade"}/
                       {voucher.establishment?.address?.state || "Estado"}
                     </span>
                   </div>
-                  <div className="flex items-center text-[#7a7b9f] space-x-2">
+                  <div className="flex items-center text-[#7a7b9f] space-x-4">
                     <Clock className="h-4 w-4" />
-                    <span>
-                      Expira em: {formatExpirationTime(voucher.expiresAt)}
+                    <span className="text-sm">
+                      {formatExpirationTime(voucher.expiresAt)}
                     </span>
                   </div>
-                  <div className="flex items-center text-[#7a7b9f] space-x-2">
+                  <div className="flex items-center text-[#7a7b9f] space-x-4">
                     <Info className="h-4 w-4" />
-                    <span>
-                      Regras: {voucher.voucherDescription || "Sem descrição"}
+                    <span className="text-sm">
+                      {voucher.voucherDescription || "Sem descrição"}
                     </span>
                   </div>
-                  <div className="flex items-center text-[#7a7b9f] space-x-2">
+                  <div className="flex items-center text-[#7a7b9f] space-x-4">
                     <Users className="h-4 w-4" />
-                    <span>
-                      Limite de uso: {voucher.usageLimit || "Sem limite"}
+                    <span className="text-sm">
+                      {voucher.usageLimit || "Sem limite"}
                     </span>
                   </div>
                 </div>
 
-                <div className="mt-4 pt-4 border-t border-[#1a1b2d]">
+                <div className="relative pb-1">
+                  {/* Linha pontilhada decorativa */}
+                  <div className="absolute  h-4 flex justify-between items-center left-[-33px] right-[-33px]" >
+                    <div className="w-4 h-4 bg-[#0F0F1A] rounded-full" />
+                    <div className="flex-1 border-t-2 border-dashed border-[#0F0F1A] mx-2" />
+                    <div className="w-4 h-4 bg-[#0F0F1A] rounded-full" />
+                  </div>
+                </div>
+
+                <div className="mt-4 pt-4">
                   <div className="text-center">
                     <p className="text-sm text-[#7a7b9f] mb-1">Código do Voucher</p>
                     <p className="text-2xl font-bold text-[#7435db]">{voucher.code}</p>
                   </div>
                 </div>
 
-                <div className="mt-4">
-                  <p className="text-sm text-[#7a7b9f]">Desconto:</p>
-                  <p className="text-lg font-semibold text-emerald-500">
-                    {voucher.establishment?.discountValue || "Não disponível"}
-                  </p>
+                <div className="flex flex-row gap-4 justify-between">
+                  <div className="mt-2">
+                    <p className="text-sm text-[#7a7b9f]">Desconto:</p>
+                    <p className="text-lg font-semibold text-emerald-500">
+                      {voucher.establishment?.discountValue || "Não disponível"}
+                    </p>
+                  </div>
+                  <div>
+                    {voucher.status === "used" && voucher.usedAt && (
+                    <div className="mt-2">
+                      <p className="text-sm text-[#7a7b9f]">Utilizado em:</p>
+                      <p className="text-sm font-semibold text-[#7a7b9f]">
+                        {formatUsedDate(voucher.usedAt)}
+                      </p>
+                    </div>
+                    )}
+                  </div>
                 </div>
 
-                {voucher.status === "used" && voucher.usedAt && (
-                  <div className="text-sm text-[#7a7b9f]">
-                    Utilizado em: {new Date(voucher.usedAt).toLocaleDateString("pt-BR")}
-                  </div>
-                )}
+                
               </Card>
             ))}
           </div>

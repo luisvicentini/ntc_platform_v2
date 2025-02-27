@@ -61,7 +61,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userData, user, theme = "da
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
-        <Button variant="ghost" className="relative h-8 w-8 rounded-full mt-2">
+        <Button variant="ghost" className="relative h-8 w-8 rounded-full">
           <Avatar className="h-8 w-8">
             <AvatarImage 
               src={userData.photoURL || user?.photoURL || undefined} 
