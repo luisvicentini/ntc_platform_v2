@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Calendar, X } from "lucide-react"
+import { Calendar, X, MoreVertical } from "lucide-react"
 import { Calendar as CalendarComponent } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
@@ -34,10 +34,12 @@ export function SubscriptionManagementModal({
   memberId,
   memberName 
 }: SubscriptionManagementModalProps) {
-  const { addSubscriptions, getMemberSubscriptions } = useSubscription()
+  const { addSubscriptions, getMemberSubscriptions, removeSubscription } = useSubscription()
   const [partners, setPartners] = useState<Partner[]>([])
   const [selectedPartners, setSelectedPartners] = useState<(Partner & { expiresAt?: Date })[]>([])
   const [loading, setLoading] = useState(false)
+  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
+  const [openCalendarId, setOpenCalendarId] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     if (!isOpen || !memberId) return
@@ -100,6 +102,21 @@ export function SubscriptionManagementModal({
     )
   }
 
+  const handleRemovePartner = async (partnerId: string) => {
+    try {
+      setLoading(true)
+      await removeSubscription(memberId, partnerId)
+      setSelectedPartners(prev => prev.filter(p => p.id !== partnerId))
+      toast.success("Parceiro removido com sucesso")
+    } catch (error) {
+      console.error("Erro ao remover parceiro:", error)
+      toast.error("Erro ao remover parceiro")
+    } finally {
+      setLoading(false)
+      setOpenDropdownId(null)
+    }
+  }
+
   const handleSave = async () => {
     try {
       const subscriptionsData = selectedPartners.map(partner => ({
@@ -154,45 +171,54 @@ export function SubscriptionManagementModal({
                     )}
                   </div>
                   <div className="flex items-center gap-2">
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          className={cn(
-                            "w-[240px] pl-3 text-left font-normal bg-[#1a1b2d] border-[#131320] hover:bg-[#1a1b2d]/80",
-                            !partner.expiresAt && "text-muted-foreground"
-                          )}
-                        >
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {partner.expiresAt ? (
-                            format(partner.expiresAt, "PPP", { locale: ptBR })
-                          ) : (
-                            "Definir data de expiração"
-                          )}
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent align="end" className="w-auto p-0 bg-[#1a1b2d] border-[#131320]">
-                        <div className="p-3">
+                    <div className="relative">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setOpenDropdownId(openDropdownId === partner.id ? null : partner.id)}
+                        className="relative z-10"
+                      >
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+
+                      {openDropdownId === partner.id && (
+                        <div className="absolute right-0 top-full mt-1 min-w-[200px] rounded-md bg-[#1a1b2d] p-2 shadow-md border border-[#131320] z-50">
+                          <div className="flex flex-col space-y-1">
+                            <button
+                              className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                              onClick={() => setOpenCalendarId(partner.id)}
+                            >
+                              <Calendar className="h-4 w-4 mr-2" />
+                              Data de Expiração
+                            </button>
+                            <button
+                              className="text-left px-2 py-1.5 text-sm text-red-500 hover:bg-[#131320] rounded-sm flex items-center"
+                              onClick={() => handleRemovePartner(partner.id)}
+                            >
+                              <X className="h-4 w-4 mr-2" />
+                              Remover
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {openCalendarId === partner.id && (
+                        <div className="absolute right-0 top-full mt-1 rounded-md bg-[#1a1b2d] p-3 shadow-md border border-[#131320] z-50">
                           <CalendarComponent
                             mode="single"
                             selected={partner.expiresAt}
-                            onSelect={(date) => handleDateSelect(partner.id, date)}
+                            onSelect={(date) => {
+                              handleDateSelect(partner.id, date)
+                              setOpenCalendarId(null)
+                            }}
                             disabled={(date) => date < new Date()}
                             initialFocus
                             locale={ptBR}
                             className="rounded-md border border-[#1a1b2d]"
                           />
                         </div>
-                      </PopoverContent>
-                    </Popover>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setSelectedPartners(prev => prev.filter(p => p.id !== partner.id))}
-                      className="text-red-500 hover:text-red-600"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}

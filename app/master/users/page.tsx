@@ -19,6 +19,7 @@ import type { UserProfile, UserListResponse } from "@/types/user"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { PopoverArrow } from "@radix-ui/react-popover"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { SubscriptionManagementSidebar } from "@/components/subscription-management-sidebar"
 
 const ITEMS_PER_PAGE = 10
 
@@ -46,6 +47,7 @@ function UsersContent() {
   const [showDeleteModal, setShowDeleteModal] = useState(false)
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
+  const [showSubscriptionSidebar, setShowSubscriptionSidebar] = useState(false)
 
   useEffect(() => {
     fetchUsers()
@@ -323,11 +325,17 @@ function UsersContent() {
         />
       )}
 
-      <AddUserModal
-        isOpen={showAddUserModal}
-        onClose={handleCloseAddUserModal}
-        user={selectedUser}
-      />
+      {selectedUser && (
+        <SubscriptionManagementSidebar
+          isOpen={showSubscriptionSidebar}
+          onClose={() => {
+            setSelectedUser(null)
+            setShowSubscriptionSidebar(false)
+          }}
+          memberId={selectedUser.id}
+          memberName={selectedUser.displayName}
+        />
+      )}
 
       {showDeleteModal && userToDelete && (
         <DeleteUserModal
@@ -380,7 +388,8 @@ function UsersContent() {
                       <button
                         className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
                         onClick={() => {
-                          handleEdit(user)
+                          setSelectedUser(user)
+                          setShowSubscriptionSidebar(true)
                           setOpenDropdownId(null)
                         }}
                       >
@@ -568,7 +577,8 @@ function UsersContent() {
                         <button
                           className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
                           onClick={() => {
-                            handleEdit(user)
+                            setSelectedUser(user)
+                            setShowSubscriptionSidebar(true)
                             setOpenDropdownId(null)
                           }}
                         >

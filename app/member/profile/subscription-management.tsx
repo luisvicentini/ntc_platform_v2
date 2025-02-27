@@ -93,8 +93,14 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
       return
     }
 
+    if (!priceId) {
+      toast.error("Preço não selecionado")
+      return
+    }
+
     try {
       setLoading(true)
+      console.log('Iniciando checkout com:', { priceId }) // Debug
       
       const customerResponse = await fetch('/api/stripe/customer', {
         method: 'POST',
@@ -113,15 +119,20 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
 
       const { customerId } = await customerResponse.json()
 
+      // Verificar se temos o partnerId do link
+      const partnerLinkId = new URLSearchParams(window.location.search).get('ref')
+      const partnerId = partnerLinkId ? '42797K2f9lBo3tbnzrpT' : 'MChsM1JopUMB2ye2Tdvp'
+
       const checkoutResponse = await fetch('/api/stripe/create-checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          priceId,
+          priceId: priceId, // Garantir que o priceId está sendo passado
           customerId,
-          partnerId: 'MChsM1JopUMB2ye2Tdvp',
+          partnerId,
+          partnerLinkId,
         }),
       })
 
@@ -133,7 +144,14 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
       const { sessionId } = await checkoutResponse.json()
       
       const stripe = await stripePromise
-      await stripe?.redirectToCheckout({ sessionId })
+      if (!stripe) {
+        throw new Error('Stripe não inicializado')
+      }
+
+      const { error } = await stripe.redirectToCheckout({ sessionId })
+      if (error) {
+        throw error
+      }
     } catch (error: any) {
       console.error('Erro no checkout:', error)
       toast.error(error.message || 'Erro ao processar checkout')

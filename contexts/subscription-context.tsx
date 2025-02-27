@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback } from "react"
 import { toast } from "sonner"
 import type { Subscription } from "@/types/subscription"
-import { collection, getDocs, query, where } from "firebase/firestore"
+import { collection, getDocs, query, where, addDoc, doc, deleteDoc, updateDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
 interface SubscriptionContextData {
@@ -15,6 +15,7 @@ interface SubscriptionContextData {
   getMemberSubscriptions: (memberId: string) => Promise<Subscription[]>
   loadMemberSubscriptions: (memberId: string) => Promise<void>
   checkActiveSubscription: (memberId: string, partnerId: string) => Promise<boolean>
+  removeSubscription: (memberId: string, partnerId: string) => Promise<void>
 }
 
 const SubscriptionContext = createContext({} as SubscriptionContextData)
@@ -62,30 +63,49 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [])
 
-  const addSubscriptions = useCallback(async (memberId: string, subscriptions: { partnerId: string, expiresAt?: string }[]) => {
+  const addSubscriptions = useCallback(async (memberId: string, subscriptionsData: any[]) => {
     try {
-      const response = await fetch("/api/subscriptions/batch", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ 
-          subscriptions: subscriptions.map(s => ({
-            ...s,
+      const subscriptionsRef = collection(db, "subscriptions")
+      
+      // Buscar assinaturas existentes usando diretamente o Firestore
+      const existingQuery = query(
+        subscriptionsRef,
+        where("memberId", "==", memberId),
+        where("status", "==", "active")
+      )
+      const existingSnapshot = await getDocs(existingQuery)
+      const existingSubscriptions = existingSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+      
+      // Para cada assinatura nova
+      for (const subscription of subscriptionsData) {
+        // Verificar se já existe
+        const existing = existingSubscriptions.find(
+          s => s.partnerId === subscription.partnerId
+        )
+        
+        if (existing) {
+          // Atualizar existente
+          await updateDoc(doc(db, "subscriptions", existing.id), {
+            expiresAt: subscription.expiresAt,
+            updatedAt: new Date().toISOString()
+          })
+        } else {
+          // Criar nova
+          await addDoc(subscriptionsRef, {
             memberId,
-            status: "active"
-          }))
-        })
-      })
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || "Erro ao criar assinaturas")
+            partnerId: subscription.partnerId,
+            status: "active",
+            expiresAt: subscription.expiresAt,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          })
+        }
       }
-
-      toast.success("Assinaturas atualizadas com sucesso!")
-    } catch (error: any) {
-      toast.error(error.message)
+    } catch (error) {
+      console.error("Erro ao adicionar assinaturas:", error)
       throw error
     }
   }, [])
@@ -152,6 +172,45 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     }
   }, [])
 
+  const removeSubscription = useCallback(async (memberId: string, partnerId: string) => {
+    try {
+      const subscriptionsRef = collection(db, "subscriptions")
+      const q = query(
+        subscriptionsRef,
+        where("memberId", "==", memberId),
+        where("partnerId", "==", partnerId),
+        where("status", "==", "active")
+      )
+      
+      const snapshot = await getDocs(q)
+      
+      if (snapshot.empty) {
+        throw new Error("Assinatura não encontrada")
+      }
+
+      const subscriptionDoc = snapshot.docs[0]
+      
+      // Atualizar status para inativo ao invés de deletar
+      await updateDoc(doc(db, "subscriptions", subscriptionDoc.id), {
+        status: "inactive",
+        updatedAt: new Date().toISOString(),
+        canceledAt: new Date().toISOString()
+      })
+
+      // Atualizar estado local
+      setSubscriptions(prev => 
+        prev.map(sub => 
+          sub.id === subscriptionDoc.id 
+            ? { ...sub, status: "inactive" }
+            : sub
+        )
+      )
+    } catch (error) {
+      console.error("Erro ao remover assinatura:", error)
+      throw error
+    }
+  }, [])
+
   return (
     <SubscriptionContext.Provider value={{
       subscriptions,
@@ -161,7 +220,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       getPartnerSubscriptions,
       getMemberSubscriptions,
       loadMemberSubscriptions,
-      checkActiveSubscription
+      checkActiveSubscription,
+      removeSubscription
     }}>
       {children}
     </SubscriptionContext.Provider>
