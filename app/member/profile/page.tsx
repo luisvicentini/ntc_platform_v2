@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge"
 import { Coins, Receipt, ChevronRight } from "lucide-react"
 import { PhoneNumberInput } from "@/components/ui/phone-input"
+import { SubscriptionManagement } from "./subscription-management"
 
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -355,55 +356,7 @@ export default function ProfilePage() {
           </Card>
         </TabsContent>
         <TabsContent value="subscription">
-          <Card className="bg-[#131320] border-[#1a1b2d]">
-            <CardHeader>
-              <CardTitle className="text-[#e5e2e9]">Gestão de Assinatura</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-[#1a1b2d] p-6 rounded-lg">
-                <h3 className="text-xl font-semibold text-[#e5e2e9] mb-4">Plano Atual: {subscription.plan}</h3>
-                <div className="space-y-2 text-[#b5b6c9]">
-                  <p>Preço: {subscription.price}</p>
-                  <p>Ciclo de Cobrança: {subscription.billingCycle}</p>
-                  <p>Próxima Cobrança: {subscription.nextBilling}</p>
-                </div>
-                <div className="mt-6 space-x-4">
-                  <Button className="bg-[#7435db] hover:bg-[#a85fdd] text-white">Fazer Upgrade</Button>
-                  <Button variant="outline" className="text-rose-500 hover:bg-rose-500/10">
-                    Cancelar Assinatura
-                  </Button>
-                </div>
-              </div>
-
-              <div>
-                <h3 className="text-xl font-semibold text-[#e5e2e9] mb-4">Histórico de Transações</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow className="border-[#1a1b2d] hover:bg-[#1a1b2d]">
-                      <TableHead className="text-[#7a7b9f]">Data</TableHead>
-                      <TableHead className="text-[#7a7b9f]">Descrição</TableHead>
-                      <TableHead className="text-[#7a7b9f]">Valor</TableHead>
-                      <TableHead className="text-[#7a7b9f]">Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {transactions.map((transaction) => (
-                      <TableRow key={transaction.id} className="border-[#1a1b2d] hover:bg-[#1a1b2d]">
-                        <TableCell className="text-[#e5e2e9]">{transaction.date}</TableCell>
-                        <TableCell className="text-[#e5e2e9]">{transaction.description}</TableCell>
-                        <TableCell className="text-[#e5e2e9]">{transaction.amount}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500">
-                            {transaction.status}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
+          <SubscriptionManagement userId={user?.uid || ''} />
         </TabsContent>
       </Tabs>
     </div>
