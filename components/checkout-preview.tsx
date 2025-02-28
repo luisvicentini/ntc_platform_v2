@@ -25,36 +25,20 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
 
-  const handleCheckout = async () => {
-    setLoading(true)
-    try {
-      // Criar a sessão de checkout
-      const response = await fetch('/api/stripe/create-checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId: partnerLink.priceId,
-          partnerId: partnerLink.partnerId,
-          partnerLinkId: partnerLink.id,
-        }),
-      })
-
-      const data = await response.json()
-
-      if (data.error) {
-        throw new Error(data.error)
-      }
-
-      // Redirecionar para a URL do Stripe
-      window.location.href = data.url
-    } catch (error) {
-      console.error('Erro ao criar checkout:', error)
-      toast.error('Erro ao processar pagamento')
-    } finally {
-      setLoading(false)
+  const handleStartOnboarding = () => {
+    // Salvar os dados do plano no localStorage para usar depois do registro
+    const checkoutData = {
+      priceId: partnerLink.priceId,
+      partnerId: partnerLink.partnerId,
+      partnerLinkId: partnerLink.id,
+      planName: partnerLink.planName,
+      price: partnerLink.price,
+      interval: partnerLink.interval
     }
+    localStorage.setItem('checkoutData', JSON.stringify(checkoutData))
+    
+    // Redirecionar para a página de registro correta
+    router.push('/auth/register?redirect=onboarding')
   }
 
   return (
@@ -140,11 +124,11 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
 
       {/* Botão de Ação */}
       <Button
-        onClick={handleCheckout}
+        onClick={handleStartOnboarding}
         disabled={loading}
         className="w-full bg-purple-600 hover:bg-purple-700 text-white py-6 text-lg"
       >
-        {loading ? 'Processando...' : 'Assinar Agora'}
+        {loading ? 'Processando...' : 'Começar a usar os cupons'}
       </Button>
     </div>
   )

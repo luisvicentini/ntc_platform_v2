@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -16,7 +16,7 @@ export function RegisterForm() {
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
   const { signUp, user } = useAuth()
-
+  const searchParams = useSearchParams()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,7 +43,10 @@ export function RegisterForm() {
         throw new Error('Erro ao salvar dados do usuário')
       }
       
-      const redirectPath = "/member/feed"
+      // Verifica se veio do checkout e redireciona apropriadamente
+      const redirect = searchParams.get('redirect')
+      const redirectPath = redirect === 'onboarding' ? '/onboarding' : '/member/feed'
+      
       console.log('Redirecionando para:', redirectPath)
       window.location.href = redirectPath
     } catch (error) {
