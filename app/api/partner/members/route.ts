@@ -49,7 +49,7 @@ export async function GET(request: Request) {
     
     console.log("Buscando assinaturas para partnerId:", partnerId)
     const subscriptionsSnapshot = await getDocs(subscriptionsQuery)
-    console.log("Assinaturas encontradas:", subscriptionsSnapshot.size)
+    console.log("[STRIPE] Assinaturas encontradas:", subscriptionsSnapshot.size)
 
     // Obter IDs únicos dos membros
     const memberIds = [...new Set(subscriptionsSnapshot.docs.map(doc => doc.data().memberId))]

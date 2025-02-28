@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       where("status", "==", "active")
     )
     const subscriptionsSnapshot = await getDocs(subscriptionsQuery)
-    console.log("Assinaturas encontradas:", subscriptionsSnapshot.size)
+    console.log("[FIREBASE]Assinaturas encontradas:", subscriptionsSnapshot.size)
 
     // Se não houver assinaturas ativas, retornar array vazio
     if (subscriptionsSnapshot.empty) {

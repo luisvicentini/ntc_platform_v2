@@ -500,7 +500,7 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
                         style: 'currency',
                         currency: price.currency,
                       }).format(price.unit_amount / 100)}
-                      /{price.recurring.interval}
+                      {price.recurring ? `/${price.recurring.interval}` : ''}
                     </p>
                   </div>
                   <Button

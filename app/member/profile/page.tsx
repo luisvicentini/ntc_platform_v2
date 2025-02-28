@@ -11,9 +11,10 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Coins, Receipt, ChevronRight } from "lucide-react"
+import { Coins, Receipt, ChevronRight, Loader } from "lucide-react"
 import { PhoneNumberInput } from "@/components/ui/phone-input"
 import { SubscriptionManagement } from "./subscription-management"
+import { toast } from "sonner"
 
 export default function ProfilePage() {
   const { user } = useAuth()
@@ -25,6 +26,8 @@ export default function ProfilePage() {
     phone: "",
     city: ""
   })
+  const [loading, setLoading] = useState(false)
+  const [syncLoading, setSyncLoading] = useState(false)
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -91,6 +94,60 @@ export default function ProfilePage() {
     } catch (error) {
       console.error("Error updating profile:", error)
       alert("Erro ao atualizar perfil. Tente novamente.")
+    }
+  }
+
+  const handleSync = async () => {
+    try {
+      setSyncLoading(true)
+      
+      // Primeiro, buscar a assinatura do usuário no Stripe
+      const response = await fetch('/api/stripe/customer-subscription', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: user?.uid }),
+      })
+
+      const data = await response.json()
+      
+      if (!data.subscriptionId) {
+        toast.error('Nenhuma assinatura encontrada para sincronizar')
+        return
+      }
+
+      // Simular o evento webhook do Stripe
+      const webhookResponse = await fetch('/api/stripe/webhook', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Stripe-Signature': 'manual-sync'
+        },
+        body: JSON.stringify({
+          type: 'checkout.session.completed',
+          data: {
+            object: {
+              subscription: data.subscriptionId,
+              customer: data.customerId
+            }
+          }
+        })
+      })
+
+      const webhookResult = await webhookResponse.json()
+
+      if (webhookResponse.ok) {
+        toast.success('Assinatura sincronizada com sucesso!')
+      } else {
+        throw new Error(webhookResult.error || 'Erro ao sincronizar assinatura')
+      }
+
+    } catch (error) {
+      console.error('Erro na sincronização:', error)
+      toast.error('Erro ao sincronizar assinatura')
+    } finally {
+      setSyncLoading(false)
     }
   }
 
@@ -359,6 +416,17 @@ export default function ProfilePage() {
           <SubscriptionManagement userId={user?.uid || ''} />
         </TabsContent>
       </Tabs>
+
+      <div className="flex gap-4 mt-6">
+        <Button
+          onClick={handleSync}
+          disabled={syncLoading}
+          variant="secondary"
+        >
+          {syncLoading ? <Loader className="mr-2" /> : null}
+          Sincronizar Assinatura
+        </Button>
+      </div>
     </div>
   )
 }

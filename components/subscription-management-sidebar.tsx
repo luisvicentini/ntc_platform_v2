@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Copy, Link as LinkIcon } from "lucide-react"
 import { createPartnerLink, getPartnerLinks } from "@/lib/firebase/partner-links"
 import type { PartnerSalesLink } from "@/types/partner"
+import { PlanSelectionDialog } from "@/components/plan-selection-dialog"
 
 interface SubscriptionManagementSidebarProps {
   isOpen: boolean
@@ -42,6 +43,15 @@ export function SubscriptionManagementSidebar({
     pixelId: "", // Facebook Pixel ID
     analyticsId: "", // Google Analytics ID
   })
+  const [showPlanDialog, setShowPlanDialog] = useState(false)
+  const [selectedPriceId, setSelectedPriceId] = useState("")
+  const [selectedPlan, setSelectedPlan] = useState<{
+    id: string;
+    name: string;
+    price: number;
+    currency: string;
+    interval: string;
+  } | null>(null)
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -120,11 +130,17 @@ export function SubscriptionManagementSidebar({
       return
     }
 
+    if (!selectedPriceId) {
+      toast.error("Selecione um plano")
+      return
+    }
+
     try {
       setLoading(true)
-      const link = await createPartnerLink(memberId, newLinkName)
+      const link = await createPartnerLink(memberId, newLinkName, selectedPriceId)
       setSalesLinks([...salesLinks, link])
       setNewLinkName("")
+      setSelectedPriceId("")
       toast.success("Link criado com sucesso")
     } catch (error) {
       console.error("Erro ao criar link:", error)
@@ -132,6 +148,17 @@ export function SubscriptionManagementSidebar({
     } finally {
       setLoading(false)
     }
+  }
+
+  const handlePlanSelect = (priceId: string, planDetails: any) => {
+    setSelectedPriceId(priceId)
+    setSelectedPlan({
+      id: planDetails.id,
+      name: planDetails.product.name,
+      price: planDetails.unit_amount,
+      currency: planDetails.currency,
+      interval: planDetails.recurring.interval
+    })
   }
 
   return (
@@ -221,13 +248,35 @@ export function SubscriptionManagementSidebar({
                         />
                         <Button
                           type="button"
-                          onClick={handleCreateLink}
+                          onClick={() => setShowPlanDialog(true)}
                           disabled={loading}
                           className="bg-[#7435db] hover:bg-[#a85fdd]"
                         >
-                          Criar Link
+                          Selecionar Plano
                         </Button>
                       </div>
+
+                      {selectedPlan && (
+                        <div className="p-3 bg-[#131320] rounded-md">
+                          <p className="font-medium">{selectedPlan.name}</p>
+                          <p className="text-sm text-[#7a7b9f]">
+                            {new Intl.NumberFormat('pt-BR', {
+                              style: 'currency',
+                              currency: selectedPlan.currency,
+                            }).format(selectedPlan.price / 100)}
+                            /{selectedPlan.interval}
+                          </p>
+                        </div>
+                      )}
+
+                      <Button
+                        type="button"
+                        onClick={handleCreateLink}
+                        disabled={loading || !selectedPriceId || !newLinkName}
+                        className="w-full bg-[#7435db] hover:bg-[#a85fdd]"
+                      >
+                        {loading ? "Criando..." : "Criar Link"}
+                      </Button>
 
                       <div className="space-y-2">
                         {salesLinks.map((link) => (
@@ -324,6 +373,11 @@ export function SubscriptionManagementSidebar({
           </div>
         </form>
       </SheetContent>
+      <PlanSelectionDialog
+        open={showPlanDialog}
+        onOpenChange={setShowPlanDialog}
+        onSelectPlan={handlePlanSelect}
+      />
     </Sheet>
   )
 } 

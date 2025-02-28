@@ -73,4 +73,6 @@ export const listTransactions = async (customerId: string) => {
     customer: customerId,
     limit: 10,
   })
-} 
+}
+
+export const WEBHOOK_URL = `${process.env.NEXT_PUBLIC_APP_URL}/api/stripe/webhook` 

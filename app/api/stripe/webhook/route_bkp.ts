@@ -4,78 +4,51 @@ import { stripe } from '@/lib/stripe'
 import { db } from '@/lib/firebase'
 import { collection, addDoc, getDocs, query, where } from 'firebase/firestore'
 
-// Forçar modo desenvolvimento para testes locais
-const isDevelopment = true // process.env.NODE_ENV === 'development'
 const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET
-
-const calculateExpirationDate = (subscription: any) => {
-  const interval = subscription.items.data[0].price.recurring.interval
-  const intervalCount = subscription.items.data[0].price.recurring.interval_count || 1
-  let expiresAt = new Date()
-
-  switch(interval) {
-    case 'day':
-      expiresAt.setDate(expiresAt.getDate() + intervalCount)
-      break
-    case 'week':
-      expiresAt.setDate(expiresAt.getDate() + (intervalCount * 7))
-      break
-    case 'month':
-      expiresAt.setMonth(expiresAt.getMonth() + intervalCount)
-      break
-    case 'year':
-      expiresAt.setFullYear(expiresAt.getFullYear() + intervalCount)
-      break
-    default:
-      // Fallback para current_period_end do Stripe
-      expiresAt = new Date(subscription.current_period_end * 1000)
-  }
-
-  return expiresAt
-}
+const isDevelopment = process.env.NODE_ENV === 'development'
 
 export async function POST(req: Request) {
   console.log('------------------------')
   console.log('🎯 Webhook recebido')
   console.log('🔐 Secret:', endpointSecret?.substring(0, 10) + '...')
-  console.log('🌍 NODE_ENV:', process.env.NODE_ENV)
-  console.log('⚙️ isDevelopment:', isDevelopment)
+  console.log('🌍 Ambiente:', process.env.NODE_ENV)
   
   try {
     const body = await req.text()
     const signature = headers().get('stripe-signature')
     
-    console.log('📝 Headers completos:', Object.fromEntries(headers().entries()))
-    console.log('📝 Body preview:', body.substring(0, 100) + '...')
+    console.log('📝 Headers:', {
+      signature: signature?.substring(0, 20) + '...',
+      contentType: headers().get('content-type')
+    })
 
     let event
 
-    // Sempre aceitar o payload em desenvolvimento
+    // Em desenvolvimento, ser mais permissivo
     if (isDevelopment) {
       try {
-        event = JSON.parse(body)
-        console.log('⚠️ Desenvolvimento: Aceitando payload sem verificação')
+        if (signature && endpointSecret) {
+          event = stripe.webhooks.constructEvent(body, signature, endpointSecret)
+          console.log('✅ Evento validado com assinatura')
+        } else {
+          event = JSON.parse(body)
+          console.log('⚠️ Modo desenvolvimento: Evento aceito sem verificação')
+        }
       } catch (err: any) {
-        console.error('❌ Erro ao parsear body:', err.message)
-        return NextResponse.json(
-          { error: 'Invalid JSON payload' },
-          { status: 400 }
-        )
+        // Em desenvolvimento, continuar mesmo com erro de validação
+        console.warn('⚠️ Erro na validação, tentando processar mesmo assim:', err.message)
+        event = JSON.parse(body)
       }
     } else {
-      try {
-        event = stripe.webhooks.constructEvent(body, signature!, endpointSecret!)
-      } catch (err: any) {
-        console.error('❌ Erro na validação do webhook:', err.message)
-        return NextResponse.json(
-          { error: `Webhook Error: ${err.message}` },
-          { status: 401 }
-        )
-      }
+      // Em produção, ser mais rigoroso
+      event = stripe.webhooks.constructEvent(body, signature!, endpointSecret!)
     }
 
-    // Log do evento completo para debug
-    console.log('📦 Evento completo:', JSON.stringify(event, null, 2))
+    console.log('📦 Evento:', {
+      type: event.type,
+      id: event.id,
+      api_version: event.api_version
+    })
 
     // Processar apenas eventos específicos
     if (event.type === 'checkout.session.completed') {
@@ -97,7 +70,29 @@ export async function POST(req: Request) {
         console.log('👤 Dados do cliente:', customer)
         console.log('💰 Dados do preço:', price)
 
-        const expiresAt = calculateExpirationDate(subscription)
+        // Calcular data de expiração baseada no intervalo do plano
+        const interval = price.recurring?.interval || 'month' // fallback para mensal
+        const intervalCount = price.recurring?.interval_count || 1
+        let expiresAt = new Date()
+
+        switch(interval) {
+          case 'day':
+            expiresAt.setDate(expiresAt.getDate() + intervalCount)
+            break
+          case 'week':
+            expiresAt.setDate(expiresAt.getDate() + (intervalCount * 7))
+            break
+          case 'month':
+            expiresAt.setMonth(expiresAt.getMonth() + intervalCount)
+            break
+          case 'year':
+            expiresAt.setFullYear(expiresAt.getFullYear() + intervalCount)
+            break
+          default:
+            console.warn('⚠️ Intervalo desconhecido:', interval)
+            // Usar current_period_end como fallback
+            expiresAt = new Date(subscription.current_period_end * 1000)
+        }
 
         // Verificar se já existe no Firebase
         const subscriptionsRef = collection(db, 'subscriptions')
@@ -125,14 +120,28 @@ export async function POST(req: Request) {
           partnerLinkId: subscription.metadata.partnerLinkId || null,
           priceId: subscription.items.data[0].price.id,
           currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-          interval: subscription.items.data[0].price.recurring.interval,
-          intervalCount: subscription.items.data[0].price.recurring.interval_count
+          interval: interval,
+          intervalCount: intervalCount
         }
 
         const docRef = await addDoc(subscriptionsRef, subscriptionData)
         console.log('✅ Assinatura criada no Firebase:', docRef.id)
 
-        return NextResponse.json({ success: true })
+        // Criar vínculo membro-parceiro
+        const memberPartnersRef = collection(db, 'memberPartners')
+        const memberPartnerData = {
+          memberId: customer.metadata.userId,
+          partnerId: subscription.metadata.partnerId,
+          status: 'active',
+          stripeSubscriptionId: subscription.id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          expiresAt: expiresAt.toISOString(),
+          partnerLinkId: subscription.metadata.partnerLinkId || null
+        }
+
+        const mpDoc = await addDoc(memberPartnersRef, memberPartnerData)
+        console.log('✅ Vínculo membro-parceiro criado:', mpDoc.id)
       } catch (error) {
         console.error('❌ Erro ao processar checkout:', error)
         return NextResponse.json(
@@ -142,21 +151,13 @@ export async function POST(req: Request) {
       }
     }
 
-    // Sempre retornar 200 em desenvolvimento
-    return NextResponse.json({ 
-      received: true,
-      environment: isDevelopment ? 'development' : 'production',
-      eventType: event.type
-    })
+    // Aceitar o evento mesmo que não seja processado
+    return NextResponse.json({ received: true })
 
   } catch (error: any) {
-    console.error('❌ Erro geral:', error)
-    // Em desenvolvimento, retornar mais detalhes do erro
+    console.error('❌ Erro geral:', error.message)
     return NextResponse.json(
-      { 
-        error: 'Erro interno no servidor',
-        details: isDevelopment ? error.message : undefined
-      },
+      { error: 'Erro interno no servidor' },
       { status: 500 }
     )
   }

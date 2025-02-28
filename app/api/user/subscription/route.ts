@@ -44,7 +44,7 @@ export async function GET(request: Request) {
       status: 'all', // Isso garante que pegaremos todas as assinaturas, independente do status
     })
 
-    console.log('Assinaturas encontradas:', subscriptions.data.length)
+    console.log('[STRIPE] Assinaturas encontradas:', subscriptions.data.length)
 
     // Buscar produtos para todas as assinaturas
     const subscriptionDetails = await Promise.all(
