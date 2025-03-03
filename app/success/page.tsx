@@ -1,73 +1,44 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Loader } from "lucide-react"
 import { toast } from "sonner"
-import { useAuth } from "@/contexts/auth-context"
 
 export default function SuccessPage() {
   const searchParams = useSearchParams()
   const router = useRouter()
-  const { user } = useAuth()
-  const [loading, setLoading] = useState(false)
-  const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null)
+  const [resendingEmail, setResendingEmail] = useState(false)
 
-  useEffect(() => {
-    const sessionId = searchParams.get('session_id')
-    if (sessionId) {
-      fetchSubscriptionDetails(sessionId)
-    }
-  }, [searchParams])
+  const customerEmail = searchParams.get('customer_email')
+  const customerName = searchParams.get('customer_name')
+  const planName = searchParams.get('plan_name')
 
-  const fetchSubscriptionDetails = async (sessionId: string) => {
+  const handleResendEmail = async () => {
+    if (!customerEmail) return
+
     try {
-      const response = await fetch('/api/stripe/session-details', {
-        method: 'POST',
+      setResendingEmail(true)
+      const response = await fetch("/api/users/resend-activation-public", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify({ sessionId })
-      })
-      const data = await response.json()
-      setSubscriptionDetails(data)
-    } catch (error) {
-      console.error('Erro ao buscar detalhes:', error)
-      toast.error('Erro ao carregar detalhes da assinatura')
-    }
-  }
-
-  const handleSyncSubscription = async () => {
-    try {
-      setLoading(true)
-      
-      // Simular o evento webhook
-      const response = await fetch('/api/stripe/webhook', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Stripe-Signature': 'manual-sync'
-        },
-        body: JSON.stringify({
-          type: 'checkout.session.completed',
-          data: {
-            object: subscriptionDetails
-          }
-        })
+        body: JSON.stringify({ email: customerEmail }),
       })
 
       if (!response.ok) {
-        throw new Error('Erro ao sincronizar assinatura')
+        const data = await response.json()
+        throw new Error(data.error || "Erro ao reenviar email")
       }
 
-      toast.success('Assinatura sincronizada com sucesso!')
-      router.push('/feed') // Redirecionar para o feed
-    } catch (error) {
-      console.error('Erro na sincronização:', error)
-      toast.error('Erro ao sincronizar assinatura')
+      toast.success("Email de ativação reenviado com sucesso!")
+    } catch (error: any) {
+      console.error("Erro ao reenviar:", error)
+      toast.error(error.message || "Erro ao reenviar email de ativação")
     } finally {
-      setLoading(false)
+      setResendingEmail(false)
     }
   }
 
@@ -75,32 +46,56 @@ export default function SuccessPage() {
     <div className="container mx-auto px-4 py-8 max-w-2xl">
       <div className="text-center space-y-6">
         <h1 className="text-3xl font-bold">
-          Parabéns! Sua assinatura foi confirmada
+          Parabéns, {customerName}!
         </h1>
         
-        <p className="text-lg text-muted-foreground">
-          Estamos quase lá! Para começar a usar os cupons, 
-          precisamos sincronizar sua assinatura.
+        <div className="bg-green-50 p-6 rounded-lg">
+          <p className="text-lg text-green-800">
+            Sua assinatura do plano {planName} foi confirmada com sucesso!
+          </p>
+        </div>
+
+        <div className="bg-purple-50 p-6 rounded-lg">
+          <h2 className="text-xl font-semibold text-purple-900 mb-2">
+            Próximos passos
+          </h2>
+          <p className="text-purple-800">
+            Para acessar sua conta e começar a usar os cupons, você precisa ativá-la através do link que enviamos para:
+            <br />
+            <span className="font-medium">{customerEmail}</span>
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <Button
+            onClick={() => router.push('/auth/member')}
+            size="lg"
+            className="w-full bg-purple-600 hover:bg-purple-700"
+          >
+            Já ativou a conta? Faça login
+          </Button>
+
+          <Button
+            onClick={handleResendEmail}
+            variant="outline"
+            size="lg"
+            className="w-full"
+            disabled={resendingEmail}
+          >
+            {resendingEmail ? (
+              <>
+                <Loader className="mr-2 h-4 w-4 animate-spin" />
+                Reenviando...
+              </>
+            ) : (
+              "Reenviar email de ativação"
+            )}
+          </Button>
+        </div>
+
+        <p className="text-sm text-muted-foreground">
+          Não recebeu o email? Verifique sua caixa de spam ou clique em "Reenviar email de ativação"
         </p>
-
-        {subscriptionDetails && (
-          <div className="bg-card p-6 rounded-lg shadow-lg">
-            <h2 className="text-xl font-semibold mb-4">
-              Detalhes da sua assinatura
-            </h2>
-            {/* Adicione mais detalhes aqui */}
-          </div>
-        )}
-
-        <Button
-          onClick={handleSyncSubscription}
-          disabled={loading}
-          size="lg"
-          className="w-full max-w-md"
-        >
-          {loading && <Loader className="mr-2" />}
-          Começar a usar os cupons
-        </Button>
       </div>
     </div>
   )

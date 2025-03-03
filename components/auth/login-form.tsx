@@ -12,6 +12,7 @@ import { FaFacebook } from "react-icons/fa"
 import { Eye, EyeOff } from "lucide-react"
 import { useAuth } from "@/contexts/auth-context"
 import { UserType } from "@/contexts/auth-context"
+import { toast } from "sonner"
 
 interface LoginFormProps {
   title: string
@@ -44,7 +45,44 @@ export function LoginForm({
     setError(null)
 
     try {
-      console.log('Iniciando login com email/senha...')
+      // Primeiro verificar se a conta está ativa e o tipo do usuário
+      const userStatusResponse = await fetch(`/api/users/status?email=${encodeURIComponent(email)}`)
+      const userStatus = await userStatusResponse.json()
+
+      if (userStatus.error) {
+        throw new Error(userStatus.error)
+      }
+
+      // Verificar se o tipo de usuário corresponde
+      if (userStatus.type !== userType) {
+        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userStatus.type}.`)
+      }
+
+      if (userStatus.status === "inactive") {
+        toast.error("Conta não ativada. Verifique seu email para ativar sua conta.", {
+          action: {
+            label: "Reenviar email",
+            onClick: async () => {
+              try {
+                await fetch("/api/users/resend-activation", {
+                  method: "POST",
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  body: JSON.stringify({ email }),
+                })
+                toast.success("Email de ativação reenviado!")
+              } catch (error) {
+                toast.error("Erro ao reenviar email de ativação")
+              }
+            },
+          },
+        })
+        setLoading(false)
+        return
+      }
+
+      // Continuar com o login normal se a conta estiver ativa e o tipo estiver correto
       await signIn(email, password, userType)
       console.log('Login bem sucedido')
       
@@ -54,24 +92,25 @@ export function LoginForm({
       // Verificar se o usuário tem o userType correto
       const storedUserData = localStorage.getItem('authUser')
       if (!storedUserData) {
-        throw new Error('Erro ao salvar dados do usuário')
+        throw new Error('Erro ao recuperar dados do usuário')
       }
       
-      const userData = JSON.parse(storedUserData) as { userType: UserType }
-      if (userData.userType !== userType) {
-        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userData.userType}.`)
+      const authUser = JSON.parse(storedUserData)
+      if (!authUser.userType) {
+        throw new Error('Tipo de usuário não definido')
+      }
+
+      if (authUser.userType !== userType) {
+        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${authUser.userType || 'indefinido'}.`)
       }
 
       const redirectPath = userType === "member" ? "/member/feed" : `/${userType}/dashboard`
       console.log('Redirecionando para:', redirectPath)
       window.location.href = redirectPath
-    } catch (error) {
-      console.error("Login error:", error)
-      if (error instanceof Error) {
-        setError(error.message)
-      } else {
-        setError("Erro ao fazer login. Verifique suas credenciais.")
-      }
+    } catch (error: any) {
+      console.error("Erro no login:", error)
+      setError(error.message)
+      toast.error(error.message)
     } finally {
       setLoading(false)
     }

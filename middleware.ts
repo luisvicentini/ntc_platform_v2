@@ -83,8 +83,10 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public files
+     * - success page
+     * - api/users/resend-activation
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\..*|_next).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\..*|success|api/users/resend-activation).*)',
     '/api/:path*'
   ]
 }

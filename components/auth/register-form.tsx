@@ -1,137 +1,190 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Logo } from "@/components/ui/logo"
-import { useAuth } from "@/contexts/auth-context"
+import { PhoneNumberInput } from "@/components/ui/phone-input"
+import { toast } from "sonner"
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "../ui/card"
 
 export function RegisterForm() {
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
+  const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const router = useRouter()
-  const { signUp, user } = useAuth()
-  const searchParams = useSearchParams()
+  const [phone, setPhone] = useState("")
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
-    if (password !== confirmPassword) {
-      setError("As senhas não coincidem")
-      setLoading(false)
-      return
-    }
-
     try {
-      console.log('Iniciando registro...')
-      await signUp(email, password, "member")
-      console.log('Registro bem sucedido')
-      
-      // Aguarda um momento para garantir que o estado foi atualizado
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Verifica se o usuário foi salvo corretamente
-      const storedUser = localStorage.getItem('authUser')
-      if (!storedUser) {
-        throw new Error('Erro ao salvar dados do usuário')
+      const formData = new FormData(e.currentTarget)
+      const userData = {
+        email: formData.get("email") as string,
+        displayName: formData.get("name") as string,
+        phoneNumber: phone,
+        city: formData.get("city") as string,
+        userType: "member"
       }
-      
-      // Verifica se veio do checkout e redireciona apropriadamente
-      const redirect = searchParams.get('redirect')
-      const redirectPath = redirect === 'onboarding' ? '/onboarding' : '/member/feed'
-      
-      console.log('Redirecionando para:', redirectPath)
-      window.location.href = redirectPath
-    } catch (error) {
-      console.error("Registration error:", error)
-      setError("Erro ao criar conta. Verifique suas informações.")
+
+      // 1. Criar a conta do usuário
+      const registerResponse = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(userData),
+      })
+
+      const registerData = await registerResponse.json()
+
+      if (!registerResponse.ok) {
+        setError(registerData.error || "Erro ao criar conta")
+        return // Importante: retornar aqui para não continuar o processo
+      }
+
+      // 2. Recuperar dados do checkout do localStorage
+      const checkoutData = localStorage.getItem('checkoutData')
+      if (!checkoutData) {
+        console.error('Dados do checkout não encontrados')
+        toast.error("Erro ao recuperar dados do plano")
+        router.push('/')
+        return
+      }
+
+      let parsedCheckoutData
+      try {
+        parsedCheckoutData = JSON.parse(checkoutData)
+        console.log('Dados do checkout recuperados:', parsedCheckoutData)
+      } catch (e) {
+        console.error('Erro ao parsear dados do checkout:', e)
+        toast.error("Erro ao processar dados do plano")
+        router.push('/')
+        return
+      }
+
+      // 3. Criar a sessão de checkout no Stripe
+      const stripeResponse = await fetch('/api/stripe/create-checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          priceId: parsedCheckoutData.priceId,
+          partnerId: parsedCheckoutData.partnerId,
+          partnerLinkId: parsedCheckoutData.partnerLinkId,
+          email: userData.email,
+          customer_data: {
+            email: userData.email,
+            phone: phone,
+            name: userData.displayName
+          },
+          planName: parsedCheckoutData.planName
+        }),
+      })
+
+      const stripeData = await stripeResponse.json()
+
+      if (!stripeResponse.ok) {
+        setError(stripeData.error || "Erro ao criar sessão de pagamento")
+        return
+      }
+
+      // 4. Limpar dados e redirecionar
+      localStorage.removeItem('checkoutData')
+      toast.success("Redirecionando para o pagamento...")
+      window.location.href = stripeData.url
+
+    } catch (error: any) {
+      console.error("Erro detalhado:", error)
+      setError(error.message || "Erro ao processar registro")
+    } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="mx-auto flex w-full flex-col justify-center space-y-6 sm:w-[350px]">
-      <div className="flex flex-col space-y-2 text-center">
+    <div className="container flex flex-col items-center justify-center min-h-screen py-6">
+      
+      <div className="mb-8">
         <Logo />
-        <h1 className="text-2xl font-semibold tracking-tight text-ntc-purple">Criar Conta</h1>
-        <p className="text-sm text-ntc-gray">
-          Crie sua conta de membro para acessar o sistema
-        </p>
       </div>
-      <form onSubmit={handleSubmit} className="grid gap-6">
-        <div className="grid gap-2">
-          <Label htmlFor="email" className="text-ntc-gray">
-            Email
-          </Label>
-          <Input
-            id="email"
-            placeholder="nome@exemplo.com"
-            type="email"
-            autoCapitalize="none"
-            autoComplete="email"
-            autoCorrect="off"
-            className="border-ntc-gray-light"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={loading}
-            required
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="password" className="text-ntc-gray">
-            Senha
-          </Label>
-          <Input
-            id="password"
-            placeholder="********"
-            type="password"
-            autoCapitalize="none"
-            autoComplete="new-password"
-            className="border-ntc-gray-light"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            disabled={loading}
-            required
-          />
-        </div>
-        <div className="grid gap-2">
-          <Label htmlFor="confirm-password" className="text-ntc-gray">
-            Confirmar Senha
-          </Label>
-          <Input
-            id="confirm-password"
-            placeholder="********"
-            type="password"
-            autoCapitalize="none"
-            autoComplete="new-password"
-            className="border-ntc-gray-light"
-            value={confirmPassword}
-            onChange={(e) => setConfirmPassword(e.target.value)}
-            disabled={loading}
-            required
-          />
-        </div>
-        {error && (
-          <div className="text-sm text-red-500">
-            {error}
+      <Card className="w-[400px] bg-[#131320] text-[#e5e2e9] border-[#1a1b2d]">
+        <CardHeader>
+          <CardTitle>Crie sua Conta</CardTitle>
+          <CardDescription className="text-[#7a7b9f]">
+            Digite seus dados pessoais para criar sua conta
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <Label htmlFor="name">Nome completo</Label>
+            <Input
+              id="name"
+              name="name"
+              type="text"
+              required
+              className="mt-1 bg-[#1a1b2d] border-[#131320]"
+            />
           </div>
-        )}
-        <Button 
-          type="submit" 
-          className="w-full bg-ntc-purple hover:bg-ntc-purple-dark"
-          disabled={loading}
-        >
-          {loading ? "Criando conta..." : "Criar conta"}
-        </Button>
-      </form>
-      <div className="text-center text-sm text-ntc-gray">
+
+          <div>
+            <Label htmlFor="email">E-mail</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              required
+              className="mt-1 bg-[#1a1b2d] border-[#131320]"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="phone">Telefone</Label>
+            <PhoneNumberInput
+              id="phone"
+              value={phone}
+              onChange={(value) => setPhone(value)}
+              required
+              className="mt-1 bg-[#1a1b2d] border-[#131320]"
+            />
+          </div>
+
+          <div>
+            <Label htmlFor="city">Cidade</Label>
+            <Input
+              id="city"
+              name="city"
+              type="text"
+              required
+              className="mt-1 bg-[#1a1b2d] border-[#131320]"
+            />
+          </div>
+
+          {error && (
+            <div className="p-3 rounded bg-red-50 border border-red-200">
+              <p className="text-sm text-red-600">{error}</p>
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={loading}
+          >
+            {loading ? "Criando conta..." : "Criar conta"}
+          </Button>
+        </form>
+        
+        </CardContent>
+      </Card>
+      <div className="text-center text-sm text-ntc-gray mt-4">
         Já tem uma conta?{" "}
         <a href="/auth/member" className="text-ntc-purple hover:text-ntc-purple-dark underline underline-offset-4">
           Fazer login

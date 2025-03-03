@@ -1,19 +1,18 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
-import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
+import { useState, useEffect, useRef } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Calendar, X, MoreVertical } from "lucide-react"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { CalendarIcon, PlusCircle, Trash2 } from "lucide-react"
+import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { cn } from "@/lib/utils"
-import { useSubscription } from "@/contexts/subscription-context"
 import { toast } from "sonner"
-import { PartnerCombobox } from "./partner-combobox"
-import type { PartnerSubscription } from "@/types/subscription"
+import { useSubscription } from "@/contexts/subscription-context"
+import { cn } from "@/lib/utils"
 
 interface Partner {
   id: string
@@ -21,233 +20,325 @@ interface Partner {
   email: string
 }
 
+interface LinkedPartner extends Partner {
+  expirationDate: string
+}
+
 interface SubscriptionManagementModalProps {
   isOpen: boolean
   onClose: () => void
   memberId: string
-  memberName: string
+  linkedPartners: LinkedPartner[]
 }
 
-export function SubscriptionManagementModal({ 
-  isOpen, 
-  onClose, 
+export function SubscriptionManagementModal({
+  isOpen,
+  onClose,
   memberId,
-  memberName 
+  linkedPartners = []
 }: SubscriptionManagementModalProps) {
   const { addSubscriptions, getMemberSubscriptions, removeSubscription } = useSubscription()
-  const [partners, setPartners] = useState<Partner[]>([])
-  const [selectedPartners, setSelectedPartners] = useState<(Partner & { expiresAt?: Date })[]>([])
   const [loading, setLoading] = useState(false)
-  const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
-  const [openCalendarId, setOpenCalendarId] = useState<string | null>(null)
+  const [searchTerm, setSearchTerm] = useState("")
+  const [availablePartners, setAvailablePartners] = useState<Partner[]>([])
+  const [activeSubscriptions, setActiveSubscriptions] = useState<LinkedPartner[]>([])
+  const [newSubscriptions, setNewSubscriptions] = useState<LinkedPartner[]>([])
+  const [openDatePicker, setOpenDatePicker] = useState<string | null>(null)
+  const datePickerRef = useRef<HTMLDivElement>(null)
 
-  const loadData = useCallback(async () => {
-    if (!isOpen || !memberId) return
+  useEffect(() => {
+    if (!isOpen) return
 
-    setLoading(true)
-    try {
-      // Carregar assinaturas existentes
-      const subscriptions = await getMemberSubscriptions(memberId) as PartnerSubscription[]
-      const existingPartners = subscriptions
-        .filter(s => s.status === "active")
-        .map(s => ({
-          id: s.partnerId,
-          displayName: s.partner.displayName,
-          email: s.partner.email,
-          expiresAt: s.expiresAt ? new Date(s.expiresAt) : undefined
-        }))
-      setSelectedPartners(existingPartners)
-
-      // Carregar parceiros disponíveis
-      const response = await fetch("/api/partners/list")
-      if (!response.ok) {
-        throw new Error("Erro ao carregar parceiros")
+    const fetchPartners = async () => {
+      try {
+        const response = await fetch("/api/partners/list")
+        if (!response.ok) throw new Error("Erro ao carregar parceiros")
+        const data = await response.json()
+        
+        // Filtrar parceiros que já têm assinaturas ativas
+        const subscribedIds = new Set([...activeSubscriptions, ...newSubscriptions].map(p => p.id))
+        const available = data.filter(partner => !subscribedIds.has(partner.id))
+        setAvailablePartners(available)
+      } catch (error) {
+        console.error("Erro ao carregar parceiros:", error)
+        toast.error("Erro ao carregar parceiros")
       }
-      const data = await response.json()
-      setPartners(data)
-    } catch (error) {
-      console.error("Erro ao carregar dados:", error)
-      toast.error("Erro ao carregar dados")
-    } finally {
-      setLoading(false)
     }
+
+    fetchPartners()
+  }, [isOpen, activeSubscriptions.length, newSubscriptions.length])
+
+  useEffect(() => {
+    const loadExistingSubscriptions = async () => {
+      if (!isOpen || !memberId) return
+
+      try {
+        const subscriptions = await getMemberSubscriptions(memberId)
+        const activeOnes = subscriptions
+          .filter(sub => sub.status === 'active')
+          .map(sub => ({
+            id: sub.partnerId,
+            displayName: sub.partnerName || 'Parceiro não identificado',
+            email: sub.partnerEmail || '',
+            expirationDate: sub.expiresAt
+          }))
+        
+        console.log('Assinaturas ativas carregadas:', activeOnes)
+        setActiveSubscriptions(activeOnes)
+      } catch (error) {
+        console.error("Erro ao carregar assinaturas:", error)
+        toast.error("Erro ao carregar assinaturas")
+      }
+    }
+
+    loadExistingSubscriptions()
   }, [isOpen, memberId, getMemberSubscriptions])
 
-  // Carregar dados quando o modal abrir
   useEffect(() => {
-    loadData()
-  }, [loadData])
-
-  // Limpar dados quando o modal fechar
-  useEffect(() => {
-    if (!isOpen) {
-      setSelectedPartners([])
-      setPartners([])
+    const handleClickOutside = (event: MouseEvent) => {
+      if (datePickerRef.current && !datePickerRef.current.contains(event.target as Node)) {
+        setOpenDatePicker(null)
+      }
     }
-  }, [isOpen])
 
-  const handlePartnerSelect = (partner: Partner) => {
-    if (!selectedPartners.find(p => p.id === partner.id)) {
-      setSelectedPartners([...selectedPartners, partner])
-    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleSelectPartner = (partner: Partner) => {
+    const defaultExpiration = new Date()
+    defaultExpiration.setMonth(defaultExpiration.getMonth() + 1)
+
+    setNewSubscriptions(prev => [...prev, {
+      ...partner,
+      expirationDate: defaultExpiration.toISOString()
+    }])
   }
 
-  const handleDateSelect = (partnerId: string, date: Date | undefined) => {
-    setSelectedPartners(prev => 
-      prev.map(partner => 
-        partner.id === partnerId 
-          ? { ...partner, expiresAt: date }
+  const handleRemovePartner = (partner: LinkedPartner) => {
+    setNewSubscriptions(prev => prev.filter(p => p.id !== partner.id))
+  }
+
+  const handleUpdateExpiration = (partnerId: string, date: Date) => {
+    setNewSubscriptions(prev =>
+      prev.map(partner =>
+        partner.id === partnerId
+          ? { ...partner, expirationDate: date.toISOString() }
           : partner
       )
     )
   }
 
-  const handleRemovePartner = async (partnerId: string) => {
+  const handleRemoveActiveSubscription = async (partnerId: string) => {
     try {
       setLoading(true)
       await removeSubscription(memberId, partnerId)
-      setSelectedPartners(prev => prev.filter(p => p.id !== partnerId))
-      toast.success("Parceiro removido com sucesso")
+      
+      // Atualizar a lista de assinaturas ativas
+      setActiveSubscriptions(prev => prev.filter(p => p.id !== partnerId))
+      
+      // Adicionar o parceiro de volta à lista de disponíveis
+      const removedPartner = activeSubscriptions.find(p => p.id === partnerId)
+      if (removedPartner) {
+        setAvailablePartners(prev => [...prev, removedPartner])
+      }
+      
+      toast.success("Assinatura removida com sucesso")
     } catch (error) {
-      console.error("Erro ao remover parceiro:", error)
-      toast.error("Erro ao remover parceiro")
+      console.error("Erro ao remover assinatura:", error)
+      toast.error("Erro ao remover assinatura")
     } finally {
       setLoading(false)
-      setOpenDropdownId(null)
     }
   }
 
   const handleSave = async () => {
+    setLoading(true)
     try {
-      const subscriptionsData = selectedPartners.map(partner => ({
+      const subscriptionsToAdd = newSubscriptions.map(partner => ({
         partnerId: partner.id,
-        expiresAt: partner.expiresAt?.toISOString()
+        expiresAt: partner.expirationDate
       }))
 
-      await addSubscriptions(memberId, subscriptionsData)
+      if (subscriptionsToAdd.length > 0) {
+        await addSubscriptions(memberId, subscriptionsToAdd)
+        toast.success("Assinaturas adicionadas com sucesso")
+      }
       onClose()
-      toast.success("Assinaturas atualizadas com sucesso")
     } catch (error) {
       console.error("Erro ao salvar assinaturas:", error)
       toast.error("Erro ao salvar assinaturas")
+    } finally {
+      setLoading(false)
     }
+  }
+
+  const DatePickerDropdown = ({ partner, onSelect }: { 
+    partner: LinkedPartner, 
+    onSelect: (date: Date) => void 
+  }) => {
+    const isOpen = openDatePicker === partner.id
+
+    return (
+      <>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setOpenDatePicker(isOpen ? null : partner.id)}
+          className="text-xs bg-transparent border-gray-800 w-full justify-start"
+        >
+          <CalendarIcon className="h-3 w-3 mr-1" />
+          Data de Expiração: {format(new Date(partner.expirationDate), "dd/MM/yyyy", { locale: ptBR })}
+        </Button>
+        
+        {isOpen && (
+          <div 
+            ref={datePickerRef}
+            className="absolute z-50 mt-1 bg-[#1E1D23] border border-gray-800 rounded-md shadow-lg"
+          >
+            <Calendar
+              mode="single"
+              selected={new Date(partner.expirationDate)}
+              onSelect={(date) => {
+                if (date) {
+                  onSelect(date)
+                  setOpenDatePicker(null)
+                }
+              }}
+              disabled={(date) => date < new Date()}
+              initialFocus
+              className="bg-[#1E1D23] rounded-md"
+            />
+          </div>
+        )}
+      </>
+    )
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#131320] text-[#e5e2e9] border-[#1a1b2d] max-w-5xl">
-        <DialogHeader>
-          <DialogTitle>Gerenciar Assinaturas - {memberName}</DialogTitle>
+      <DialogContent className="max-w-4xl bg-[#16151A] text-white p-0">
+        <DialogHeader className="p-6 border-b border-gray-800">
+          <DialogTitle className="text-xl font-semibold">Vincular Estabelecimentos</DialogTitle>
         </DialogHeader>
 
-        <div className="grid gap-6">
-          {/* Adicionar Parceiro */}
+        <div className="grid grid-cols-2 gap-6 p-6">
+          {/* Coluna 1: Parceiros Disponíveis */}
           <div>
-            <Label>Adicionar Parceiro</Label>
-            <div className="mt-2">
-              <PartnerCombobox 
-                partners={partners.filter(p => !selectedPartners.find(sp => sp.id === p.id))}
-                onSelect={handlePartnerSelect}
-              />
+            <Label className="text-gray-400 mb-2">Estabelecimentos Disponíveis</Label>
+            <Input
+              placeholder="Buscar estabelecimento..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="mb-4 bg-[#1E1D23] border-gray-800 text-white"
+            />
+            <div className="space-y-2 max-h-[400px] overflow-y-auto">
+              {availablePartners
+                .filter(partner => 
+                  partner.displayName?.toLowerCase().includes(searchTerm.toLowerCase())
+                )
+                .map((partner) => (
+                  <div
+                    key={partner.id}
+                    className="flex items-center justify-between p-3 bg-[#1E1D23] rounded-lg"
+                  >
+                    <span>{partner.displayName}</span>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleSelectPartner(partner)}
+                      className="text-white hover:bg-[#2D2C32]"
+                    >
+                      <PlusCircle className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
             </div>
           </div>
 
-          {/* Parceiros Selecionados */}
+          {/* Coluna 2: Assinaturas */}
           <div>
-            <Label>Parceiros Vinculados</Label>
-            <div className="mt-2 space-y-2">
-              {selectedPartners.map((partner) => (
-                <div
-                  key={partner.id}
-                  className="bg-[#1a1b2d] p-4 rounded-lg flex items-center justify-between"
-                >
-                  <div>
-                    <h4 className="font-medium">{partner.displayName}</h4>
-                    <p className="text-sm text-[#7a7b9f]">{partner.email}</p>
-                    {partner.expiresAt && (
-                      <p className="text-sm text-[#7a7b9f]">
-                        Expira em: {format(partner.expiresAt, "dd/MM/yyyy", { locale: ptBR })}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="relative">
+            <Label className="text-gray-400 mb-2">Assinaturas</Label>
+            <div className="space-y-4 max-h-[400px] overflow-y-auto">
+              {/* Assinaturas Ativas */}
+              {activeSubscriptions.length > 0 ? (
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500">Assinaturas Ativas</Label>
+                  {activeSubscriptions.map((partner) => (
+                    <div
+                      key={partner.id}
+                      className="flex items-center justify-between p-3 bg-[#1E1D23] rounded-lg"
+                    >
+                      <div className="flex flex-col gap-1">
+                        <span className="text-white">{partner.displayName}</span>
+                        <span className="text-xs text-gray-400">
+                          Expira em: {format(new Date(partner.expirationDate), "dd/MM/yyyy", { locale: ptBR })}
+                        </span>
+                      </div>
                       <Button
                         variant="ghost"
-                        size="icon"
-                        onClick={() => setOpenDropdownId(openDropdownId === partner.id ? null : partner.id)}
-                        className="relative z-10"
+                        size="sm"
+                        onClick={() => handleRemoveActiveSubscription(partner.id)}
+                        className="text-red-500 hover:bg-[#2D2C32]"
+                        disabled={loading}
                       >
-                        <MoreVertical className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4" />
                       </Button>
-
-                      {openDropdownId === partner.id && (
-                        <div className="absolute right-0 top-full mt-1 min-w-[200px] rounded-md bg-[#1a1b2d] p-2 shadow-md border border-[#131320] z-50">
-                          <div className="flex flex-col space-y-1">
-                            <button
-                              className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
-                              onClick={() => setOpenCalendarId(partner.id)}
-                            >
-                              <Calendar className="h-4 w-4 mr-2" />
-                              Data de Expiração
-                            </button>
-                            <button
-                              className="text-left px-2 py-1.5 text-sm text-red-500 hover:bg-[#131320] rounded-sm flex items-center"
-                              onClick={() => handleRemovePartner(partner.id)}
-                            >
-                              <X className="h-4 w-4 mr-2" />
-                              Remover
-                            </button>
-                          </div>
-                        </div>
-                      )}
-
-                      {openCalendarId === partner.id && (
-                        <div className="absolute right-0 top-full mt-1 rounded-md bg-[#1a1b2d] p-3 shadow-md border border-[#131320] z-50">
-                          <CalendarComponent
-                            mode="single"
-                            selected={partner.expiresAt}
-                            onSelect={(date) => {
-                              handleDateSelect(partner.id, date)
-                              setOpenCalendarId(null)
-                            }}
-                            disabled={(date) => date < new Date()}
-                            initialFocus
-                            locale={ptBR}
-                            className="rounded-md border border-[#1a1b2d]"
-                          />
-                        </div>
-                      )}
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-
-              {loading && (
-                <div className="text-center text-[#7a7b9f] py-4">
-                  Carregando...
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  Nenhuma assinatura ativa
                 </div>
               )}
 
-              {!loading && selectedPartners.length === 0 && (
-                <div className="text-center text-[#7a7b9f] py-4">
-                  Nenhum parceiro vinculado
+              {/* Novas Assinaturas */}
+              {newSubscriptions.length > 0 && (
+                <div className="space-y-2">
+                  <Label className="text-sm text-gray-500">Novas Assinaturas</Label>
+                  {newSubscriptions.map((partner) => (
+                    <div
+                      key={partner.id}
+                      className="flex items-center justify-between p-3 bg-[#1E1D23] rounded-lg"
+                    >
+                      <div className="flex flex-col gap-1 w-full">
+                        <span>{partner.displayName}</span>
+                        <DatePickerDropdown
+                          partner={partner}
+                          onSelect={(date) => handleUpdateExpiration(partner.id, date)}
+                        />
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRemovePartner(partner)}
+                        className="text-red-500 hover:bg-[#2D2C32] ml-2"
+                      >
+                        Remover
+                      </Button>
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 mt-4">
-          <Button variant="outline" onClick={onClose} className="bg-[#1a1b2d] border-[#131320]">
+        <div className="flex justify-end gap-3 p-6 border-t border-gray-800">
+          <Button
+            variant="outline"
+            onClick={onClose}
+            className="bg-transparent border-gray-800 text-white hover:bg-[#2D2C32]"
+          >
             Cancelar
           </Button>
-          <Button 
-            onClick={handleSave} 
-            className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
-            disabled={selectedPartners.length === 0 || loading}
+          <Button
+            onClick={handleSave}
+            disabled={loading || newSubscriptions.length === 0}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
           >
-            Salvar
+            {loading ? "Salvando..." : "Salvar"}
           </Button>
         </div>
       </DialogContent>

@@ -345,6 +345,15 @@ function UsersContent() {
           onConfirm={handleDeleteConfirm}
         />
       )}
+
+      <AddUserModal
+        isOpen={showAddUserModal}
+        onClose={() => {
+          setSelectedUser(null)
+          setShowAddUserModal(false)
+        }}
+        user={selectedUser}
+      />
     </div>
   )
 
@@ -362,8 +371,15 @@ function UsersContent() {
             <div className="flex items-start justify-between">
               <div className="flex items-end space-x-4">
                 <Avatar className="h-12 w-12">
-                  <AvatarImage src={user.photoURL || ""} alt={user.displayName} />
-                  <AvatarFallback>{user.displayName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                  <AvatarImage src={user.photoURL || ""} alt={user.displayName || 'Usuário'} />
+                  <AvatarFallback>
+                    {user.displayName 
+                      ? user.displayName.substring(0, 2).toUpperCase()
+                      : user.email 
+                        ? user.email.substring(0, 2).toUpperCase()
+                        : 'U'
+                    }
+                  </AvatarFallback>
                 </Avatar>
                 <Badge className={getUserTypeColor(user.userType)}>
                   <span className="flex items-center space-x-1">
@@ -513,8 +529,15 @@ function UsersContent() {
               <TableCell className="font-medium text-[#e5e2e9]">
                 <div className="flex items-center space-x-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={user.photoURL || ""} alt={user.displayName} />
-                    <AvatarFallback>{user.displayName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                    <AvatarImage src={user.photoURL || ""} alt={user.displayName || 'Usuário'} />
+                    <AvatarFallback>
+                      {user.displayName 
+                        ? user.displayName.substring(0, 2).toUpperCase()
+                        : user.email 
+                          ? user.email.substring(0, 2).toUpperCase()
+                          : 'U'
+                      }
+                    </AvatarFallback>
                   </Avatar>
                   <span>{user.displayName}</span>
                 </div>

@@ -96,7 +96,9 @@ export default function ActivateAccountPage() {
         ? "/auth/partner"
         : userType === "business"
         ? "/auth/business"
-        : "/auth/master"
+        : userType === "master"
+        ? "/auth/master"
+        : "/auth/member"
       
       router.push(loginPath)
 
