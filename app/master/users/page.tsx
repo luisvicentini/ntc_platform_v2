@@ -21,8 +21,6 @@ import { PopoverArrow } from "@radix-ui/react-popover"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { SubscriptionManagementSidebar } from "@/components/subscription-management-sidebar"
 
-const ITEMS_PER_PAGE = 10
-
 export default function UsersPage() {
   return (
     <SubscriptionProvider>
@@ -48,6 +46,8 @@ function UsersContent() {
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null)
   const [openDropdownId, setOpenDropdownId] = useState<string | null>(null)
   const [showSubscriptionSidebar, setShowSubscriptionSidebar] = useState(false)
+  const ITEMS_PER_PAGE = 12
+  const [totalRecords, setTotalRecords] = useState(0)
 
   useEffect(() => {
     fetchUsers()
@@ -84,6 +84,7 @@ function UsersContent() {
 
       const data = await response.json()
       setAllUsers(data.users)
+      setTotalRecords(data.total)
       filterUsers()
     } catch (error) {
       console.error("Erro ao carregar usuários:", error)
@@ -95,22 +96,19 @@ function UsersContent() {
   const filterUsers = () => {
     let filtered = [...allUsers]
 
-    // Filtrar por tipo
     if (activeTab !== "all") {
       filtered = filtered.filter(user => user.userType === activeTab)
     }
 
-    // Filtrar por termo de busca
     if (searchTerm) {
       const term = searchTerm.toLowerCase()
       filtered = filtered.filter(user => 
-        user.displayName.toLowerCase().includes(term) ||
+        user.displayName?.toLowerCase().includes(term) ||
         user.email.toLowerCase().includes(term)
       )
     }
 
     setFilteredUsers(filtered)
-    setCurrentPage(1)
   }
 
   const getPaginatedUsers = () => {
@@ -246,6 +244,10 @@ function UsersContent() {
     fetchUsers()
   }
 
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page)
+  }
+
   if (loading) {
     return (
       <div className="container py-6">
@@ -258,7 +260,12 @@ function UsersContent() {
   return (
     <div className="container py-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-[#e5e2e9]">Usuários</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-[#e5e2e9]">Usuários</h1>
+          <p className="text-sm text-[#7a7b9f] mt-1">
+            Total de registros: {totalRecords} | Exibindo: {getPaginatedUsers().length}
+          </p>
+        </div>
         <Button onClick={() => setShowAddUserModal(true)}>Adicionar Usuário</Button>
       </div>
 
@@ -293,19 +300,9 @@ function UsersContent() {
         </div>
 
         <div className="mt-6">
-          {viewMode === "card" ? renderUserCards(getPaginatedUsers()) : renderUserTable(getPaginatedUsers())}
+          {viewMode === "card" ? renderUserCards(filteredUsers) : renderUserTable(filteredUsers)}
         </div>
       </div>
-
-      {totalPages > 1 && (
-        <div className="flex justify-center mt-6">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
-        </div>
-      )}
 
       {showSubscriptionModal && selectedUser && (
         <SubscriptionManagementModal
@@ -364,171 +361,16 @@ function UsersContent() {
       )
     }
 
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {users.map((user) => (
-          <Card key={user.id} className="bg-[#131320] border-[#1a1b2d] p-6">
-            <div className="flex items-start justify-between">
-              <div className="flex items-end space-x-4">
-                <Avatar className="h-12 w-12">
-                  <AvatarImage src={user.photoURL || ""} alt={user.displayName || 'Usuário'} />
-                  <AvatarFallback>
-                    {user.displayName 
-                      ? user.displayName.substring(0, 2).toUpperCase()
-                      : user.email 
-                        ? user.email.substring(0, 2).toUpperCase()
-                        : 'U'
-                    }
-                  </AvatarFallback>
-                </Avatar>
-                <Badge className={getUserTypeColor(user.userType)}>
-                  <span className="flex items-center space-x-1">
-                    {getUserTypeIcon(user.userType)}
-                    <span>{getUserTypeText(user.userType)}</span>
-                  </span>
-                </Badge>
-              </div>
-              <div className="dropdown-container relative">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => setOpenDropdownId(openDropdownId === user.id ? null : user.id)}
-                  className="relative z-10"
-                >
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
-                
-                {openDropdownId === user.id && (
-                  <div className="absolute right-0 top-full mt-1 min-w-[200px] rounded-md bg-[#1a1b2d] p-2 shadow-md border border-[#131320] z-50">
-                    <div className="flex flex-col space-y-1">
-                      <button
-                        className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
-                        onClick={() => {
-                          setSelectedUser(user)
-                          setShowSubscriptionSidebar(true)
-                          setOpenDropdownId(null)
-                        }}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Editar
-                      </button>
-                      
-                      {(user.status === "inactive" || user.status === "expired") && (
-                        <button
-                          className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
-                          onClick={() => {
-                            handleResendActivation(user)
-                            setOpenDropdownId(null)
-                          }}
-                        >
-                          <Mail className="h-4 w-4 mr-2" />
-                          Reenviar Email de Ativação
-                        </button>
-                      )}
-                      
-                      <button
-                        className="text-left px-2 py-1.5 text-sm text-red-500 hover:bg-[#131320] rounded-sm flex items-center"
-                        onClick={() => {
-                          handleDeleteClick(user)
-                          setOpenDropdownId(null)
-                        }}
-                      >
-                        <Trash className="h-4 w-4 mr-2" />
-                        Excluir
-                      </button>
-                      
-                      {user.userType === "member" && (
-                        <button
-                          className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
-                          onClick={() => {
-                            handleLinkSubscription(user)
-                            setOpenDropdownId(null)
-                          }}
-                        >
-                          <Link className="h-4 w-4 mr-2" />
-                          Vincular Assinatura
-                        </button>
-                      )}
-                      
-                      {user.userType === "business" && (
-                        <button
-                          className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
-                          onClick={() => {
-                            handleLinkEstablishment(user)
-                            setOpenDropdownId(null)
-                          }}
-                        >
-                          <Building2 className="h-4 w-4 mr-2" />
-                          Vincular Estabelecimento
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="mt-4">
-              <h3 className="text-[#e5e2e9] font-semibold truncate">{user.displayName}</h3>
-              <p className="text-[#7a7b9f] text-sm truncate">{user.email}</p>
-              <div className="flex items-center space-x-2 mt-2">
-                <Badge variant="outline" className="border-[#1a1b2d]">
-                  {user.status === "active" ? (
-                    <Check className="h-3 w-3 text-green-500 mr-1" />
-                  ) : (
-                    <X className="h-3 w-3 text-red-500 mr-1" />
-                  )}
-                  {user.status === "active" ? "Ativo" : "Inativo"}
-                </Badge>
-              </div>
-            </div>
-            
-            {user.userType === "business" && "establishment" in user && (
-              <p className="text-[#7a7b9f] text-sm mt-2">
-                Estabelecimento: {(user as any).establishment?.name || "Não vinculado"}
-                {(user as any).establishments?.length > 1 && (
-                  <span className="ml-1 text-sm text-[#7435db]">
-                    +{(user as any).establishments.length - 1}
-                  </span>
-                )}
-              </p>
-            )}
-
-            {user.userType === "member" && "partner" in user && (
-              <p className="text-[#7a7b9f] text-sm mt-2">
-                Parceiro: {(user as any).partner?.name || "Não vinculado"}
-              </p>
-            )}
-          </Card>
-        ))}
-      </div>
-    )
-  }
-
-  function renderUserTable(users: UserProfile[]) {
-    if (users.length === 0) {
-      return (
-        <div className="text-[#7a7b9f]">Nenhum usuário encontrado.</div>
-      )
-    }
+    const paginatedUsers = getPaginatedUsers()
 
     return (
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Nome</TableHead>
-            <TableHead>Email</TableHead>
-            <TableHead>Função</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Vínculo</TableHead>
-            <TableHead className="text-right">Ações</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {users.map((user) => (
-            <TableRow key={user.id}>
-              <TableCell className="font-medium text-[#e5e2e9]">
-                <div className="flex items-center space-x-2">
-                  <Avatar className="h-8 w-8">
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {paginatedUsers.map((user) => (
+            <Card key={user.id} className="bg-[#131320] border-[#1a1b2d] p-6">
+              <div className="flex items-start justify-between">
+                <div className="flex items-end space-x-4">
+                  <Avatar className="h-12 w-12">
                     <AvatarImage src={user.photoURL || ""} alt={user.displayName || 'Usuário'} />
                     <AvatarFallback>
                       {user.displayName 
@@ -539,51 +381,13 @@ function UsersContent() {
                       }
                     </AvatarFallback>
                   </Avatar>
-                  <span>{user.displayName}</span>
+                  <Badge className={getUserTypeColor(user.userType)}>
+                    <span className="flex items-center space-x-1">
+                      {getUserTypeIcon(user.userType)}
+                      <span>{getUserTypeText(user.userType)}</span>
+                    </span>
+                  </Badge>
                 </div>
-              </TableCell>
-              <TableCell className="text-[#7a7b9f]">{user.email}</TableCell>
-              <TableCell>
-                <Badge className={getUserTypeColor(user.userType)}>
-                  <span className="flex items-center space-x-1">
-                    {getUserTypeIcon(user.userType)}
-                    <span>{getUserTypeText(user.userType)}</span>
-                  </span>
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline" className="border-[#1a1b2d]">
-                  {user.status === "active" ? (
-                    <Check className="h-3 w-3 text-green-500 mr-1" />
-                  ) : (
-                    <X className="h-3 w-3 text-red-500 mr-1" />
-                  )}
-                  {user.status === "active" ? "Ativo" : "Inativo"}
-                </Badge>
-              </TableCell>
-              <TableCell className="text-[#7a7b9f]">
-                {user.userType === "business" && (
-                  <>
-                    {(user as any).establishment?.name || "Não vinculado"}
-                    {(user as any).establishments?.length > 1 && (
-                      <span className="ml-1 text-sm text-[#7435db]">
-                        +{(user as any).establishments.length - 1}
-                      </span>
-                    )}
-                  </>
-                )}
-                {user.userType === "member" && (
-                  <>
-                    {(user as any).partner?.name || "Não vinculado"}
-                    {(user as any).partners?.length > 1 && (
-                      <span className="ml-1 text-sm text-[#7435db]">
-                        +{(user as any).partners.length - 1}
-                      </span>
-                    )}
-                  </>
-                )}
-              </TableCell>
-              <TableCell className="text-right">
                 <div className="dropdown-container relative">
                   <Button
                     variant="ghost"
@@ -662,11 +466,230 @@ function UsersContent() {
                     </div>
                   )}
                 </div>
-              </TableCell>
-            </TableRow>
+              </div>
+              <div className="mt-4">
+                <h3 className="text-[#e5e2e9] font-semibold truncate">{user.displayName}</h3>
+                <p className="text-[#7a7b9f] text-sm truncate">{user.email}</p>
+                <div className="flex items-center space-x-2 mt-2">
+                  <Badge variant="outline" className="border-[#1a1b2d]">
+                    {user.status === "active" ? (
+                      <Check className="h-3 w-3 text-green-500 mr-1" />
+                    ) : (
+                      <X className="h-3 w-3 text-red-500 mr-1" />
+                    )}
+                    {user.status === "active" ? "Ativo" : "Inativo"}
+                  </Badge>
+                </div>
+              </div>
+              
+              {user.userType === "business" && "establishment" in user && (
+                <p className="text-[#7a7b9f] text-sm mt-2">
+                  Estabelecimento: {(user as any).establishment?.name || "Não vinculado"}
+                  {(user as any).establishments?.length > 1 && (
+                    <span className="ml-1 text-sm text-[#7435db]">
+                      +{(user as any).establishments.length - 1}
+                    </span>
+                  )}
+                </p>
+              )}
+
+              {user.userType === "member" && "partner" in user && (
+                <p className="text-[#7a7b9f] text-sm mt-2">
+                  Parceiro: {(user as any).partner?.name || "Não vinculado"}
+                </p>
+              )}
+            </Card>
           ))}
-        </TableBody>
-      </Table>
+        </div>
+        {totalPages > 1 && (
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
+      </>
+    )
+  }
+
+  function renderUserTable(users: UserProfile[]) {
+    if (users.length === 0) {
+      return (
+        <div className="text-[#7a7b9f]">Nenhum usuário encontrado.</div>
+      )
+    }
+
+    const paginatedUsers = getPaginatedUsers()
+
+    return (
+      <>
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Nome</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Função</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Vínculo</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {paginatedUsers.map((user) => (
+              <TableRow key={user.id}>
+                <TableCell className="font-medium text-[#e5e2e9]">
+                  <div className="flex items-center space-x-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={user.photoURL || ""} alt={user.displayName || 'Usuário'} />
+                      <AvatarFallback>
+                        {user.displayName 
+                          ? user.displayName.substring(0, 2).toUpperCase()
+                          : user.email 
+                            ? user.email.substring(0, 2).toUpperCase()
+                            : 'U'
+                        }
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{user.displayName}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-[#7a7b9f]">{user.email}</TableCell>
+                <TableCell>
+                  <Badge className={getUserTypeColor(user.userType)}>
+                    <span className="flex items-center space-x-1">
+                      {getUserTypeIcon(user.userType)}
+                      <span>{getUserTypeText(user.userType)}</span>
+                    </span>
+                  </Badge>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="border-[#1a1b2d]">
+                    {user.status === "active" ? (
+                      <Check className="h-3 w-3 text-green-500 mr-1" />
+                    ) : (
+                      <X className="h-3 w-3 text-red-500 mr-1" />
+                    )}
+                    {user.status === "active" ? "Ativo" : "Inativo"}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-[#7a7b9f]">
+                  {user.userType === "business" && (
+                    <>
+                      {(user as any).establishment?.name || "Não vinculado"}
+                      {(user as any).establishments?.length > 1 && (
+                        <span className="ml-1 text-sm text-[#7435db]">
+                          +{(user as any).establishments.length - 1}
+                        </span>
+                      )}
+                    </>
+                  )}
+                  {user.userType === "member" && (
+                    <>
+                      {(user as any).partner?.name || "Não vinculado"}
+                      {(user as any).partners?.length > 1 && (
+                        <span className="ml-1 text-sm text-[#7435db]">
+                          +{(user as any).partners.length - 1}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  <div className="dropdown-container relative">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setOpenDropdownId(openDropdownId === user.id ? null : user.id)}
+                      className="relative z-10"
+                    >
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                    
+                    {openDropdownId === user.id && (
+                      <div className="absolute right-0 top-full mt-1 min-w-[200px] rounded-md bg-[#1a1b2d] p-2 shadow-md border border-[#131320] z-50">
+                        <div className="flex flex-col space-y-1">
+                          <button
+                            className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                            onClick={() => {
+                              setSelectedUser(user)
+                              setShowSubscriptionSidebar(true)
+                              setOpenDropdownId(null)
+                            }}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Editar
+                          </button>
+                          
+                          {(user.status === "inactive" || user.status === "expired") && (
+                            <button
+                              className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                              onClick={() => {
+                                handleResendActivation(user)
+                                setOpenDropdownId(null)
+                              }}
+                            >
+                              <Mail className="h-4 w-4 mr-2" />
+                              Reenviar Email de Ativação
+                            </button>
+                          )}
+                          
+                          <button
+                            className="text-left px-2 py-1.5 text-sm text-red-500 hover:bg-[#131320] rounded-sm flex items-center"
+                            onClick={() => {
+                              handleDeleteClick(user)
+                              setOpenDropdownId(null)
+                            }}
+                          >
+                            <Trash className="h-4 w-4 mr-2" />
+                            Excluir
+                          </button>
+                          
+                          {user.userType === "member" && (
+                            <button
+                              className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                              onClick={() => {
+                                handleLinkSubscription(user)
+                                setOpenDropdownId(null)
+                              }}
+                            >
+                              <Link className="h-4 w-4 mr-2" />
+                              Vincular Assinatura
+                            </button>
+                          )}
+                          
+                          {user.userType === "business" && (
+                            <button
+                              className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                              onClick={() => {
+                                handleLinkEstablishment(user)
+                                setOpenDropdownId(null)
+                              }}
+                            >
+                              <Building2 className="h-4 w-4 mr-2" />
+                              Vincular Estabelecimento
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+        {totalPages > 1 && (
+          <div className="mt-6">
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
+          </div>
+        )}
+      </>
     )
   }
 }

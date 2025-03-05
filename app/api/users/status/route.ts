@@ -3,30 +3,34 @@ import { db } from "@/lib/firebase"
 import { collection, query, where, getDocs } from "firebase/firestore"
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url)
-  const email = searchParams.get("email")
-
-  if (!email) {
-    return NextResponse.json({ error: "Email não fornecido" }, { status: 400 })
-  }
-
   try {
+    const { searchParams } = new URL(request.url)
+    const email = searchParams.get('email')
+
+    if (!email) {
+      return NextResponse.json({ error: "Email é obrigatório" }, { status: 400 })
+    }
+
     const usersRef = collection(db, "users")
     const q = query(usersRef, where("email", "==", email.toLowerCase()))
-    const snapshot = await getDocs(q)
+    const querySnapshot = await getDocs(q)
 
-    if (snapshot.empty) {
+    if (querySnapshot.empty) {
       return NextResponse.json({ error: "Usuário não encontrado" }, { status: 404 })
     }
 
-    const userData = snapshot.docs[0].data()
-    return NextResponse.json({ 
+    const userData = querySnapshot.docs[0].data()
+
+    // Log para debug
+    console.log('Dados do usuário encontrados:', userData)
+
+    return NextResponse.json({
       status: userData.status,
-      type: userData.type,
-      id: snapshot.docs[0].id
+      type: userData.userType // Garantir que estamos retornando userType e não type
     })
+
   } catch (error) {
-    console.error("Erro ao verificar status do usuário:", error)
+    console.error("Erro ao verificar status:", error)
     return NextResponse.json(
       { error: "Erro ao verificar status do usuário" },
       { status: 500 }
