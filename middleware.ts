@@ -38,7 +38,9 @@ export function middleware(request: NextRequest) {
       '/api/users/activate',
       '/api/auth/forgot-password',
       '/api/auth/reset-password',
-      '/api/payment/direct-session'
+      '/api/payment/direct-session',
+      '/api/stripe/webhook',
+      '/api/stripe/sync-subscription'
     ]
 
     // Verificar se é uma rota pública

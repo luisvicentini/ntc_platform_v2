@@ -1,13 +1,16 @@
 import { stripe } from '@/lib/stripe'
 import { NextResponse } from 'next/server'
+import { collection, query, where, getDocs } from 'firebase/firestore'
+import { db } from '@/lib/firebase'
 
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const userId = searchParams.get('userId')
     const email = searchParams.get('email')
+    const firebaseUid = searchParams.get('firebaseUid')
 
-    console.log('Buscando assinaturas para:', { userId, email })
+    console.log('Buscando assinaturas para:', { userId, email, firebaseUid })
 
     if (!userId) {
       return NextResponse.json(
@@ -180,6 +183,26 @@ export async function GET(request: Request) {
     }))
 
     console.log('Transações encontradas:', transactions.length)
+
+    // Buscar assinaturas usando ambos os IDs
+    const subscriptionsRef = collection(db, 'subscriptions')
+    const q1 = query(subscriptionsRef, where('memberId', '==', userId))
+    const q2 = query(subscriptionsRef, where('memberId', '==', firebaseUid)) // se tiver acesso ao firebaseUid
+
+    const [snapshot1, snapshot2] = await Promise.all([
+      getDocs(q1),
+      getDocs(q2)
+    ])
+
+    const allSubscriptions = [
+      ...snapshot1.docs.map(doc => ({ id: doc.id, ...doc.data() })),
+      ...snapshot2.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    ]
+
+    // Remover duplicatas
+    const uniqueSubscriptions = Array.from(
+      new Map(allSubscriptions.map(sub => [sub.id, sub])).values()
+    )
 
     return NextResponse.json({
       subscriptions: subscriptionDetails,

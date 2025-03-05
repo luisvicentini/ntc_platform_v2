@@ -60,10 +60,12 @@ export async function POST(request: Request) {
 
       // Preparar metadados para sessão e assinatura
       const metadata = {
+        userId: effectiveUserId,
         partnerId: partnerId || '',
-        partnerLinkId: partnerLinkId || '',
-        userId: effectiveUserId // Adicionar userId aos metadados da sessão
+        partnerLinkId: partnerLinkId || ''
       }
+
+      console.log('Metadados para a sessão:', metadata)
 
       // Criar a sessão usando o customer criado
       const session = await stripe.checkout.sessions.create({
