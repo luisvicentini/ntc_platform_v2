@@ -7,7 +7,8 @@ const publicRoutes = [
   '/auth/business',
   '/auth/partner',
   '/auth/master',
-  '/auth/register'
+  '/auth/register',
+  '/checkout-redirect'
 ]
 
 // Mapeia os tipos de usuário para suas rotas permitidas
@@ -36,7 +37,8 @@ export function middleware(request: NextRequest) {
     const publicApiRoutes = [
       '/api/users/activate',
       '/api/auth/forgot-password',
-      '/api/auth/reset-password'
+      '/api/auth/reset-password',
+      '/api/payment/direct-session'
     ]
 
     // Verificar se é uma rota pública
@@ -68,6 +70,11 @@ export function middleware(request: NextRequest) {
         headers: requestHeaders,
       },
     })
+  }
+
+  // Verificar se é uma rota pública
+  if (publicRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next()
   }
 
   // Permite acesso a todas as outras rotas da aplicação

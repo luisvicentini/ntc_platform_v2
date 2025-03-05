@@ -65,10 +65,21 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
 
   const fetchSubscriptionData = async () => {
     try {
-      const response = await fetch(`/api/user/subscription?userId=${userId}`)
+      setLoading(true)
+      const email = user?.email || ''
+      
+      // Incluir email como parâmetro adicional para aumentar chances de encontrar o cliente
+      const response = await fetch(`/api/user/subscription?userId=${userId}&email=${encodeURIComponent(email)}`)
+      
+      if (!response.ok) {
+        throw new Error(`Erro ${response.status}: ${response.statusText}`)
+      }
+      
       const data = await response.json()
-      setSubscriptions(data.subscriptions)
-      setTransactions(data.transactions)
+      console.log('Dados de assinatura recebidos:', data)
+      
+      setSubscriptions(data.subscriptions || [])
+      setTransactions(data.transactions || [])
     } catch (error) {
       console.error('Erro ao buscar dados da assinatura:', error)
       toast.error('Erro ao carregar dados da assinatura')

@@ -2,7 +2,8 @@ import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { db } from '@/lib/firebase'
-import { collection, addDoc, getDocs, query, where } from 'firebase/firestore'
+import { collection, addDoc, getDocs, query, where, doc, updateDoc } from 'firebase/firestore'
+import Stripe from 'stripe'
 
 // Forçar modo desenvolvimento para testes locais
 const isDevelopment = true // process.env.NODE_ENV === 'development'
@@ -43,12 +44,12 @@ export async function POST(req: Request) {
   
   try {
     const body = await req.text()
-    const signature = headers().get('stripe-signature')
+    const signature = headers().get('stripe-signature')!
     
     console.log('📝 Headers completos:', Object.fromEntries(headers().entries()))
     console.log('📝 Body preview:', body.substring(0, 100) + '...')
 
-    let event
+    let event: Stripe.Event
 
     // Sempre aceitar o payload em desenvolvimento
     if (isDevelopment) {
@@ -64,7 +65,7 @@ export async function POST(req: Request) {
       }
     } else {
       try {
-        event = stripe.webhooks.constructEvent(body, signature!, endpointSecret!)
+        event = stripe.webhooks.constructEvent(body, signature, endpointSecret!)
       } catch (err: any) {
         console.error('❌ Erro na validação do webhook:', err.message)
         return NextResponse.json(
@@ -77,42 +78,22 @@ export async function POST(req: Request) {
     // Log do evento completo para debug
     console.log('📦 Evento completo:', JSON.stringify(event, null, 2))
 
-    // Processar apenas eventos específicos
+    // Processar evento de checkout concluído
     if (event.type === 'checkout.session.completed') {
-      const session = event.data.object
-      console.log('💳 Checkout completado:', {
-        sessionId: session.id,
-        customerId: session.customer,
-        amount: session.amount_total,
-        status: session.payment_status
-      })
+      const session = event.data.object as Stripe.Checkout.Session
 
-      try {
-        // Buscar dados necessários
-        const subscription = await stripe.subscriptions.retrieve(session.subscription as string)
-        const customer = await stripe.customers.retrieve(session.customer as string)
-        const price = await stripe.prices.retrieve(subscription.items.data[0].price.id)
-        
-        console.log('📄 Dados da assinatura:', subscription)
-        console.log('👤 Dados do cliente:', customer)
-        console.log('💰 Dados do preço:', price)
+      // Verificar se é uma compra de assinatura
+      if (session.mode === 'subscription') {
+        const subscriptionId = session.subscription as string
+        const customerId = session.customer as string
 
-        const expiresAt = calculateExpirationDate(subscription)
+        // Buscar dados da assinatura e cliente
+        const [subscription, customer] = await Promise.all([
+          stripe.subscriptions.retrieve(subscriptionId),
+          stripe.customers.retrieve(customerId)
+        ])
 
-        // Verificar se já existe no Firebase
-        const subscriptionsRef = collection(db, 'subscriptions')
-        const q = query(
-          subscriptionsRef,
-          where('stripeSubscriptionId', '==', subscription.id)
-        )
-        const existingDocs = await getDocs(q)
-
-        if (!existingDocs.empty) {
-          console.log('⚠️ Assinatura já existe no Firebase')
-          return NextResponse.json({ received: true })
-        }
-
-        // Criar assinatura no Firebase
+        // Dados para a assinatura
         const subscriptionData = {
           memberId: customer.metadata.userId,
           partnerId: subscription.metadata.partnerId,
@@ -120,25 +101,50 @@ export async function POST(req: Request) {
           status: subscription.status,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
-          expiresAt: expiresAt.toISOString(),
           type: 'stripe',
           partnerLinkId: subscription.metadata.partnerLinkId || null,
           priceId: subscription.items.data[0].price.id,
           currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
-          interval: subscription.items.data[0].price.recurring.interval,
-          intervalCount: subscription.items.data[0].price.recurring.interval_count
+          expiresAt: new Date(subscription.current_period_end * 1000).toISOString()
         }
 
-        const docRef = await addDoc(subscriptionsRef, subscriptionData)
-        console.log('✅ Assinatura criada no Firebase:', docRef.id)
+        // Criar assinatura no Firestore
+        const subscriptionsRef = collection(db, 'subscriptions')
+        await addDoc(subscriptionsRef, subscriptionData)
 
-        return NextResponse.json({ success: true })
-      } catch (error) {
-        console.error('❌ Erro ao processar checkout:', error)
-        return NextResponse.json(
-          { error: 'Erro ao processar checkout' },
-          { status: 500 }
-        )
+        // Criar vínculo membro-parceiro
+        const memberPartnersRef = collection(db, 'memberPartners')
+        const memberPartnerData = {
+          memberId: customer.metadata.userId,
+          partnerId: subscription.metadata.partnerId,
+          status: 'active',
+          stripeSubscriptionId: subscription.id,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          partnerLinkId: subscription.metadata.partnerLinkId || null,
+          expiresAt: new Date(subscription.current_period_end * 1000).toISOString()
+        }
+
+        await addDoc(memberPartnersRef, memberPartnerData)
+      }
+    }
+
+    // Processar evento de atualização de assinatura
+    if (event.type === 'customer.subscription.updated') {
+      const subscription = event.data.object as Stripe.Subscription
+
+      // Atualizar status da assinatura no Firestore
+      const q = query(collection(db, 'subscriptions'), where('stripeSubscriptionId', '==', subscription.id))
+      const querySnapshot = await getDocs(q)
+
+      if (!querySnapshot.empty) {
+        const subscriptionDoc = querySnapshot.docs[0]
+        await updateDoc(doc(db, 'subscriptions', subscriptionDoc.id), {
+          status: subscription.status,
+          currentPeriodEnd: new Date(subscription.current_period_end * 1000).toISOString(),
+          expiresAt: new Date(subscription.current_period_end * 1000).toISOString(),
+          updatedAt: new Date().toISOString()
+        })
       }
     }
 

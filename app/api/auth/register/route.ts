@@ -3,6 +3,8 @@ import { db } from "@/lib/firebase"
 import { collection, doc, setDoc, query, where, getDocs } from "firebase/firestore"
 import { generateActivationToken } from "@/lib/utils"
 import { sendActivationEmail } from "@/lib/email"
+import jwt from "jsonwebtoken"
+import { cookies } from 'next/headers'
 
 export async function POST(request: Request) {
   try {
@@ -57,10 +59,41 @@ export async function POST(request: Request) {
       userType: "member"
     })
 
-    return NextResponse.json({ 
+    // Criar token de sessão temporária
+    const sessionToken = jwt.sign(
+      {
+        uid: newUserRef.id,
+        email: userData.email,
+        userType: "member",
+        isTemporary: true
+      },
+      process.env.JWT_SECRET || 'fallback-secret-key',
+      { expiresIn: '1h' }
+    )
+
+    console.log('5. Token de sessão criado')
+
+    // Configurar cookie de sessão
+    const response = NextResponse.json({
       success: true,
-      message: "Conta criada com sucesso. Verifique seu email para ativar sua conta."
+      user: {
+        id: newUserRef.id,
+        ...newUserData
+      },
+      sessionToken
     })
+
+    // Adicionar cookie à resposta com o nome correto (__session)
+    response.cookies.set('__session', sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60, // 1 hora
+      path: '/'
+    })
+
+    console.log('6. Cookie de sessão configurado')
+    return response
 
   } catch (error: any) {
     console.error("Erro detalhado ao criar usuário:", {

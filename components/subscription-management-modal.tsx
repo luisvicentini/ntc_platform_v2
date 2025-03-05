@@ -185,7 +185,7 @@ export function SubscriptionManagementModal({
           variant="outline"
           size="sm"
           onClick={() => setOpenDatePicker(isOpen ? null : partner.id)}
-          className="text-xs bg-transparent border-gray-800 w-full justify-start"
+          className="text-xs bg-transparent w-full justify-start"
         >
           <CalendarIcon className="h-3 w-3 mr-1" />
           Data de Expiração: {format(new Date(partner.expirationDate), "dd/MM/yyyy", { locale: ptBR })}
@@ -194,7 +194,7 @@ export function SubscriptionManagementModal({
         {isOpen && (
           <div 
             ref={datePickerRef}
-            className="absolute z-50 mt-1 bg-[#1E1D23] border border-gray-800 rounded-md shadow-lg"
+            className="absolute z-50 mt-1 bg-[#1E1D23] rounded-md shadow-lg"
           >
             <Calendar
               mode="single"
@@ -218,19 +218,19 @@ export function SubscriptionManagementModal({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl bg-[#16151A] text-white p-0">
-        <DialogHeader className="p-6 border-b border-gray-800">
-          <DialogTitle className="text-xl font-semibold">Vincular Estabelecimentos</DialogTitle>
+        <DialogHeader className="p-6 border-b border-[#1a1b2d]">
+          <DialogTitle className="text-xl font-semibold">Vincular membro a uma assinatura de parceiro</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-6 p-6">
           {/* Coluna 1: Parceiros Disponíveis */}
           <div>
-            <Label className="text-gray-400 mb-2">Estabelecimentos Disponíveis</Label>
+            <Label className="text-gray-400 mb-2">Parceiros Disponíveis</Label>
             <Input
-              placeholder="Buscar estabelecimento..."
+              placeholder="Buscar parceiro..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="mb-4 bg-[#1E1D23] border-gray-800 text-white"
+              className="mb-4 bg-[#1E1D23] text-white"
             />
             <div className="space-y-2 max-h-[400px] overflow-y-auto">
               {availablePartners
