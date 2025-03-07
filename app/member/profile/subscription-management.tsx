@@ -467,68 +467,24 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
               </div>
             </div>
 
+            
             {hasOnlyCanceledSubscriptions && (
-              <div className="mt-6 text-center">
-                <Button
-                  onClick={() => setShowPricesDialog(true)}
-                  className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
-                >
-                  Assinar Novamente
-                </Button>
-              </div>
-            )}
+              
+            <div className="text-center py-8">
+              <p className="text-[#7a7b9f] mb-4">
+                Você ainda não possui nenhuma assinatura ativa
+              </p>
+            </div>
+            )}            
           </>
         ) : (
           <div className="text-center py-8">
             <p className="text-[#7a7b9f] mb-4">
-              Você ainda não possui nenhuma assinatura
+              Você ainda não possui nenhuma assinatura ativa
             </p>
-            <Button
-              onClick={() => setShowPricesDialog(true)}
-              className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
-              disabled={loading}
-            >
-              Assinar Agora
-            </Button>
           </div>
         )}
 
-        <Dialog open={showPricesDialog} onOpenChange={setShowPricesDialog}>
-          <DialogContent className="bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]">
-            <DialogHeader>
-              <DialogTitle>Escolha seu plano</DialogTitle>
-            </DialogHeader>
-            <div className="grid gap-4 py-4">
-              {prices.map((price) => (
-                <div
-                  key={price.id}
-                  className="flex items-center justify-between p-4 rounded-lg bg-[#1a1b2d]"
-                >
-                  <div>
-                    <h4 className="font-medium">{price.product.name}</h4>
-                    <p className="text-sm text-[#7a7b9f]">
-                      {new Intl.NumberFormat('pt-BR', {
-                        style: 'currency',
-                        currency: price.currency,
-                      }).format(price.unit_amount / 100)}
-                      {price.recurring ? `/${price.recurring.interval}` : ''}
-                    </p>
-                  </div>
-                  <Button
-                    onClick={() => {
-                      handleSubscribe(price.id)
-                      setShowPricesDialog(false)
-                    }}
-                    className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
-                    disabled={loading}
-                  >
-                    Selecionar
-                  </Button>
-                </div>
-              ))}
-            </div>
-          </DialogContent>
-        </Dialog>
       </CardContent>
     </Card>
   )

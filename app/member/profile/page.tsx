@@ -182,7 +182,7 @@ export default function ProfilePage() {
   return (
     <div className="container max-w-4xl py-10">
       {/* Savings Overview Card */}
-      <Card className="mb-8 overflow-hidden">
+      {/*<Card className="mb-8 overflow-hidden">
         <div className="relative bg-gradient-to-r from-[#7435db] to-[#a85fdd] p-6">
           <div className="absolute top-6 right-6 flex items-center space-x-2 text-white/90">
             <Badge variant="outline" className="border-white/20 bg-white/10">
@@ -228,6 +228,7 @@ export default function ProfilePage() {
           </div>
         </div>
       </Card>
+      */}
 
       <Tabs defaultValue="profile" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
@@ -417,7 +418,7 @@ export default function ProfilePage() {
         </TabsContent>
       </Tabs>
 
-      <div className="flex gap-4 mt-6">
+      {/* <div className="flex gap-4 mt-6">
         <Button
           onClick={handleSync}
           disabled={syncLoading}
@@ -426,7 +427,7 @@ export default function ProfilePage() {
           {syncLoading ? <Loader className="mr-2" /> : null}
           Sincronizar Assinatura
         </Button>
-      </div>
+      </div> */}
     </div>
   )
 }

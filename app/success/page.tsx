@@ -5,8 +5,12 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Loader } from "lucide-react"
 import { toast } from "sonner"
+import { useAuth } from "@/contexts/auth-context"
 
 export default function SuccessPage() {
+  const { user } = useAuth()
+  const [loading, setLoading] = useState(false)
+
   const searchParams = useSearchParams()
   const router = useRouter()
   const [resendingEmail, setResendingEmail] = useState(false)
@@ -19,6 +23,7 @@ export default function SuccessPage() {
     if (!customerEmail) return
 
     try {
+      setLoading(true)
       setResendingEmail(true)
       const response = await fetch("/api/users/resend-activation-public", {
         method: "POST",
@@ -68,11 +73,11 @@ export default function SuccessPage() {
 
         <div className="flex flex-col gap-4">
           <Button
-            onClick={() => router.push('/login')}
+            onClick={() => router.push('/login') || router.push('/member/feed')}
             size="lg"
             className="w-full bg-purple-600 hover:bg-purple-700"
           >
-            Já ativou a conta? Faça login
+            {loading ? 'Processando...' : user?.userType === 'member' ? 'Ir para o feed de cupons' : 'Já ativou a conta? Faça login'}
           </Button>
 
           <Button

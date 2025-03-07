@@ -18,6 +18,7 @@ interface PartnerLink {
   price: number
   interval: string
   intervalCount: number
+  code: string
 }
 
 export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
@@ -67,8 +68,84 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
     }
   }
 
+  // Nova função para criar a sessão do Stripe diretamente para usuários logados
+  const createCheckoutSession = async () => {
+    try {
+      setLoading(true)
+      
+      // Tentar diferentes opções de tokens
+      const sessionToken = localStorage.getItem("session_token") || 
+                           localStorage.getItem("sessionToken") || 
+                           localStorage.getItem("authToken")
+      
+      // Log para diagnóstico
+      console.log("Token encontrado:", sessionToken ? "Sim (comprimento: " + sessionToken.length + ")" : "Não")
+      
+      // Obter dados do usuário do contexto de autenticação
+      const userData = {
+        userId: user?.id || user?.uid,
+        email: user?.email,
+        displayName: user?.displayName
+      }
+      
+      console.log("Dados do usuário:", userData)
+      
+      const response = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${sessionToken || ""}`,
+          'x-session-token': sessionToken || ""
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          userId: userData.userId,
+          email: userData.email,
+          priceId: partnerLink.priceId,
+          partnerId: partnerLink.partnerId,
+          partnerLinkId: partnerLink.id,
+          isAuthenticated: true,
+          // Incluir dados adicionais que possam ser úteis
+          userInfo: {
+            displayName: userData.displayName,
+            email: userData.email
+          }
+        })
+      })
+
+      // Log para status da resposta
+      console.log("Status da resposta:", response.status)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error("Erro na resposta:", errorData)
+        throw new Error(errorData.message || 'Erro ao criar sessão de checkout')
+      }
+
+      const { url } = await response.json()
+      console.log("URL de redirecionamento:", url ? "Recebida" : "Não encontrada")
+      
+      if (url) {
+        window.location.href = url
+      } else {
+        throw new Error('URL de checkout não encontrada')
+      }
+    } catch (error: any) {
+      console.error('Erro ao criar sessão de checkout:', error)
+      toast.error(error.message || 'Erro ao processar o checkout')
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleStartOnboarding = () => {
-    // Salvar os dados do plano no localStorage para usar depois do registro
+    // Se o usuário já estiver logado, criar a sessão do Stripe diretamente
+    if (user && user.uid && user.userType === 'member') {
+      createCheckoutSession()
+      return
+    }
+    
+    // Caso contrário, seguir o fluxo atual (salvar dados e redirecionar para registro)
     const checkoutData = {
       priceId: partnerLink.priceId,
       partnerId: partnerLink.partnerId,
@@ -79,8 +156,8 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
     }
     localStorage.setItem('checkoutData', JSON.stringify(checkoutData))
     
-    // Redirecionar para a página de registro correta
-    router.push('/auth/register?redirect=onboarding')
+    // Redirecionar para a página de registro
+    router.push(`/auth/register?redirect=onboarding&partnerId=${partnerLink.partnerId}&ref=${partnerLink.id}`)
   }
 
   return (
@@ -112,7 +189,6 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
         {/* Preços */}
         <div className="bg-purple-50 rounded-xl p-6">
           <div className="space-y-2">
-
             {/* Valor da parcela */}
             {/* Só exibe se for plano mensal */}
             {partnerLink.interval == 'month' && (
@@ -153,14 +229,34 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
         ))}
       </div>
 
-      {/* Botão de Ação */}
+      {/* Botão de Ação mostra mensagem diferente para usuários já logados */}
       <Button
         onClick={handleStartOnboarding}
         disabled={loading}
         className="w-full bg-purple-600 hover:bg-purple-700 text-white py-6 text-lg"
       >
-        {loading ? 'Processando...' : 'Começar a usar os cupons'}
+        {loading ? 'Processando...' : user?.userType === 'member' ? 'Continuar para pagamento' : 'Quero esse plano'}
       </Button>
+      
+      {/* Mostrar mensagem para usuários já logados */}
+      {user?.userType === 'member' && (
+        <div className="mt-3 flex items-center justify-center space-x-2">
+          <p className="text-sm text-gray-500">
+            Você já está logado como <b>{user.email}</b>
+          </p>
+          {user.photoURL ? (
+            <img 
+              src={user.photoURL} 
+              alt="Avatar do usuário" 
+              className="w-6 h-6 rounded-full object-cover border border-gray-200"
+            />
+          ) : (
+            <div className="w-6 h-6 rounded-full bg-purple-200 flex items-center justify-center text-purple-700 text-xs font-bold">
+              {user.displayName ? user.displayName.charAt(0).toUpperCase() : user.email?.charAt(0).toUpperCase()}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 } 
