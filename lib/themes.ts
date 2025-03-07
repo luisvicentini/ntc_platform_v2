@@ -8,8 +8,8 @@ export const themes = {
   dark: {
     background: "bg-[#0B0A0D]",
     text: "text-gray-100",
-    card: "bg-[#16151A] border-gray-800",
-    input: "bg-[#16151A] border-gray-800",
+    card: "bg-[#131320] border-[#1a1b2d]",
+    input: "bg-[#131320] border-[#1a1b2d]",
   },
 }
 

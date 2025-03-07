@@ -22,7 +22,7 @@ const statusMap = {
   active: { label: 'Ativa', color: 'bg-green-500' },
   canceled: { label: 'Cancelada', color: 'bg-red-500' },
   incomplete: { label: 'Incompleta', color: 'bg-yellow-500' },
-  incomplete_expired: { label: 'Expirada', color: 'bg-gray-500' },
+  incomplete_expired: { label: 'Expirada', color: 'bg-[#7a7b9f]' },
   past_due: { label: 'Atrasada', color: 'bg-orange-500' },
   trialing: { label: 'Teste', color: 'bg-blue-500' },
   unpaid: { label: 'Não paga', color: 'bg-red-500' },

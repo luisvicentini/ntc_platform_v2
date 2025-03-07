@@ -36,7 +36,7 @@ export function VoucherTicket({
       case "used":
         return "bg-emerald-500/10 text-emerald-500 text-xl"
       default:
-        return "bg-gray-500/10 text-gray-500 text-xl"
+        return "bg-[#7a7b9f]/10 text-gray-500 text-xl"
     }
   }
 

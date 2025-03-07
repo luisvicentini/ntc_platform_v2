@@ -164,7 +164,7 @@ export default function CouponsPage() {
       case "expired":
         return "bg-red-500/20 rounded-full px-2 py-1 font-medium text-red-500"
       default:
-        return "bg-gray-500/20 rounded-full px-2 py-1 font-medium text-gray-500"
+        return "bg-[#7a7b9f]/20 rounded-full px-2 py-1 font-medium text-gray-500"
     }
   }
 

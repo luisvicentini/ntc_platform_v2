@@ -143,7 +143,7 @@ function UsersContent() {
       case "master":
         return "bg-yellow-500"
       default:
-        return "bg-gray-500"
+        return "bg-[#7a7b9f]"
     }
   }
 

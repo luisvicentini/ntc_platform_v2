@@ -412,7 +412,7 @@ export default function ReportsPage() {
       case "expired":
         return "bg-red-500/10 text-red-500"
       default:
-        return "bg-gray-500/10 text-gray-500"
+        return "bg-[#7a7b9f]/10 text-[#7a7b9f]"
     }
   }
 

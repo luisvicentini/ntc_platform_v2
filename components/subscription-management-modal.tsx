@@ -194,7 +194,7 @@ export function SubscriptionManagementModal({
         {isOpen && (
           <div 
             ref={datePickerRef}
-            className="absolute z-50 mt-1 bg-[#1E1D23] rounded-md shadow-lg"
+            className="absolute z-50 mt-1 bg-[#1a1b2d] rounded-md shadow-lg"
           >
             <Calendar
               mode="single"
@@ -207,7 +207,7 @@ export function SubscriptionManagementModal({
               }}
               disabled={(date) => date < new Date()}
               initialFocus
-              className="bg-[#1E1D23] rounded-md"
+              className="bg-[#1a1b2d] rounded-md"
             />
           </div>
         )}
@@ -217,7 +217,7 @@ export function SubscriptionManagementModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl bg-[#16151A] text-white p-0">
+      <DialogContent className="max-w-4xl bg-[#131320] text-white p-0">
         <DialogHeader className="p-6 border-b border-[#1a1b2d]">
           <DialogTitle className="text-xl font-semibold">Vincular membro a uma assinatura de parceiro</DialogTitle>
         </DialogHeader>
@@ -230,7 +230,7 @@ export function SubscriptionManagementModal({
               placeholder="Buscar parceiro..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="mb-4 bg-[#1E1D23] text-white"
+              className="mb-4 bg-[#1a1b2d] text-white"
             />
             <div className="space-y-2 max-h-[400px] overflow-y-auto">
               {availablePartners
@@ -240,7 +240,7 @@ export function SubscriptionManagementModal({
                 .map((partner) => (
                   <div
                     key={partner.id}
-                    className="flex items-center justify-between p-3 bg-[#1E1D23] rounded-lg"
+                    className="flex items-center justify-between p-3 bg-[#1a1b2d] rounded-lg"
                   >
                     <span>{partner.displayName}</span>
                     <Button
@@ -267,7 +267,7 @@ export function SubscriptionManagementModal({
                   {activeSubscriptions.map((partner) => (
                     <div
                       key={partner.id}
-                      className="flex items-center justify-between p-3 bg-[#1E1D23] rounded-lg"
+                      className="flex items-center justify-between p-3 bg-[#1a1b2d] rounded-lg"
                     >
                       <div className="flex flex-col gap-1">
                         <span className="text-white">{partner.displayName}</span>
@@ -300,7 +300,7 @@ export function SubscriptionManagementModal({
                   {newSubscriptions.map((partner) => (
                     <div
                       key={partner.id}
-                      className="flex items-center justify-between p-3 bg-[#1E1D23] rounded-lg"
+                      className="flex items-center justify-between p-3 bg-[#1a1b2d] rounded-lg"
                     >
                       <div className="flex flex-col gap-1 w-full">
                         <span>{partner.displayName}</span>
