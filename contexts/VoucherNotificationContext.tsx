@@ -21,15 +21,15 @@ export function VoucherNotificationProvider({ children }: { children: React.Reac
       const vouchersRef = collection(db, "vouchers")
       
       // Busca vouchers pendentes do usuário
-      const q = query(
+      const pendingQuery = query(
         vouchersRef,
         where("memberId", "==", user.uid),
         where("status", "==", "pending")
       )
 
-      const snapshot = await getDocs(q)
+      const pendingSnapshot = await getDocs(pendingQuery)
 
-      for (const voucherDoc of snapshot.docs) {
+      for (const voucherDoc of pendingSnapshot.docs) {
         const voucher = voucherDoc.data()
         const expiresAt = voucher.expiresAt.toDate()
         const createdAt = voucher.createdAt.toDate()
@@ -102,6 +102,55 @@ export function VoucherNotificationProvider({ children }: { children: React.Reac
               status: "expired",
               expiredNotificationSent: true
             })
+          ])
+        }
+      }
+
+      // NOVA LÓGICA: busca vouchers já utilizados (com check-in)
+      const usedQuery = query(
+        vouchersRef,
+        where("memberId", "==", user.uid),
+        where("status", "==", "used") // Assumindo que vouchers com check-in têm status "used"
+      )
+
+      const usedSnapshot = await getDocs(usedQuery)
+
+      for (const voucherDoc of usedSnapshot.docs) {
+        const voucher = voucherDoc.data()
+        
+        // Verificar se usedAt existe (data do check-in)
+        if (!voucher.usedAt) continue;
+        
+        const usedAt = voucher.usedAt.toDate()
+        const oneDayAfterUsage = addDays(usedAt, 1)
+        
+        // Buscar dados do estabelecimento
+        const establishmentRef = doc(db, "establishments", voucher.establishmentId)
+        const establishmentSnap = await getDoc(establishmentRef)
+        
+        if (!establishmentSnap.exists()) {
+          console.error("Estabelecimento não encontrado:", voucher.establishmentId)
+          continue
+        }
+
+        const establishment = establishmentSnap.data()
+        const establishmentName = establishment.name
+
+        // Notificação 1 dia após o check-in (para avaliação)
+        if (isAfter(now, oneDayAfterUsage) && 
+            !voucher.ratingNotificationSent) {
+          await Promise.all([
+            addDoc(collection(db, "notifications"), {
+              type: "rating",
+              memberId: user.uid,
+              establishmentId: voucher.establishmentId,
+              establishmentName,
+              voucherId: voucherDoc.id,
+              message: `Como foi sua experiência em ${establishmentName}? Avalie agora!`,
+              createdAt: Timestamp.now(),
+              status: "pending"
+            }),
+            updateDoc(voucherDoc.ref, { ratingNotificationSent: true })
           ])
         }
       }

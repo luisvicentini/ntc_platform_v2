@@ -45,17 +45,12 @@ export function LoginForm({
     setError(null)
 
     try {
-      // Primeiro verificar se a conta está ativa e o tipo do usuário
+      // Verificar apenas se a conta está ativa, sem verificar o tipo
       const userStatusResponse = await fetch(`/api/users/status?email=${encodeURIComponent(email)}`)
       const userStatus = await userStatusResponse.json()
 
       if (userStatus.error) {
         throw new Error(userStatus.error)
-      }
-
-      // Verificar se o tipo de usuário corresponde
-      if (userStatus.type !== userType) {
-        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userStatus.type}.`)
       }
 
       if (userStatus.status === "inactive") {
@@ -82,14 +77,15 @@ export function LoginForm({
         return
       }
 
-      // Continuar com o login normal se a conta estiver ativa e o tipo estiver correto
-      await signIn(email, password, userType)
+      // Continuar com o login normal se a conta estiver ativa
+      // Não passamos mais o userType para a função signIn
+      await signIn(email, password)
       console.log('Login bem sucedido')
       
       // Aguarda um momento para garantir que o estado foi atualizado
       await new Promise(resolve => setTimeout(resolve, 1000))
       
-      // Verificar se o usuário tem o userType correto
+      // Verificar o tipo de usuário e redirecionar adequadamente
       const storedUserData = localStorage.getItem('authUser')
       if (!storedUserData) {
         throw new Error('Erro ao recuperar dados do usuário')
@@ -100,11 +96,11 @@ export function LoginForm({
         throw new Error('Tipo de usuário não definido')
       }
 
-      if (authUser.userType !== userType) {
-        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${authUser.userType || 'indefinido'}.`)
-      }
+      // Redirecionar baseado no tipo de usuário retornado
+      const redirectPath = authUser.userType === "member" 
+        ? "/member/feed" 
+        : `/${authUser.userType}/dashboard`
 
-      const redirectPath = userType === "member" ? "/member/feed" : `/${userType}/dashboard`
       console.log('Redirecionando para:', redirectPath)
       window.location.href = redirectPath
     } catch (error: any) {
@@ -138,7 +134,7 @@ export function LoginForm({
       
       const userData = JSON.parse(storedUserData) as { userType: UserType }
       if (userData.userType !== userType) {
-        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userData.userType}.`)
+        throw new Error(`Você não tem permissão para fazer login`)
       }
 
       const redirectPath = userType === "member" ? "/member/feed" : `/${userType}/dashboard`
@@ -174,7 +170,7 @@ export function LoginForm({
       
       const userData = JSON.parse(storedUserData) as { userType: UserType }
       if (userData.userType !== userType) {
-        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userData.userType}.`)
+        throw new Error(`Você não tem permissão para fazer login`)
       }
 
       const redirectPath = userType === "member" ? "/member/feed" : `/${userType}/dashboard`

@@ -91,14 +91,14 @@ export default function ActivateAccountPage() {
       
       // Redirecionar para a página de login correta baseada no userType
       const loginPath = userType === "member" 
-        ? "/auth/member" 
+        ? "/login" 
         : userType === "partner"
-        ? "/auth/partner"
+        ? "/login"
         : userType === "business"
-        ? "/auth/business"
+        ? "/login"
         : userType === "master"
-        ? "/auth/master"
-        : "/auth/member"
+        ? "/login"
+        : "/login"
       
       router.push(loginPath)
 

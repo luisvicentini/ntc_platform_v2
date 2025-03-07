@@ -68,7 +68,7 @@ export default function SuccessPage() {
 
         <div className="flex flex-col gap-4">
           <Button
-            onClick={() => router.push('/auth/member')}
+            onClick={() => router.push('/login')}
             size="lg"
             className="w-full bg-purple-600 hover:bg-purple-700"
           >

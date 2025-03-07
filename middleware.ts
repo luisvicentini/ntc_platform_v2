@@ -3,12 +3,9 @@ import type { NextRequest } from 'next/server'
 
 // Rotas que não precisam de autenticação
 const publicRoutes = [
-  '/auth/member',
-  '/auth/business',
-  '/auth/partner',
-  '/auth/master',
   '/auth/register',
-  '/checkout-redirect'
+  '/checkout-redirect',
+  '/login'
 ]
 
 // Mapeia os tipos de usuário para suas rotas permitidas
@@ -40,7 +37,8 @@ export function middleware(request: NextRequest) {
       '/api/auth/reset-password',
       '/api/payment/direct-session',
       '/api/stripe/webhook',
-      '/api/stripe/sync-subscription'
+      '/api/stripe/sync-subscription',
+      '/api/auth/session'
     ]
 
     // Verificar se é uma rota pública

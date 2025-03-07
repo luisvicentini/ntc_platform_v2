@@ -206,33 +206,34 @@ export default function ValidateVoucherPage() {
   }
 
   const performCheckIn = async () => {
-    if (!validationResult?.code) return
-
     try {
-      const sessionToken = localStorage.getItem("sessionToken")
+      const code = validationResult.code;
+      
       const response = await fetch("/api/vouchers/validate", {
-        method: "PATCH",
+        method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-session-token": sessionToken || "",
         },
-        body: JSON.stringify({ code: validationResult.code }),
-      })
+        body: JSON.stringify({ 
+          code,
+          action: "checkin" 
+        }),
+        credentials: "include",
+      });
 
-      const data = await response.json()
-
-      if (data.success) {
-        setCheckInDone(true)
-        toast.success("Check-in realizado com sucesso!")
-        setValidationResult(prev => prev ? { ...prev, status: "used" } : null)
+      const data = await response.json();
+      
+      if (response.ok) {
+        setCheckInDone(true);
+        toast.success("Check-in realizado com sucesso!");
       } else {
-        toast.error(data.error || "Erro ao realizar check-in")
+        toast.error(data.message || "Erro ao realizar check-in");
       }
     } catch (error) {
-      console.error("Erro ao realizar check-in:", error)
-      toast.error("Erro ao realizar check-in")
+      console.error("Erro ao realizar check-in:", error);
+      toast.error("Erro ao realizar check-in");
     }
-  }
+  };
 
   const renderValidationResult = () => {
     if (!validationResult) return null
@@ -404,7 +405,7 @@ export default function ValidateVoucherPage() {
           </div>
         )}
       </Card>
+      {renderValidationResult()}
     </div>
   )
 }
-

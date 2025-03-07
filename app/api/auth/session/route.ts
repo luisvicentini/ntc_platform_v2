@@ -20,7 +20,8 @@ export async function POST(request: Request) {
     )
 
     // Configurar cookie
-    cookies().set("__session", token, {
+    const cookieStore = await cookies();
+    cookieStore.set("__session", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

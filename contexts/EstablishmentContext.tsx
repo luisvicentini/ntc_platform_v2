@@ -16,7 +16,7 @@ interface EstablishmentContextType {
   canGenerateVoucher: (establishmentId: string, userId: string) => Promise<boolean>
   getNextVoucherTime: (establishmentId: string, userId: string) => Promise<Date | null>
   toggleFeatured: (id: string) => Promise<void>
-  refreshEstablishments: () => Promise<void>
+  refreshEstablishments: (forceRefresh?: boolean) => Promise<void>
   updateEstablishmentRating: (establishmentId: string, newRating: number) => Promise<boolean>
 }
 
@@ -33,14 +33,26 @@ export const useEstablishment = () => {
 export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [establishments, setEstablishments] = useState<(Establishment | AvailableEstablishment)[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const auth = useAuth()
+  const [dataLoaded, setDataLoaded] = useState(false)
 
-  const refreshEstablishments = useCallback(async () => {
+  const refreshEstablishments = useCallback(async (forceRefresh = false) => {
+    if (!auth.user) {
+      console.log('Usuário não autenticado. Ignorando carregamento de estabelecimentos.');
+      return;
+    }
+
+    if (dataLoaded && !forceRefresh) {
+      console.log('Dados já carregados. Use forceRefresh para recarregar.');
+      return;
+    }
+
     try {
       setLoading(true)
       let url = "/api/member/feed"
 
-      if (auth.user?.userType === "partner") {
+      if (auth.user.userType === "partner") {
         url = "/api/establishments"
       }
 
@@ -56,20 +68,22 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
       }
 
       const data = await response.json()
-      setEstablishments(auth.user?.userType === "partner" ? data : data.establishments)
+      setEstablishments(auth.user.userType === "partner" ? data : data.establishments)
+      setDataLoaded(true)
     } catch (error: any) {
       console.error("Erro ao carregar estabelecimentos:", error)
-      toast.error(error.message)
+      setError("Erro ao carregar estabelecimentos")
     } finally {
       setLoading(false)
     }
-  }, [auth.user?.userType])
+  }, [auth.user, dataLoaded])
 
   useEffect(() => {
     if (auth.user) {
+      setDataLoaded(false)
       refreshEstablishments()
     }
-  }, [refreshEstablishments, auth.user])
+  }, [auth.user])
 
   const addEstablishment = useCallback(async (establishment: Omit<Establishment, "id" | "partnerId" | "status" | "createdAt" | "updatedAt" | "rating" | "totalRatings" | "isFeatured">) => {
     try {

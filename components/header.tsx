@@ -21,7 +21,7 @@ import { useTheme } from "next-themes"
 import React from "react"
 import { cn } from "@/lib/utils"
 import { usePathname } from "next/navigation"
-import { collection, query, where, onSnapshot, doc, getDoc } from "firebase/firestore"
+import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
 interface MenuItem {
@@ -75,13 +75,13 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userData, user, theme = "da
       <DropdownMenuContent className="w-56 bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]" align="end">
         <div className="flex items-center justify-start gap-2 p-2">
           <div className="flex flex-col space-y-1 leading-none">
-            <p className="font-medium">{userData.displayName || user?.displayName || "Usuário"}</p>
-            <p className="text-sm text-[#7a7b9f]">{userData.email || user?.email || "usuario@exemplo.com"}</p>
+            <p className="font-medium">{userData.displayName || user?.displayName || "Nome não informado"}</p>
+            <p className="text-sm text-[#7a7b9f]">{userData.email || user?.email || "Email não informado"}</p>
           </div>
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem>
-          <Link href="/member/profile">Editar Perfil</Link>
+          <Link href={`/${user?.userType}/profile`}>Editar Perfil</Link>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? <SunIcon className="mr-2 h-4 w-4" /> : <MoonIcon className="mr-2 h-4 w-4" />}

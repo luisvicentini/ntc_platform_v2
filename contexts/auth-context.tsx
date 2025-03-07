@@ -14,6 +14,7 @@ import {
 } from "firebase/auth"
 import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, updateDoc } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
+import { redirect } from "next/navigation"
 
 export type UserType = "member" | "partner" | "business" | "master"
 
@@ -39,9 +40,9 @@ interface CustomUser extends User {
 interface AuthContextType {
   user: CustomUser | null
   loading: boolean
-  signIn: (email: string, password: string, userType: UserType) => Promise<void>
-  signInWithGoogle: (userType: UserType) => Promise<void>
-  signInWithFacebook: (userType: UserType) => Promise<void>
+  signIn: (email: string, password: string, userType?: UserType) => Promise<void>
+  signInWithGoogle: (userType?: UserType) => Promise<void>
+  signInWithFacebook: (userType?: UserType) => Promise<void>
   signUp: (email: string, password: string, userType: UserType) => Promise<void>
   signOut: () => Promise<void>
 }
@@ -173,7 +174,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
-  const signIn = async (email: string, password: string, userType: UserType) => {
+  const signIn = async (email: string, password: string, userType?: UserType) => {
     try {
       // Verificar os métodos de login disponíveis
       const signInMethods = await fetchSignInMethodsForEmail(auth, email)
@@ -186,7 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Este email está vinculado ao Facebook. Por favor, faça login com o Facebook.")
       }
 
-      console.log('Tentando autenticar com email:', email, 'e tipo:', userType)
+      console.log('Tentando autenticar com email:', email)
       const { user: firebaseUser } = await signInWithEmailAndPassword(auth, email, password)
       console.log('Usuário autenticado no Firebase:', firebaseUser.uid)
       
@@ -202,13 +203,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Pegar o primeiro documento encontrado
       const userDoc = querySnapshot.docs[0]
       const userData = userDoc.data() as UserData
-      
-      // Verificar o tipo de usuário
-      console.log('Dados do usuário:', userData)
-      
-      if (userData.userType !== userType) {
-        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userData.userType}.`)
-      }
       
       // Atualizar o documento com o firebaseUid
       await updateDoc(doc(db, "users", userDoc.id), {
@@ -241,18 +235,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
 
       if (!response.ok) {
+        console.error("Erro na resposta da API de sessão:", await response.text())
         throw new Error("Erro ao criar sessão")
       }
       
       setUser(customUser)
       localStorage.setItem('authUser', JSON.stringify(customUser))
+      
+      // Redirecionar com base no tipo de usuário
+      redirectBasedOnUserType(userData.userType)
     } catch (error) {
       console.error("Error signing in:", error)
       throw error
     }
   }
 
-  const signInWithGoogle = async (userType: UserType) => {
+  const signInWithGoogle = async (userType?: UserType) => {
     try {
       const provider = new GoogleAuthProvider()
       const { user: firebaseUser } = await signInWithPopup(auth, provider)
@@ -269,11 +267,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Pegar o primeiro documento encontrado
       const userDoc = querySnapshot.docs[0]
       const userData = userDoc.data() as UserData
-      
-      // Verificar o tipo de usuário
-      if (userData.userType !== userType) {
-        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userData.userType}.`)
-      }
       
       // Atualizar o documento com o firebaseUid
       await updateDoc(doc(db, "users", userDoc.id), {
@@ -315,13 +308,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setUser(customUser)
       localStorage.setItem('authUser', JSON.stringify(customUser))
+      
+      // Ao final, redirecionar com base no tipo do usuário
+      redirectBasedOnUserType(userData.userType)
     } catch (error) {
       console.error("Error signing in with Google:", error)
       throw error
     }
   }
 
-  const signInWithFacebook = async (userType: UserType) => {
+  const signInWithFacebook = async (userType?: UserType) => {
     try {
       const provider = new FacebookAuthProvider()
       const { user: firebaseUser } = await signInWithPopup(auth, provider)
@@ -338,11 +334,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Pegar o primeiro documento encontrado
       const userDoc = querySnapshot.docs[0]
       const userData = userDoc.data() as UserData
-      
-      // Verificar o tipo de usuário
-      if (userData.userType !== userType) {
-        throw new Error(`Você não tem permissão para acessar esta área. Seu tipo de usuário é ${userData.userType}.`)
-      }
       
       // Atualizar o documento com o firebaseUid
       await updateDoc(doc(db, "users", userDoc.id), {
@@ -384,6 +375,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       setUser(customUser)
       localStorage.setItem('authUser', JSON.stringify(customUser))
+      
+      // Ao final, redirecionar com base no tipo do usuário
+      redirectBasedOnUserType(userData.userType)
     } catch (error) {
       console.error("Error signing in with Facebook:", error)
       throw error
@@ -474,11 +468,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Pequeno delay para garantir que o Firebase processe o logout
       await new Promise(resolve => setTimeout(resolve, 500))
-      // Redireciona para a página inicial usando window.location para garantir um refresh completo
-      window.location.href = '/auth/member'
+      // Redireciona para a página de login unificada
+      window.location.href = '/login'
     } catch (error) {
       console.error("Error signing out:", error)
       throw error
+    }
+  }
+
+  const redirectBasedOnUserType = (userType: UserType) => {
+    switch (userType) {
+      case 'member':
+        window.location.href = '/member/profile'
+        break
+      case 'partner':
+        window.location.href = '/partner/dashboard'
+        break
+      case 'business':
+        window.location.href = '/business/dashboard'
+        break
+      case 'master':
+        window.location.href = '/master/dashboard'
+        break
     }
   }
 

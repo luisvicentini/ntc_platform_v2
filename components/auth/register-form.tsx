@@ -186,7 +186,7 @@ export function RegisterForm() {
       </Card>
       <div className="text-center text-sm text-ntc-gray mt-4">
         Já tem uma conta?{" "}
-        <a href="/auth/member" className="text-ntc-purple hover:text-ntc-purple-dark underline underline-offset-4">
+        <a href="/login" className="text-ntc-purple hover:text-ntc-purple-dark underline underline-offset-4">
           Fazer login
         </a>
       </div>
