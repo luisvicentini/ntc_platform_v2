@@ -119,15 +119,15 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
         })
 
         if (!response.ok) {
-          throw new Error("Falha ao atualizar membro")
+          throw new Error("Falha ao atualizar Assinante")
         }
 
         onEdit(editedMember)
         setIsEditing(false)
-        toast.success("Membro atualizado com sucesso")
+        toast.success("Assinante atualizado com sucesso")
       } catch (error) {
-        console.error("Erro ao atualizar membro:", error)
-        toast.error("Erro ao atualizar membro")
+        console.error("Erro ao atualizar Assinante:", error)
+        toast.error("Erro ao atualizar Assinante")
       }
     }
   }
@@ -149,7 +149,7 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
     <Sheet open={isOpen} onOpenChange={onClose}>
       <SheetContent className="w-[400px] bg-[#131320] border-l border-[#1a1b2d] text-[#e5e2e9]">
         <SheetHeader className="flex flex-row items-center justify-between">
-          <SheetTitle className="text-[#e5e2e9]">Detalhes do Membro</SheetTitle>
+          <SheetTitle className="text-[#e5e2e9]">Detalhes do Assinante</SheetTitle>
           {!isEditing ? (
             <Button
               variant="ghost"
@@ -203,7 +203,7 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
                     value={editedMember?.displayName}
                     onChange={(e) => setEditedMember(prev => prev ? { ...prev, displayName: e.target.value } : null)}
                     className="bg-[#1a1b2d] border-[#2a2b3d] text-[#e5e2e9]"
-                    placeholder="Nome do membro"
+                    placeholder="Nome do Assinante"
                   />
                 </div>
               ) : (

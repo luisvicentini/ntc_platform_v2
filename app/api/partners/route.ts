@@ -20,7 +20,7 @@ export async function GET() {
       const establishmentsSnapshot = await getDocs(establishmentsQuery)
       const establishmentsCount = establishmentsSnapshot.size
 
-      // Buscar membros dos estabelecimentos do parceiro
+      // Buscar Assinantes dos estabelecimentos do parceiro
       let membersCount = 0
       const establishmentIds = establishmentsSnapshot.docs.map(doc => doc.id)
       

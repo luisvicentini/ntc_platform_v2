@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     // Apenas usuários master podem criar assinaturas
     if (session.userType !== "master") {
       return NextResponse.json(
-        { error: "Apenas administradores podem vincular membros a parceiros" },
+        { error: "Apenas administradores podem vincular Assinantes a parceiros" },
         { status: 403 }
       )
     }
@@ -45,14 +45,14 @@ export async function POST(request: Request) {
 
     const memberId = subscriptions[0].memberId
 
-    // Verificar se o membro existe
+    // Verificar se o Assinante existe
     const membersRef = collection(db, "users")
     const memberDoc = doc(membersRef, memberId)
     const memberSnapshot = await getDocs(query(membersRef, where("__name__", "==", memberId)))
 
     if (memberSnapshot.empty) {
       return NextResponse.json(
-        { error: "Membro não encontrado" },
+        { error: "Assinante não encontrado" },
         { status: 404 }
       )
     }

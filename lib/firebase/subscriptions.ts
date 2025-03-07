@@ -71,7 +71,7 @@ export async function createSubscription(data: {
   
   const existingSnapshot = await getDocs(existingQuery)
   if (!existingSnapshot.empty) {
-    throw new Error('Já existe uma assinatura ativa para este membro e parceiro')
+    throw new Error('Já existe uma assinatura ativa para este Assinante e parceiro')
   }
 
   // Criar nova assinatura

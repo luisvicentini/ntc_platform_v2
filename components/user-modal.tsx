@@ -117,7 +117,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="bg-[#1a1b2d] border-[#131320]">
-                <SelectItem value="member" className="text-[#e5e2e9]">Membro</SelectItem>
+                <SelectItem value="member" className="text-[#e5e2e9]">Assinante</SelectItem>
                 <SelectItem value="business" className="text-[#e5e2e9]">Estabelecimento</SelectItem>
                 <SelectItem value="partner" className="text-[#e5e2e9]">Parceiro</SelectItem>
                 <SelectItem value="master" className="text-[#e5e2e9]">Master</SelectItem>

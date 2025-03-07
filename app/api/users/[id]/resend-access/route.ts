@@ -79,7 +79,7 @@ export async function POST(
               <p>Você foi convidado para acessar a plataforma NTC como <strong>${
                 userData.userType === "master" ? "Usuário Master" :
                 userData.userType === "partner" ? "Parceiro" :
-                userData.userType === "member" ? "Membro" :
+                userData.userType === "member" ? "Assinante" :
                 userData.userType === "business" ? "Business" : "Usuário"
               }</strong>.</p>
               

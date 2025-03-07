@@ -21,7 +21,7 @@ export async function GET(
     // Decodificar o token
     const session = jwtDecode<SessionToken>(sessionToken)
 
-    // Apenas usuários master e o próprio parceiro podem ver seus membros
+    // Apenas usuários master e o próprio parceiro podem ver seus Assinantes
     if (session.userType !== "master" && session.uid !== params.id) {
       return NextResponse.json(
         { error: "Acesso não autorizado" },
@@ -43,13 +43,13 @@ export async function GET(
       return NextResponse.json([])
     }
 
-    // Buscar dados dos membros
+    // Buscar dados dos Assinantes
     const memberIds = subscriptionsSnapshot.docs.map(doc => doc.data().memberId)
     const usersRef = collection(db, "users")
     const membersQuery = query(usersRef, where("__name__", "in", memberIds))
     const membersSnapshot = await getDocs(membersQuery)
 
-    // Mapear dados dos membros com suas assinaturas
+    // Mapear dados dos Assinantes com suas assinaturas
     const members = membersSnapshot.docs.map(doc => {
       const memberData = doc.data()
       const subscription = subscriptionsSnapshot.docs.find(s => s.data().memberId === doc.id)
@@ -70,9 +70,9 @@ export async function GET(
     return NextResponse.json(members)
 
   } catch (error) {
-    console.error("Erro ao buscar membros:", error)
+    console.error("Erro ao buscar Assinantes:", error)
     return NextResponse.json(
-      { error: "Erro ao buscar membros" },
+      { error: "Erro ao buscar Assinantes" },
       { status: 500 }
     )
   }

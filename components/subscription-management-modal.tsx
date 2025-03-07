@@ -219,7 +219,7 @@ export function SubscriptionManagementModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl bg-[#131320] text-white p-0">
         <DialogHeader className="p-6 border-b border-[#1a1b2d]">
-          <DialogTitle className="text-xl font-semibold">Vincular membro a uma assinatura de parceiro</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">Vincular Assinante a uma assinatura de parceiro</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-6 p-6">

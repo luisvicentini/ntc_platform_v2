@@ -64,7 +64,7 @@ export async function GET(req: Request) {
 
     if (!memberId) {
       return NextResponse.json(
-        { error: 'ID do membro não fornecido' },
+        { error: 'ID do Assinante não fornecido' },
         { status: 400 }
       )
     }

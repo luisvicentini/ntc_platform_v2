@@ -79,7 +79,7 @@ export default function DashboardPage() {
         <Card className="bg-[#131320] border-[#1a1b2d]">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-[#e5e2e9]">
-              Total de Membros
+              Total de Assinantes
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -162,16 +162,16 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* Gráfico de Membros */}
+        {/* Gráfico de Assinantes */}
         <Card className="bg-[#131320] border-[#1a1b2d] p-6">
           <CardHeader>
-            <CardTitle className="text-[#e5e2e9]">Evolução de Membros</CardTitle>
+            <CardTitle className="text-[#e5e2e9]">Evolução de Assinantes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={[{
-                  name: 'Membros',
+                  name: 'Assinantes',
                   total: metrics.totalMembers,
                   ativos: metrics.activeMembers,
                   novos: metrics.newMembers,

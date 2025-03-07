@@ -51,18 +51,18 @@ export async function GET(request: Request) {
     const subscriptionsSnapshot = await getDocs(subscriptionsQuery)
     console.log("[STRIPE] Assinaturas encontradas:", subscriptionsSnapshot.size)
 
-    // Obter IDs únicos dos membros
+    // Obter IDs únicos dos Assinantes
     const memberIds = [...new Set(subscriptionsSnapshot.docs.map(doc => doc.data().memberId))]
-    console.log("IDs únicos de membros:", memberIds)
+    console.log("IDs únicos de Assinantes:", memberIds)
 
     if (memberIds.length === 0) {
       return NextResponse.json({ members: [] })
     }
 
-    // Buscar dados dos membros
+    // Buscar dados dos Assinantes
     const members = []
 
-    // Buscar membros em lotes para evitar limitações do Firestore
+    // Buscar Assinantes em lotes para evitar limitações do Firestore
     for (let i = 0; i < memberIds.length; i += 10) {
       const batch = memberIds.slice(i, i + 10)
       const membersQuery = query(
@@ -72,7 +72,7 @@ export async function GET(request: Request) {
       const membersSnapshot = await getDocs(membersQuery)
       console.log(`Buscando lote ${i/10 + 1}, encontrados:`, membersSnapshot.size)
       
-      // Para cada membro, encontrar sua assinatura mais recente
+      // Para cada Assinante, encontrar sua assinatura mais recente
       const batchMembers = membersSnapshot.docs.map(doc => {
         const memberData = doc.data()
         const memberSubscriptions = subscriptionsSnapshot.docs
@@ -104,13 +104,13 @@ export async function GET(request: Request) {
       members.push(...batchMembers)
     }
 
-    console.log("Total de membros processados:", members.length)
+    console.log("Total de Assinantes processados:", members.length)
     return NextResponse.json({ members })
 
   } catch (error) {
-    console.error("Erro ao listar membros:", error)
+    console.error("Erro ao listar Assinantes:", error)
     return NextResponse.json(
-      { error: "Erro ao listar membros" },
+      { error: "Erro ao listar Assinantes" },
       { status: 500 }
     )
   }

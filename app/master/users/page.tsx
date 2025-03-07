@@ -152,7 +152,7 @@ function UsersContent() {
       case "business":
         return "Estabelecimento"
       case "member":
-        return "Membro"
+        return "Assinante"
       case "partner":
         return "Parceiro"
       case "master":
@@ -275,7 +275,7 @@ function UsersContent() {
             <TabsList className="bg-[#1a1b2d] text-[#e5e2e9]">
               <TabsTrigger value="all">Todos</TabsTrigger>
               <TabsTrigger value="business">Estabelecimentos</TabsTrigger>
-              <TabsTrigger value="member">Membros</TabsTrigger>
+              <TabsTrigger value="member">Assinantes</TabsTrigger>
               <TabsTrigger value="partner">Parceiros</TabsTrigger>
               <TabsTrigger value="master">Master</TabsTrigger>
             </TabsList>

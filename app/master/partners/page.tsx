@@ -98,7 +98,7 @@ export default function PartnersPage() {
               <TableHead className="text-[#7a7b9f]">Nome</TableHead>
               <TableHead className="text-[#7a7b9f]">Email</TableHead>
               <TableHead className="text-[#7a7b9f]">Estabelecimentos</TableHead>
-              <TableHead className="text-[#7a7b9f]">Membros</TableHead>
+              <TableHead className="text-[#7a7b9f]">Assinantes</TableHead>
               <TableHead className="text-[#7a7b9f]">Status</TableHead>
               <TableHead className="w-[70px]"></TableHead>
             </TableRow>

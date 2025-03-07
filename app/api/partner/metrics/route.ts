@@ -91,7 +91,7 @@ export async function GET(request: Request) {
     console.log("Total Vouchers:", totalVouchers)
     console.log("Total Check-ins:", totalCheckins)
 
-    // 3. Buscar assinaturas e membros
+    // 3. Buscar assinaturas e Assinantes
     const subscriptionsRef = collection(db, "subscriptions")
     const subscriptionsQuery = query(
       subscriptionsRef,
@@ -99,7 +99,7 @@ export async function GET(request: Request) {
     )
     const subscriptionsSnapshot = await getDocs(subscriptionsQuery)
 
-    // Mapear membros únicos e suas assinaturas
+    // Mapear Assinantes únicos e suas assinaturas
     const memberMap = new Map()
     
     subscriptionsSnapshot.docs.forEach(doc => {
@@ -134,7 +134,7 @@ export async function GET(request: Request) {
       }
     })
 
-    // Calcular métricas de membros
+    // Calcular métricas de Assinantes
     let totalMembers = 0
     let activeMembers = 0
     let newMembers = 0

@@ -18,10 +18,10 @@ export async function GET(request: Request) {
     // Decodificar o token
     const session = jwtDecode<SessionToken>(sessionToken)
 
-    // Apenas membros podem verificar cooldown
+    // Apenas Assinantes podem verificar cooldown
     if (session.userType !== "member") {
       return NextResponse.json(
-        { error: "Apenas membros podem verificar cooldown" },
+        { error: "Apenas Assinantes podem verificar cooldown" },
         { status: 403 }
       )
     }

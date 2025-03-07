@@ -72,14 +72,14 @@ export default function MembersPage() {
       })
 
       if (!response.ok) {
-        throw new Error("Falha ao carregar membros")
+        throw new Error("Falha ao carregar Assinantes")
       }
 
       const data = await response.json()
       setMembers(data.members)
     } catch (error) {
-      console.error("Erro ao carregar membros:", error)
-      toast.error("Erro ao carregar membros")
+      console.error("Erro ao carregar Assinantes:", error)
+      toast.error("Erro ao carregar Assinantes")
     } finally {
       setLoading(false)
     }
@@ -122,14 +122,14 @@ export default function MembersPage() {
       })
 
       if (!response.ok) {
-        throw new Error("Falha ao atualizar membro")
+        throw new Error("Falha ao atualizar Assinante")
       }
 
-      toast.success("Membro atualizado com sucesso")
-      fetchMembers() // Recarrega a lista de membros
+      toast.success("Assinante atualizado com sucesso")
+      fetchMembers() // Recarrega a lista de Assinantes
     } catch (error) {
-      console.error("Erro ao atualizar membro:", error)
-      toast.error("Erro ao atualizar membro")
+      console.error("Erro ao atualizar Assinante:", error)
+      toast.error("Erro ao atualizar Assinante")
     }
   }
 
@@ -147,13 +147,13 @@ export default function MembersPage() {
     <div className="container mx-auto p-6">
       <div className="flex flex-col space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h1 className="text-2xl font-bold text-[#e5e2e9]">Membros</h1>
+          <h1 className="text-2xl font-bold text-[#e5e2e9]">Assinantes</h1>
           <div className="flex items-center gap-2 w-full md:w-auto">
             <div className="flex items-center space-x-2">
               <div className="relative flex-1">
                 <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#7a7b9f]" />
                 <Input
-                  placeholder="Buscar membro..."
+                  placeholder="Buscar Assinante..."
                   className="pl-8 bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -238,7 +238,7 @@ export default function MembersPage() {
             <Table>
               <TableHeader>
                 <TableRow className="border-[#1a1b2d]">
-                  <TableHead className="text-[#7a7b9f]">Membro</TableHead>
+                  <TableHead className="text-[#7a7b9f]">Assinante</TableHead>
                   <TableHead className="text-[#7a7b9f]">Email</TableHead>
                   <TableHead className="text-[#7a7b9f]">Telefone</TableHead>
                   <TableHead className="text-[#7a7b9f]">Status</TableHead>
@@ -296,7 +296,7 @@ export default function MembersPage() {
 
         {filteredMembers.length === 0 && (
           <div className="text-center text-[#7a7b9f] py-10">
-            {searchTerm ? "Nenhum membro encontrado" : "Nenhum membro cadastrado"}
+            {searchTerm ? "Nenhum Assinante encontrado" : "Nenhum Assinante cadastrado"}
           </div>
         )}
 

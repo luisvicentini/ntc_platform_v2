@@ -61,13 +61,13 @@ export function SubscriptionModal({ isOpen, onClose, memberId, memberName }: Sub
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="bg-[#131320] text-[#e5e2e9] border-[#1a1b2d]">
         <DialogHeader>
-          <DialogTitle>Vincular Membro a Parceiro</DialogTitle>
+          <DialogTitle>Vincular Assinante a Parceiro</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-4 items-center gap-4">
               <Label htmlFor="member" className="text-right">
-                Membro
+                Assinante
               </Label>
               <Input
                 id="member"

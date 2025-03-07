@@ -58,9 +58,9 @@ export async function PATCH(
     return NextResponse.json({ success: true })
 
   } catch (error) {
-    console.error("Erro ao atualizar membro:", error)
+    console.error("Erro ao atualizar Assinante:", error)
     return NextResponse.json(
-      { error: "Erro ao atualizar membro" },
+      { error: "Erro ao atualizar Assinante" },
       { status: 500 }
     )
   }

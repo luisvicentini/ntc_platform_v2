@@ -219,7 +219,7 @@ export function SubscriptionManagementSidebar({
                         </SelectTrigger>
                         <SelectContent className="bg-[#1a1b2d] border-[#131320]">
                           <SelectItem value="business">Estabelecimento</SelectItem>
-                          <SelectItem value="member">Membro</SelectItem>
+                          <SelectItem value="member">Assinante</SelectItem>
                           <SelectItem value="partner">Parceiro</SelectItem>
                           <SelectItem value="master">Master</SelectItem>
                         </SelectContent>

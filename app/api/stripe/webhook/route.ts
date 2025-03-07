@@ -185,7 +185,7 @@ async function processCheckoutCompleted(session) {
         const existingSubscriptions = await getDocs(q)
         
         if (!existingSubscriptions.empty) {
-          console.log('⚠️ Já existe uma assinatura ativa para este membro e parceiro')
+          console.log('⚠️ Já existe uma assinatura ativa para este Assinante e parceiro')
           return
         }
         

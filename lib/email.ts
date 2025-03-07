@@ -22,7 +22,7 @@ export async function sendActivationEmail({ to, name, activationUrl, userType }:
     master: "Master",
     business: "Estabelecimento",
     partner: "Parceiro",
-    member: "Membro"
+    member: "Assinante"
   }[userType]
 
   const html = `

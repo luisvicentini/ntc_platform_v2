@@ -25,7 +25,7 @@ export async function GET(request: Request) {
       )
     }
 
-    // Buscar assinaturas ativas do membro
+    // Buscar assinaturas ativas do Assinante
     const subscriptionsRef = collection(db, "subscriptions")
     const subscriptionsQuery = query(
       subscriptionsRef,

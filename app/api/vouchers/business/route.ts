@@ -36,7 +36,7 @@ export async function GET(request: Request) {
       vouchersSnap.docs.map(async (doc) => {
         const data = doc.data()
         
-        // Buscar dados do membro
+        // Buscar dados do Assinante
         const memberDoc = await getDocs(
           query(collection(db, "members"), where("__name__", "==", data.memberId))
         )

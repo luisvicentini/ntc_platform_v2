@@ -103,7 +103,7 @@ export async function GET(request: Request) {
         where("partnerId", "==", partnerId)
       )
     } else if (memberId) {
-      // Buscar estabelecimentos dos parceiros que o membro é assinante
+      // Buscar estabelecimentos dos parceiros que o Assinante é assinante
       const subscriptionsRef = collection(db, "subscriptions")
       const subscriptionsQuery = query(subscriptionsRef, where("memberId", "==", memberId))
       const subscriptionsSnapshot = await getDocs(subscriptionsQuery)

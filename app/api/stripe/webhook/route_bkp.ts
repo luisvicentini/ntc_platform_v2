@@ -127,7 +127,7 @@ export async function POST(req: Request) {
         const docRef = await addDoc(subscriptionsRef, subscriptionData)
         console.log('✅ Assinatura criada no Firebase:', docRef.id)
 
-        // Criar vínculo membro-parceiro
+        // Criar vínculo Assinante-parceiro
         const memberPartnersRef = collection(db, 'memberPartners')
         const memberPartnerData = {
           memberId: customer.metadata.userId,
@@ -141,7 +141,7 @@ export async function POST(req: Request) {
         }
 
         const mpDoc = await addDoc(memberPartnersRef, memberPartnerData)
-        console.log('✅ Vínculo membro-parceiro criado:', mpDoc.id)
+        console.log('✅ Vínculo Assinante-parceiro criado:', mpDoc.id)
       } catch (error) {
         console.error('❌ Erro ao processar checkout:', error)
         return NextResponse.json(

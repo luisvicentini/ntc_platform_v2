@@ -92,14 +92,14 @@ export async function POST(request: Request) {
       })
     }
 
-    // Buscar dados do membro
+    // Buscar dados do Assinante
     const memberRef = doc(db, "users", voucher.memberId)
     const memberSnap = await getDoc(memberRef)
 
     if (!memberSnap.exists()) {
       return NextResponse.json({
         valid: false,
-        message: "Membro não encontrado"
+        message: "Assinante não encontrado"
       })
     }
 
