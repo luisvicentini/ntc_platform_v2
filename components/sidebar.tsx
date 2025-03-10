@@ -36,7 +36,7 @@ export function Sidebar({ establishment, onClose }) {
       </div>
 
       <h2 className="text-2xl font-bold mb-2">{establishment.name}</h2>
-      <p className="text-sm text-gray-600 mb-4">
+      <p className="text-sm text-zinc-600 mb-4">
         {establishment.type} • {establishment.location}
       </p>
       <p className="mb-4">{establishment.description}</p>

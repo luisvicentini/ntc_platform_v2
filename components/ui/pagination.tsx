@@ -22,7 +22,7 @@ export function PaginationPrevious({
       size="icon"
       onClick={() => onPageChange?.(currentPage - 1)}
       disabled={currentPage === 1}
-      className={cn("bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]", className)}
+      className={cn("bg-zinc-100 text-zinc-500 border-zinc-200", className)}
       {...props}
     >
       <ChevronLeft className="h-4 w-4" />
@@ -77,7 +77,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
       <PaginationPrevious
         onPageChange={onPageChange}
         currentPage={currentPage}
-        className="bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
+        className="bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-200 hover:text-zinc-500 p-2"
       />
 
       {renderPageNumbers().map((page, index) => (
@@ -87,14 +87,14 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
             variant={currentPage === page ? "default" : "outline"}
             onClick={() => onPageChange(page)}
             className={currentPage === page ? 
-              "bg-[#7435db] text-white hover:bg-[#7435db]/90" : 
-              "bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
+              "bg-primary text-white hover:bg-primary/90 " : 
+              "bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-200 hover:text-zinc-500"
             }
           >
             {page}
           </Button>
         ) : (
-          <span key={index} className="text-[#7a7b9f]">...</span>
+          <span key={index} className="text-zinc-400">...</span>
         )
       ))}
 
@@ -103,7 +103,7 @@ export function Pagination({ currentPage, totalPages, onPageChange }: Pagination
         size="icon"
         onClick={() => onPageChange(currentPage + 1)}
         disabled={currentPage === totalPages}
-        className="bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
+        className="bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-200 hover:text-zinc-500 p-2"
       >
         <ChevronRight className="h-4 w-4" />
       </Button>

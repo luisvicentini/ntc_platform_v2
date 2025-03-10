@@ -88,15 +88,15 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
   }
 
   return (
-    <div className="container flex flex-col items-center justify-center min-h-screen py-2">
+    <div className="bg-zinc-50 container flex flex-col items-center justify-center min-h-screen py-2">
       <div className="mb-8">
         <Logo />
       </div>
       
-      <Card className="w-[400px] bg-[#131320] text-[#e5e2e9] border-[#1a1b2d]">
+      <Card className="w-[400px] bg-zinc-100 text-zinc-500 border-zinc-200">
         <CardHeader>
           <CardTitle>{title}</CardTitle>
-          <CardDescription className="text-[#7a7b9f]">{subtitle}</CardDescription>
+          <CardDescription className="text-zinc-400">{subtitle}</CardDescription>
         </CardHeader>
         
         <CardContent>
@@ -109,7 +109,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
-                className="bg-[#1a1b2d] border-[#131320]"
+                className="bg-white border-zinc-200"
                 required
               />
             </div>
@@ -119,7 +119,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
                 <Label htmlFor="password">Senha</Label>
                 <Link
                   href="/auth/forgot-password"
-                  className="text-sm text-[#7435db] hover:text-[#a85fdd]"
+                  className="bg-zinc-100 text-sm text-zinc-500 hover:text-primary"
                 >
                   Esqueceu a senha?
                 </Link>
@@ -129,7 +129,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-[#1a1b2d] border-[#131320]"
+                className="bg-white border-zinc-200"
                 required
               />
             </div>
@@ -142,16 +142,16 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
             
             <Button 
               type="submit" 
-              className="w-full bg-[#7435db] hover:bg-[#a85fdd]"
+              className="w-full bg-primary hover:bg-primary-dark text-white"
               disabled={loading || authLoading}
             >
               {loading || authLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Entrando...
+                  <Loader2 className="mr-2 h-6 w-4 animate-spin" /> Entrando...
                 </>
               ) : (
                 <>
-                  Entrar <ArrowRight className="ml-2 h-4 w-4" />
+                  Entrar <ArrowRight className="ml-2 h-6 w-4" />
                 </>
               )}
             </Button>
@@ -159,10 +159,10 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
           
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-[#1a1b2d]"></div>
+              <div className="w-full border-t border-zinc-200"></div>
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-[#131320] px-2 text-[#7a7b9f]">Ou continue com</span>
+              <span className="bg-zinc-100 px-2 text-zinc-400">Ou continue com</span>
             </div>
           </div>
           
@@ -171,7 +171,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
               variant="outline"
               onClick={handleGoogleSignIn}
               disabled={loading || authLoading}
-              className="bg-transparent border-[#1a1b2d] hover:bg-[#1a1b2d]"
+              className="bg-transparent border-zinc-200 hover:bg-white hover:text-zinc-500"
             >
               <FcGoogle className="mr-2 h-4 w-4" />
               Google
@@ -180,7 +180,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
               variant="outline"
               onClick={handleFacebookSignIn}
               disabled={loading || authLoading}
-              className="bg-transparent border-[#1a1b2d] hover:bg-[#1a1b2d]"
+              className="bg-transparent border-zinc-200 hover:bg-white hover:text-zinc-500"
             >
               <FaFacebook className="mr-2 h-4 w-4 text-blue-600" />
               Facebook
@@ -189,9 +189,9 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
         </CardContent>
         
         <CardFooter className="flex justify-center">
-          <div className="text-sm text-[#7a7b9f]">
+          <div className="text-sm text-zinc-400">
             Não tem uma conta?{" "}
-            <Link href={registerUrl} className="text-[#7435db] hover:text-[#a85fdd]">
+            <Link href={registerUrl} className="text-zinc-500 hover:text-primary">
               Criar conta
             </Link>
           </div>

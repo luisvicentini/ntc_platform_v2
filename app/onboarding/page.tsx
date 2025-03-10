@@ -69,18 +69,18 @@ export default function OnboardingPage() {
   if (!checkoutData) return null
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
+    <div className="min-h-screen bg-zinc-50 py-12">
       <div className="max-w-2xl mx-auto px-4">
         <div className="bg-white rounded-lg shadow p-8">
-          <h1 className="text-2xl text-ntc-gray font-bold mb-6">Confirme sua assinatura</h1>
+          <h1 className="text-2xl text-ntc-zinc font-bold mb-6">Confirme sua assinatura</h1>
           
           <div className="mb-8">
-            <h2 className="text-xl text-ntc-gray font-semibold mb-4">{checkoutData.planName}</h2>
-            <p className="text-gray-600 mb-4">
+            <h2 className="text-xl text-ntc-zinc font-semibold mb-4">{checkoutData.planName}</h2>
+            <p className="text-zinc-600 mb-4">
               Valor: R$ {checkoutData.price.toFixed(2)}/{checkoutData.interval}
             </p>
-            <div className="bg-gray-50 p-4 rounded">
-              <p className="text-sm text-gray-600">
+            <div className="bg-zinc-50 p-4 rounded">
+              <p className="text-sm text-zinc-600">
                 Você está logado como: <strong>{user?.email}</strong>
               </p>
             </div>

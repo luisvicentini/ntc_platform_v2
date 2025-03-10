@@ -116,7 +116,7 @@ export function RouteGuard({ children, allowedUserType }: RouteGuardProps) {
   if (loading || !authenticatedUser) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ntc-purple"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-custom-primary"></div>
       </div>
     )
   }
@@ -130,7 +130,7 @@ export function RouteGuard({ children, allowedUserType }: RouteGuardProps) {
   if (loading || isAuthenticating) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-ntc-purple"></div>
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-custom-primary"></div>
       </div>
     )
   }

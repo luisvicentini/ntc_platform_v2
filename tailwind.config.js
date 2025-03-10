@@ -52,10 +52,8 @@ module.exports = {
           foreground: "hsl(var(--card-foreground))",
         },
         // Adicione as cores específicas do seu design Figma aqui
-        "ntc-purple": "#8B5CF6",
-        "ntc-purple-dark": "#7C3AED",
-        "ntc-gray": "#6B7280",
-        "ntc-gray-light": "#E5E7EB",
+        "custom-primary": "#ea1d2c",
+        "custom-primary-dark": "#ea1d2c",
       },
       borderRadius: {
         lg: "var(--radius)",

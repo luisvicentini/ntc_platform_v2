@@ -56,10 +56,10 @@ function ForgotPasswordForm() {
       <div className="mb-8">
         <Logo />
       </div>
-      <Card className="w-[400px] bg-[#131320] text-[#e5e2e9] border-[#1a1b2d]">
+      <Card className="w-[400px] bg-zinc-100 text-zinc-500 border-zinc-200">
         <CardHeader>
           <CardTitle>Recuperar Senha</CardTitle>
-          <CardDescription className="text-[#7a7b9f]">
+          <CardDescription className="text-zinc-400">
             Digite seu email para receber as instruções de recuperação de senha
           </CardDescription>
         </CardHeader>
@@ -72,14 +72,14 @@ function ForgotPasswordForm() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-[#1a1b2d] border-[#131320]"
+                className="bg-zinc-100 border-zinc-200"
                 disabled={isLoading}
                 placeholder="Digite seu email"
               />
             </div>
             <Button 
               type="submit" 
-              className="w-full bg-[#7435db] hover:bg-[#7435db]/80"
+              className="w-full bg-primary hover:bg-primary/80"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -94,7 +94,7 @@ function ForgotPasswordForm() {
             <Button
               type="button"
               variant="ghost"
-              className="w-full hover:bg-[#1a1b2d]"
+              className="w-full hover:bg-zinc-100"
               onClick={() => router.push("/auth/master")}
               disabled={isLoading}
             >
@@ -112,7 +112,7 @@ export default function ForgotPasswordPage() {
   return (
     <Suspense fallback={
       <div className="container flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-[#7435db]" />
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
       </div>
     }>
       <ForgotPasswordForm />

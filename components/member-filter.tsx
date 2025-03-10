@@ -44,28 +44,28 @@ export function MemberFilter({
         <Button 
           variant="outline" 
           size="icon"
-          className="bg-[#131320] border-[#1a1b2d] hover:bg-[#1a1b2d] hover:border-[#7435db]"
+          className="bg-zinc-100 border-zinc-200 hover:bg-zinc-100 hover:border-[#7435db]"
         >
-          <Filter className="h-4 w-4 text-[#7a7b9f]" />
+          <Filter className="h-4 w-4 text-zinc-400" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
-        className="w-[240px] bg-[#131320] border-[#1a1b2d]"
+        className="w-[240px] bg-zinc-100 border-zinc-200"
         forceMount
       >
-        <DropdownMenuLabel className="text-[#e5e2e9] px-2 py-1.5">
+        <DropdownMenuLabel className="text-zinc-500 px-2 py-1.5">
           Status
         </DropdownMenuLabel>
-        <DropdownMenuSeparator className="bg-[#1a1b2d]" />
+        <DropdownMenuSeparator className="bg-zinc-100" />
         <DropdownMenuItem
           onClick={() => {
             onStatusChange("all")
             setOpen(false)
           }}
           className={cn(
-            "cursor-pointer text-[#e5e2e9] hover:bg-[#1a1b2d] focus:bg-[#1a1b2d] focus:text-[#e5e2e9]",
-            statusFilter === "all" && "bg-[#1a1b2d]"
+            "cursor-pointer text-zinc-500 hover:bg-zinc-100 focus:bg-zinc-100 focus:text-zinc-500",
+            statusFilter === "all" && "bg-zinc-100"
           )}
         >
           Todos
@@ -76,8 +76,8 @@ export function MemberFilter({
             setOpen(false)
           }}
           className={cn(
-            "cursor-pointer text-[#e5e2e9] hover:bg-[#1a1b2d] focus:bg-[#1a1b2d] focus:text-[#e5e2e9]",
-            statusFilter === "active" && "bg-[#1a1b2d]"
+            "cursor-pointer text-zinc-500 hover:bg-zinc-100 focus:bg-zinc-100 focus:text-zinc-500",
+            statusFilter === "active" && "bg-zinc-100"
           )}
         >
           Ativos
@@ -88,16 +88,16 @@ export function MemberFilter({
             setOpen(false)
           }}
           className={cn(
-            "cursor-pointer text-[#e5e2e9] hover:bg-[#1a1b2d] focus:bg-[#1a1b2d] focus:text-[#e5e2e9]",
-            statusFilter === "inactive" && "bg-[#1a1b2d]"
+            "cursor-pointer text-zinc-500 hover:bg-zinc-100 focus:bg-zinc-100 focus:text-zinc-500",
+            statusFilter === "inactive" && "bg-zinc-100"
           )}
         >
           Inativos
         </DropdownMenuItem>
         
-        <DropdownMenuSeparator className="bg-[#1a1b2d]" />
+        <DropdownMenuSeparator className="bg-zinc-100" />
         <div className="p-3">
-          <span className="text-sm text-[#e5e2e9] mb-2 block">
+          <span className="text-sm text-zinc-500 mb-2 block">
             Período de Expiração
           </span>
           <Popover>
@@ -105,7 +105,7 @@ export function MemberFilter({
               <Button
                 variant="outline"
                 className={cn(
-                  "w-full justify-start text-left font-normal bg-[#1a1b2d] border-[#2a2b3d] text-[#e5e2e9]",
+                  "w-full justify-start text-left font-normal bg-zinc-100 border-[#2a2b3d] text-zinc-500",
                   !dateRange && "text-muted-foreground"
                 )}
               >
@@ -124,7 +124,7 @@ export function MemberFilter({
                 )}
               </Button>
             </PopoverTrigger>
-            <PopoverContent className="w-auto p-0 bg-[#131320] border-[#1a1b2d]" align="start">
+            <PopoverContent className="w-auto p-0 bg-zinc-100 border-zinc-200" align="start">
               <Calendar
                 initialFocus
                 mode="range"
@@ -133,7 +133,7 @@ export function MemberFilter({
                 onSelect={onDateRangeChange}
                 numberOfMonths={2}
                 locale={ptBR}
-                className="bg-[#131320]"
+                className="bg-zinc-100"
               />
             </PopoverContent>
           </Popover>

@@ -24,7 +24,7 @@ export default async function CheckoutPage({ params }: { params: { code: string 
           <CheckoutPreview partnerLink={link} />
 
           {/* Selos de Segurança */}
-          <div className="p-6 border-t border-gray-200">
+          <div className="p-6 border-t border-zinc-200">
             <div className="flex items-center justify-center space-x-8">
 
               {/* Informação do Stripe */}

@@ -164,7 +164,7 @@ export default function CouponsPage() {
       case "expired":
         return "bg-red-500/20 rounded-full px-2 py-1 font-medium text-red-500"
       default:
-        return "bg-[#7a7b9f]/20 rounded-full px-2 py-1 font-medium text-gray-500"
+        return "bg-zinc-400/20 rounded-full px-2 py-1 font-medium text-zinc-500"
     }
   }
 
@@ -305,8 +305,8 @@ export default function CouponsPage() {
   if (loading) {
     return (
       <div className="container py-6">
-        <h1 className="text-2xl font-bold text-[#e5e2e9] mb-6">Meus Cupons</h1>
-        <div className="text-[#7a7b9f]">Carregando...</div>
+        <h1 className="text-2xl font-bold text-zinc-500 mb-6">Meus Cupons</h1>
+        <div className="text-zinc-400">Carregando...</div>
       </div>
     )
   }
@@ -314,8 +314,8 @@ export default function CouponsPage() {
   if (vouchers.length === 0) {
     return (
       <div className="container py-6">
-        <h1 className="text-2xl font-bold text-[#e5e2e9] mb-6">Meus Cupons</h1>
-        <div className="text-[#7a7b9f]">Você ainda não possui cupons.</div>
+        <h1 className="text-2xl font-bold text-zinc-500 mb-6">Meus Cupons</h1>
+        <div className="text-zinc-400">Você ainda não possui cupons.</div>
       </div>
     )
   }
@@ -323,40 +323,40 @@ export default function CouponsPage() {
   return (
     <div className="container py-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#e5e2e9]">Meus Cupons</h1>
+        <h1 className="text-2xl font-bold text-zinc-500">Meus Cupons</h1>
         <div className="flex gap-2">
           <div className="flex-1 md:w-[300px]">
             <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#7a7b9f]" />
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-zinc-400" />
               <Input
                 placeholder="Buscar cupons..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]"
+                className="pl-8 bg-zinc-100 border-zinc-200 text-zinc-500"
               />
             </div>
           </div>
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="bg-[#131320] border-[#1a1b2d]">
-                <Filter className="h-4 w-4 text-[#7a7b9f]" />
+              <Button variant="outline" size="icon" className="bg-zinc-100 border-zinc-200">
+                <Filter className="h-4 w-4 text-zinc-400" />
               </Button>
             </SheetTrigger>
-            <SheetContent className="bg-[#0d0d1d] border-[#1a1b2d]">
+            <SheetContent className="bg-[#0d0d1d] border-zinc-200">
               <SheetHeader>
-                <SheetTitle className="text-[#e5e2e9]">Filtros</SheetTitle>
+                <SheetTitle className="text-zinc-500">Filtros</SheetTitle>
               </SheetHeader>
               <div className="mt-4 space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-medium text-[#e5e2e9]">Status</label>
+                  <label className="text-sm font-medium text-zinc-500">Status</label>
                   <Select
                     value={statusFilter}
                     onValueChange={setStatusFilter}
                   >
-                    <SelectTrigger className="bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]">
+                    <SelectTrigger className="bg-zinc-100 border-zinc-200 text-zinc-500">
                       <SelectValue placeholder="Selecione um status" />
                     </SelectTrigger>
-                    <SelectContent className="bg-[#131320] border-[#1a1b2d]">
+                    <SelectContent className="bg-zinc-100 border-zinc-200">
                       <SelectItem value="all">Todos</SelectItem>
                       <SelectItem value="pending">Pendente</SelectItem>
                       <SelectItem value="used">Utilizado</SelectItem>
@@ -370,13 +370,13 @@ export default function CouponsPage() {
           <Button
             variant="outline"
             size="icon"
-            className="bg-[#131320] border-[#1a1b2d]"
+            className="bg-zinc-100 border-zinc-200"
             onClick={() => setViewMode(viewMode === "grid" ? "table" : "grid")}
           >
             {viewMode === "grid" ? (
-              <LayoutList className="h-4 w-4 text-[#7a7b9f]" />
+              <LayoutList className="h-4 w-4 text-zinc-400" />
             ) : (
-              <LayoutGrid className="h-4 w-4 text-[#7a7b9f]" />
+              <LayoutGrid className="h-4 w-4 text-zinc-400" />
             )}
           </Button>
         </div>
@@ -386,11 +386,11 @@ export default function CouponsPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {paginatedVouchers.map((voucher) => (
-              <Card key={voucher.id} className="bg-[#131320] border-[#1a1b2d] p-6 space-y-4">
+              <Card key={voucher.id} className="bg-zinc-100 border-zinc-200 p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Ticket className="h-5 w-5 text-emerald-500" />
-                    <h3 className="font-semibold text-[#e5e2e9]">
+                    <h3 className="font-semibold text-zinc-500">
                       {voucher.establishment?.name || "Estabelecimento não disponível"}
                     </h3>
                   </div>
@@ -400,26 +400,26 @@ export default function CouponsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center text-[#7a7b9f] space-x-4">
+                  <div className="flex items-center text-zinc-400 space-x-4">
                     <MapPin className="h-4 w-4" />
                     <span className="text-sm">
                       {voucher.establishment?.address?.city || "Cidade"}/
                       {voucher.establishment?.address?.state || "Estado"}
                     </span>
                   </div>
-                  <div className="flex items-center text-[#7a7b9f] space-x-4">
+                  <div className="flex items-center text-zinc-400 space-x-4">
                     <Clock className="h-4 w-4" />
                     <span className="text-sm">
                       {formatExpirationTime(voucher.expiresAt)}
                     </span>
                   </div>
-                  <div className="flex items-center text-[#7a7b9f] space-x-4">
+                  <div className="flex items-center text-zinc-400 space-x-4">
                     <Info className="h-4 w-4" />
                     <span className="text-sm">
                       {voucher.voucherDescription || "Sem descrição"}
                     </span>
                   </div>
-                  <div className="flex items-center text-[#7a7b9f] space-x-4">
+                  <div className="flex items-center text-zinc-400 space-x-4">
                     <Users className="h-4 w-4" />
                     <span className="text-sm">
                       {voucher.usageLimit || "Sem limite"}
@@ -430,22 +430,22 @@ export default function CouponsPage() {
                 <div className="relative pb-1">
                   {/* Linha pontilhada decorativa */}
                   <div className="absolute  h-4 flex justify-between items-center left-[-33px] right-[-33px]" >
-                    <div className="w-4 h-4 bg-[#0F0F1A] rounded-full" />
+                    <div className="w-4 h-4 bg-white rounded-full" />
                     <div className="flex-1 border-t-2 border-dashed border-[#0F0F1A] mx-2" />
-                    <div className="w-4 h-4 bg-[#0F0F1A] rounded-full" />
+                    <div className="w-4 h-4 bg-white rounded-full" />
                   </div>
                 </div>
 
                 <div className="mt-4 pt-4">
                   <div className="text-center">
-                    <p className="text-sm text-[#7a7b9f] mb-1">Código do Voucher</p>
-                    <p className="text-2xl font-bold text-[#7435db]">{voucher.code}</p>
+                    <p className="text-sm text-zinc-400 mb-1">Código do Voucher</p>
+                    <p className="text-2xl font-bold text-zinc-500">{voucher.code}</p>
                   </div>
                 </div>
 
                 <div className="flex flex-row gap-4 justify-between">
                   <div className="mt-2">
-                    <p className="text-sm text-[#7a7b9f]">Desconto:</p>
+                    <p className="text-sm text-zinc-400">Desconto:</p>
                     <p className="text-lg font-semibold text-emerald-500">
                       {voucher.establishment?.discountValue || "Não disponível"}
                     </p>
@@ -453,8 +453,8 @@ export default function CouponsPage() {
                   <div>
                     {voucher.status === "used" && voucher.usedAt && (
                     <div className="mt-2">
-                      <p className="text-sm text-[#7a7b9f]">Utilizado em:</p>
-                      <p className="text-sm font-semibold text-[#7a7b9f]">
+                      <p className="text-sm text-zinc-400">Utilizado em:</p>
+                      <p className="text-sm font-semibold text-zinc-400">
                         {formatUsedDate(voucher.usedAt)}
                       </p>
                     </div>
@@ -475,7 +475,7 @@ export default function CouponsPage() {
                   size="icon"
                   onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
+                  className="bg-zinc-100 text-zinc-500 border-zinc-200"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -486,8 +486,8 @@ export default function CouponsPage() {
                     variant="outline"
                     size="icon"
                     onClick={() => handlePageChange(i + 1)}
-                    className={`bg-[#1a1b2d] border-[#131320] ${
-                      currentPage === i + 1 ? "text-primary" : "text-[#e5e2e9]"
+                    className={`bg-zinc-100 border-zinc-200 ${
+                      currentPage === i + 1 ? "text-primary" : "text-zinc-500"
                     }`}
                   >
                     {i + 1}
@@ -499,7 +499,7 @@ export default function CouponsPage() {
                   size="icon"
                   onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
+                  className="bg-zinc-100 text-zinc-500 border-zinc-200"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -546,7 +546,7 @@ export default function CouponsPage() {
                   size="icon"
                   onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
+                  className="bg-zinc-100 text-zinc-500 border-zinc-200"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -557,8 +557,8 @@ export default function CouponsPage() {
                     variant="outline"
                     size="icon"
                     onClick={() => handlePageChange(i + 1)}
-                    className={`bg-[#1a1b2d] border-[#131320] ${
-                      currentPage === i + 1 ? "text-primary" : "text-[#e5e2e9]"
+                    className={`bg-zinc-100 border-zinc-200 ${
+                      currentPage === i + 1 ? "text-primary" : "text-zinc-500"
                     }`}
                   >
                     {i + 1}
@@ -570,7 +570,7 @@ export default function CouponsPage() {
                   size="icon"
                   onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
+                  className="bg-zinc-100 text-zinc-500 border-zinc-200"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>

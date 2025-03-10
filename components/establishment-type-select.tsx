@@ -55,15 +55,15 @@ export function EstablishmentTypeSelect({
             value={selectedType}
             onValueChange={handleTypeChange}
           >
-            <SelectTrigger className="w-full bg-[#1a1b2d] border-[#131320]">
+            <SelectTrigger className="w-full bg-zinc-100 border-zinc-200">
               <SelectValue placeholder="Selecione o tipo" />
             </SelectTrigger>
-            <SelectContent className="bg-[#131320] border-[#1a1b2d]">
+            <SelectContent className="bg-zinc-100 border-zinc-200">
               {establishmentTypes.map((type) => (
                 <SelectItem 
                   key={type.id} 
                   value={type.id}
-                  className="hover:bg-[#1a1b2d] focus:bg-[#1a1b2d]"
+                  className="hover:bg-zinc-100 focus:bg-zinc-100"
                 >
                   {type.label}
                 </SelectItem>
@@ -81,15 +81,15 @@ export function EstablishmentTypeSelect({
               value={selectedCategory}
               onValueChange={handleCategoryChange}
             >
-              <SelectTrigger className="w-full bg-[#1a1b2d] border-[#131320]">
+              <SelectTrigger className="w-full bg-zinc-100 border-zinc-200">
                 <SelectValue placeholder="Selecione a categoria" />
               </SelectTrigger>
-              <SelectContent className="bg-[#131320] border-[#1a1b2d]">
+              <SelectContent className="bg-zinc-100 border-zinc-200">
                 {getCategories().map((category) => (
                   <SelectItem 
                     key={category} 
                     value={category}
-                    className="hover:bg-[#1a1b2d] focus:bg-[#1a1b2d]"
+                    className="hover:bg-zinc-100 focus:bg-zinc-100"
                   >
                     {category}
                   </SelectItem>

@@ -79,7 +79,7 @@ export function AddressForm({ onChange, defaultValues }: AddressFormProps) {
           }}
           placeholder="00000-000"
           maxLength={9}
-          className="col-span-3 bg-[#1a1b2d] border-[#131320]"
+          className="col-span-3 bg-zinc-100 border-zinc-200"
           disabled={loading}
         />
       </div>
@@ -92,7 +92,7 @@ export function AddressForm({ onChange, defaultValues }: AddressFormProps) {
           id="street"
           value={address.street}
           onChange={(e) => handleChange("street", e.target.value)}
-          className="col-span-3 bg-[#1a1b2d] border-[#131320]"
+          className="col-span-3 bg-zinc-100 border-zinc-200"
           disabled={loading}
         />
       </div>
@@ -105,7 +105,7 @@ export function AddressForm({ onChange, defaultValues }: AddressFormProps) {
           id="number"
           value={address.number}
           onChange={(e) => handleChange("number", e.target.value)}
-          className="col-span-1 bg-[#1a1b2d] border-[#131320]"
+          className="col-span-1 bg-zinc-100 border-zinc-200"
         />
         <Label htmlFor="complement" className="text-right">
           Complemento
@@ -114,7 +114,7 @@ export function AddressForm({ onChange, defaultValues }: AddressFormProps) {
           id="complement"
           value={address.complement}
           onChange={(e) => handleChange("complement", e.target.value)}
-          className="col-span-1 bg-[#1a1b2d] border-[#131320]"
+          className="col-span-1 bg-zinc-100 border-zinc-200"
         />
       </div>
 
@@ -126,7 +126,7 @@ export function AddressForm({ onChange, defaultValues }: AddressFormProps) {
           id="neighborhood"
           value={address.neighborhood}
           onChange={(e) => handleChange("neighborhood", e.target.value)}
-          className="col-span-3 bg-[#1a1b2d] border-[#131320]"
+          className="col-span-3 bg-zinc-100 border-zinc-200"
           disabled={loading}
         />
       </div>
@@ -139,14 +139,14 @@ export function AddressForm({ onChange, defaultValues }: AddressFormProps) {
           id="city"
           value={address.city}
           onChange={(e) => handleChange("city", e.target.value)}
-          className="col-span-2 bg-[#1a1b2d] border-[#131320]"
+          className="col-span-2 bg-zinc-100 border-zinc-200"
           disabled={loading}
         />
         <Input
           id="state"
           value={address.state}
           onChange={(e) => handleChange("state", e.target.value)}
-          className="col-span-1 bg-[#1a1b2d] border-[#131320]"
+          className="col-span-1 bg-zinc-100 border-zinc-200"
           disabled={loading}
           maxLength={2}
         />

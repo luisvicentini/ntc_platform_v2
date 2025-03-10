@@ -72,21 +72,21 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userData, user, theme = "da
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]" align="end">
+      <DropdownMenuContent className="w-56 bg-zinc-50 border-zinc-200 text-zinc-500" align="end">
         <div className="flex items-center justify-start gap-2 p-2">
           <div className="flex flex-col space-y-1 leading-none">
             <p className="font-medium">{userData.displayName || user?.displayName || "Nome não informado"}</p>
-            <p className="text-sm text-[#7a7b9f]">{userData.email || user?.email || "Email não informado"}</p>
+            <p className="text-sm text-zinc-400">{userData.email || user?.email || "Email não informado"}</p>
           </div>
         </div>
         <DropdownMenuSeparator />
         <DropdownMenuItem>
           <Link href={`/${user?.userType}/profile`}>Editar Perfil</Link>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
+        {/* <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
           {theme === "dark" ? <SunIcon className="mr-2 h-4 w-4" /> : <MoonIcon className="mr-2 h-4 w-4" />}
           <span>{theme === "dark" ? "Modo Claro" : "Modo Escuro"}</span>
-        </DropdownMenuItem>
+        </DropdownMenuItem> */}
         <DropdownMenuSeparator />
         <DropdownMenuItem 
           className="text-red-500 cursor-pointer" 
@@ -108,14 +108,14 @@ const NotificationButton: React.FC<{ isOpen: boolean; onOpenChange: (open: boole
 }) => (
   <Sheet open={isOpen} onOpenChange={onOpenChange}>
     <SheetTrigger asChild>
-      <Button variant="ghost" size="icon" className="relative">
-        <Bell className="h-5 w-5 text-[#e5e2e9]" />
+      <Button variant="ghost" size="sm" className="relative hover:bg-zinc-100 hover:text-zinc-500">
+        <Bell className="h-5 w-5 text-zinc-500" />
         {notifications.length > 0 && <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" />}
       </Button>
     </SheetTrigger>
-    <SheetContent className="w-[400px] bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]">
+    <SheetContent className="w-[400px] bg-zinc-100 border-zinc-200 text-zinc-500">
       <SheetHeader>
-        <SheetTitle className="text-[#e5e2e9]">Notificações</SheetTitle>
+        <SheetTitle className="text-zinc-500">Notificações</SheetTitle>
       </SheetHeader>
       <div className="mt-6 space-y-4">
         {notifications.map((notification) => (
@@ -127,7 +127,7 @@ const NotificationButton: React.FC<{ isOpen: boolean; onOpenChange: (open: boole
             onRate={() => removeNotification(notification.id)}
           />
         ))}
-        {notifications.length === 0 && <p className="text-center text-[#7a7b9f]">Não há notificações no momento.</p>}
+        {notifications.length === 0 && <p className="text-center text-zinc-400">Não há notificações no momento.</p>}
       </div>
     </SheetContent>
   </Sheet>
@@ -172,7 +172,7 @@ export function Header({ menuItems = [] }: HeaderProps) {
   return (
     <>
       {/* Desktop Header */}
-      <header className="border-b bg-[#0f0f1a] border-[#131320] hidden md:block">
+      <header className="border-b bg-white border-zinc-200 hidden md:block">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             <Logo />
@@ -185,8 +185,8 @@ export function Header({ menuItems = [] }: HeaderProps) {
                     className={cn(
                       "flex items-center space-x-2",
                       pathname === item.href
-                        ? "bg-[#1a1b2d] text-[#7435db]"
-                        : "text-[#e5e2e9] hover:bg-[#1a1b2d] hover:text-[#7435db]",
+                        ? "bg-zinc-100 text-zinc-500"
+                        : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-500",
                     )}
                   >
                     {item.icon}
@@ -215,7 +215,7 @@ export function Header({ menuItems = [] }: HeaderProps) {
       </header>
 
       {/* Mobile Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 border-t bg-[#0f0f1a] border-[#131320] md:hidden z-50">
+      <footer className="fixed bottom-0 left-0 right-0 border-t bg-white border-zinc-200 md:hidden z-50">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
             <Logo />
@@ -226,7 +226,7 @@ export function Header({ menuItems = [] }: HeaderProps) {
                   <Button
                     variant="ghost"
                     size="icon"
-                    className={cn(pathname === item.href ? "bg-[#1a1b2d] text-[#7435db]" : "text-[#e5e2e9]")}
+                    className={cn(pathname === item.href ? "bg-zinc-100 text-zinc-500" : "text-zinc-500")}
                   >
                     {item.icon}
                   </Button>

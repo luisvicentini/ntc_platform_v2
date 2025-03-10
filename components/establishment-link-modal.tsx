@@ -176,7 +176,7 @@ export function EstablishmentLinkModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#131320] text-[#e5e2e9] border-[#1a1b2d] max-w-4xl">
+      <DialogContent className="bg-zinc-100 text-zinc-500 border-zinc-200 max-w-4xl">
         <DialogHeader>
           <DialogTitle>Vincular Estabelecimentos - {userName}</DialogTitle>
         </DialogHeader>
@@ -185,7 +185,7 @@ export function EstablishmentLinkModal({
           {/* Coluna 1 - Estabelecimentos Disponíveis */}
           <div className="space-y-4">
             <Label>Estabelecimentos Disponíveis</Label>
-            <div className="border border-[#1a1b2d] rounded-md p-4 h-[300px] overflow-y-auto">
+            <div className="border border-zinc-200 rounded-md p-4 h-[300px] overflow-y-auto">
               {availableEstablishments
                 .filter(est => !selectedEstablishments.some(s => s.id === est.id))
                 .map((establishment) => (
@@ -216,7 +216,7 @@ export function EstablishmentLinkModal({
           {/* Coluna 2 - Estabelecimentos Selecionados */}
           <div className="space-y-4">
             <Label>Estabelecimentos Selecionados</Label>
-            <div className="border border-[#1a1b2d] rounded-md p-4 h-[300px] overflow-y-auto">
+            <div className="border border-zinc-200 rounded-md p-4 h-[300px] overflow-y-auto">
               {selectedEstablishments.map((establishment) => (
                 <div key={establishment.id} className="flex items-center justify-between py-2">
                   <span>{establishment.name}</span>
@@ -240,13 +240,13 @@ export function EstablishmentLinkModal({
             variant="outline" 
             onClick={onClose} 
             disabled={loading}
-            className="bg-[#1a1b2d] border-[#131320]"
+            className="bg-zinc-100 border-zinc-200"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleSave}
-            className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
+            className="bg-primary hover:bg-[#a85fdd] text-white"
             disabled={loading}
           >
             {loading ? "Salvando..." : "Salvar"}

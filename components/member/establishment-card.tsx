@@ -17,7 +17,7 @@ export function EstablishmentCard({ establishment, onGetVoucher }: Establishment
   }
 
   return (
-    <Card className="bg-[#1a1b2d] border-[#131320] overflow-hidden">
+    <Card className="bg-zinc-100 border-zinc-200 overflow-hidden">
       <div className="relative h-48">
         <img
           src={establishment.images?.[0] || "/placeholder.svg"}
@@ -28,15 +28,15 @@ export function EstablishmentCard({ establishment, onGetVoucher }: Establishment
       <CardHeader className="p-4">
         <div className="flex justify-between items-start">
           <div>
-            <h3 className="text-lg font-semibold text-[#e5e2e9]">
+            <h3 className="text-lg font-semibold text-zinc-500">
               {establishment.name || "Sem nome"}
             </h3>
-            <p className="text-sm text-[#7a7b9f]">
+            <p className="text-sm text-zinc-400">
               {establishment.address?.city || "Cidade não informada"}, 
               {establishment.address?.state || "Estado não informado"}
             </p>
           </div>
-          <div className="flex items-center space-x-2 text-[#e5e2e9]">
+          <div className="flex items-center space-x-2 text-zinc-500">
             <Star className="h-4 w-4 text-yellow-400" />
             <span>{formatRating(establishment.rating)}</span>
             {establishment.isFeatured && <FeaturedBadge />}
@@ -48,13 +48,13 @@ export function EstablishmentCard({ establishment, onGetVoucher }: Establishment
           {establishment.description || "Sem descrição"}
         </p>
         <div className="flex justify-between items-center">
-          <div className="text-sm text-[#7a7b9f]">
+          <div className="text-sm text-zinc-400">
             {establishment.type?.category || "Categoria não informada"} • 
             {establishment.type?.type || "Tipo não informado"}
           </div>
           <Button
             onClick={onGetVoucher}
-            className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
+            className="bg-primary hover:bg-[#a85fdd] text-white"
             size="sm"
           >
             <Ticket className="h-4 w-4 mr-1" />

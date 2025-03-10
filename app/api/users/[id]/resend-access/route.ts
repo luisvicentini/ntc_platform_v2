@@ -47,7 +47,7 @@ export async function POST(
     await transporter.sendMail({
       from: process.env.SMTP_FROM,
       to: userData.email,
-      subject: "Ative sua conta na plataforma NTC",
+      subject: "Ative sua conta na Passport Gourmet Orlando",
       html: `
         <!DOCTYPE html>
         <html>
@@ -71,12 +71,12 @@ export async function POST(
           <body>
             <div class="container">
               <div class="header">
-                <h1>Bem-vindo à plataforma NTC!</h1>
+                <h1>Bem-vindo à Passport Gourmet Orlando!</h1>
               </div>
               
               <p>Olá ${userData.displayName},</p>
               
-              <p>Você foi convidado para acessar a plataforma NTC como <strong>${
+              <p>Você foi convidado para acessar a Passport Gourmet Orlando como <strong>${
                 userData.userType === "master" ? "Usuário Master" :
                 userData.userType === "partner" ? "Parceiro" :
                 userData.userType === "member" ? "Assinante" :

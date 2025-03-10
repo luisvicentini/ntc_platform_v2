@@ -102,10 +102,10 @@ export function RegisterForm({ onSuccess, loading: parentLoading }: RegisterForm
       <div className="mb-8">
         <Logo />
       </div>
-      <Card className="w-[400px] bg-[#131320] text-[#e5e2e9] border-[#1a1b2d]">
+      <Card className="w-[400px] bg-zinc-100 text-zinc-500 border-zinc-200">
         <CardHeader>
           <CardTitle>Crie sua Conta</CardTitle>
-          <CardDescription className="text-[#7a7b9f]">
+          <CardDescription className="text-zinc-400">
             Digite seus dados pessoais para criar sua conta
           </CardDescription>
         </CardHeader>
@@ -118,7 +118,7 @@ export function RegisterForm({ onSuccess, loading: parentLoading }: RegisterForm
               name="name"
               type="text"
               required
-              className="mt-1 bg-[#1a1b2d] border-[#131320]"
+              className="mt-1 bg-zinc-100 border-zinc-200"
             />
           </div>
 
@@ -129,7 +129,7 @@ export function RegisterForm({ onSuccess, loading: parentLoading }: RegisterForm
               name="email"
               type="email"
               required
-              className="mt-1 bg-[#1a1b2d] border-[#131320]"
+              className="mt-1 bg-zinc-100 border-zinc-200"
             />
           </div>
 
@@ -140,7 +140,7 @@ export function RegisterForm({ onSuccess, loading: parentLoading }: RegisterForm
               value={phone}
               onChange={(value) => setPhone(value)}
               required
-              className="mt-1 bg-[#1a1b2d] border-[#131320]"
+              className="mt-1 bg-zinc-100 border-zinc-200"
             />
           </div>
 
@@ -151,7 +151,7 @@ export function RegisterForm({ onSuccess, loading: parentLoading }: RegisterForm
               name="city"
               type="text"
               required
-              className="mt-1 bg-[#1a1b2d] border-[#131320]"
+              className="mt-1 bg-zinc-100 border-zinc-200"
             />
           </div>
 
@@ -172,9 +172,9 @@ export function RegisterForm({ onSuccess, loading: parentLoading }: RegisterForm
         
         </CardContent>
       </Card>
-      <div className="text-center text-sm text-ntc-gray mt-4">
+      <div className="text-center text-sm text-zinc-500 mt-4">
         Já tem uma conta?{" "}
-        <a href="/login" className="text-ntc-purple hover:text-ntc-purple-dark underline underline-offset-4">
+        <a href="/login" className="text-custom-primary hover:text-custom-primary-dark underline underline-offset-4">
           Fazer login
         </a>
       </div>

@@ -161,11 +161,11 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-[400px] sm:w-[540px] bg-[#131320] border-l-[#1a1b2d] flex flex-col p-0">
-        <div className="p-6 border-b border-[#1a1b2d]">
+      <SheetContent className="w-[400px] sm:w-[540px] bg-zinc-100 border-l-[#1a1b2d] flex flex-col p-0">
+        <div className="p-6 border-b border-zinc-200">
           <SheetHeader>
-            <SheetTitle className="text-[#e5e2e9]">{establishment.name}</SheetTitle>
-            <SheetDescription className="text-[#7a7b9f]">
+            <SheetTitle className="text-zinc-500">{establishment.name}</SheetTitle>
+            <SheetDescription className="text-zinc-400">
               {establishment.type.type} • {establishment.address.city}
             </SheetDescription>
           </SheetHeader>
@@ -236,45 +236,45 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             </div>
           </div>
 
-          <div className="bg-[#1a1b2d] p-4 rounded-lg flex items-center space-x-4">
+          <div className="bg-zinc-100 p-4 rounded-lg flex items-center space-x-4">
             <Ticket className="h-8 w-8 text-emerald-500" />
             <div>
-              <p className="text-[#e5e2e9] font-semibold">{establishment.voucherDescription}</p>
+              <p className="text-zinc-500 font-semibold">{establishment.voucherDescription}</p>
               <p className="text-xl font-bold text-emerald-500">{establishment.discountValue} de desconto</p>
             </div>
           </div>
 
           <div className="space-y-4">
-            <div className="flex items-center text-[#e5e2e9] space-x-2">
+            <div className="flex items-center text-zinc-500 space-x-2">
               <MapPin className="h-4 w-4" />
               <span>{establishment.address.street}, {establishment.address.number} - {establishment.address.neighborhood}, {establishment.address.city}/{establishment.address.state}</span>
             </div>
-            <div className="flex items-center text-[#e5e2e9] space-x-2">
+            <div className="flex items-center text-zinc-500 space-x-2">
               <Clock className="h-4 w-4" />
               <span>{establishment.openingHours}</span>
             </div>
-            <div className="flex items-center text-[#e5e2e9] space-x-2">
+            <div className="flex items-center text-zinc-500 space-x-2">
               <Phone className="h-4 w-4" />
               <span>+{establishment.phone.ddi} {establishment.phone.phone}</span>
             </div>
           </div>
 
           <div className="space-y-2">
-            <h3 className="font-semibold text-[#e5e2e9]">Descrição</h3>
-            <p className="text-[#7a7b9f]">{establishment.description}</p>
+            <h3 className="font-semibold text-zinc-500">Descrição</h3>
+            <p className="text-zinc-400">{establishment.description}</p>
           </div>
 
           <div className="space-y-2">
-            <h3 className="font-semibold text-[#e5e2e9]">Regras e Limites</h3>
-            <p className="text-[#7a7b9f]">{establishment.discountRules}</p>
-            <p className="text-[#7a7b9f]">Limite de uso: {establishment.usageLimit}</p>
+            <h3 className="font-semibold text-zinc-500">Regras e Limites</h3>
+            <p className="text-zinc-400">{establishment.discountRules}</p>
+            <p className="text-zinc-400">Limite de uso: {establishment.usageLimit}</p>
           </div>
 
           {currentVoucher && (
-            <Card className="bg-[#1a1b2d] border-[#a85fdd]">
+            <Card className="bg-zinc-100 border-[#a85fdd]">
               <CardContent className="p-6 text-center">
                 <h3 className="text-lg font-semibold text-[#e1e1e6] mb-2">Seu Voucher</h3>
-                <p className="text-3xl font-bold text-[#a85fdd] mb-2">{currentVoucher.code}</p>
+                <p className="text-3xl font-bold text-primary mb-2">{currentVoucher.code}</p>
                 {timeLeft > 0 && (
                   <p className="text-sm text-muted-foreground">
                     Expira em: {formatTimeLeft()}
@@ -285,7 +285,7 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
           )}
         </div>
 
-        <div className="p-6 border-t border-[#1a1b2d] mt-auto">
+        <div className="p-6 border-t border-zinc-200 mt-auto">
           {!currentVoucher && (
             <div className="space-y-2">
               <Button 

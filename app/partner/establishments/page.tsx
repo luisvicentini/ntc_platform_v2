@@ -62,12 +62,12 @@ export default function EstablishmentsPage() {
     <div className="container py-6">
       <div className="flex justify-between items-center mb-6">
         <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#7a7b9f]" />
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-zinc-400" />
           <Input
             placeholder="Buscar estabelecimentos..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8 bg-[#1a1b2d] border-[#131320]"
+            className="pl-8 bg-zinc-100 border-zinc-200"
           />
         </div>
         <div className="flex gap-2">
@@ -81,7 +81,7 @@ export default function EstablishmentsPage() {
           )}
           <Button
             onClick={() => handleOpenModal()}
-            className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
+            className="bg-primary hover:bg-[#a85fdd] text-white"
           >
             <Plus className="mr-2 h-4 w-4" /> Novo Estabelecimento
           </Button>

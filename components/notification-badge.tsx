@@ -31,25 +31,25 @@ export function NotificationBadge({ userName }: NotificationBadgeProps) {
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5 text-[#e5e2e9]" />
+          <Bell className="h-5 w-5 text-zinc-500" />
           {showNotification && <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" />}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-80 bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]">
+      <PopoverContent className="w-80 bg-zinc-100 border-zinc-200 text-zinc-500">
         <div className="space-y-4">
           <h4 className="font-medium text-lg">Avalie sua experiência</h4>
-          <p className="text-[#7a7b9f]">
+          <p className="text-zinc-400">
             Olá {userName}, você gerou um voucher recentemente. Que tal avaliar o estabelecimento?
           </p>
           <div className="flex justify-between">
             <Button
               onClick={handleDismiss}
               variant="outline"
-              className="bg-[#1a1b2d] text-[#e5e2e9] border-[#7435db] hover:bg-[#7435db] hover:text-[#e5e2e9]"
+              className="bg-zinc-100 text-zinc-500 border-[#7435db] hover:bg-primary hover:text-zinc-500"
             >
               Avaliar depois
             </Button>
-            <Button onClick={handleDismiss} className="bg-[#7435db] text-[#e5e2e9] hover:bg-[#a85fdd]">
+            <Button onClick={handleDismiss} className="bg-primary text-zinc-500 hover:bg-[#a85fdd]">
               Avaliar agora
             </Button>
           </div>

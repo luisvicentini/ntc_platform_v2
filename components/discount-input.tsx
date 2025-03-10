@@ -84,19 +84,19 @@ export function DiscountInput({ value, onChange, label = "Valor do Desconto" }: 
           value={type}
           onValueChange={(value: DiscountType) => handleTypeChange(value)}
         >
-          <SelectTrigger className="w-[180px] bg-[#1a1b2d] border-[#131320]">
+          <SelectTrigger className="w-[180px] bg-zinc-100 border-zinc-200">
             <SelectValue placeholder="Tipo de desconto" />
           </SelectTrigger>
-          <SelectContent className="bg-[#131320] border-[#1a1b2d]">
+          <SelectContent className="bg-zinc-100 border-zinc-200">
             <SelectItem 
               value="percentage"
-              className="hover:bg-[#1a1b2d] focus:bg-[#1a1b2d]"
+              className="hover:bg-zinc-100 focus:bg-zinc-100"
             >
               Porcentagem
             </SelectItem>
             <SelectItem 
               value="fixed"
-              className="hover:bg-[#1a1b2d] focus:bg-[#1a1b2d]"
+              className="hover:bg-zinc-100 focus:bg-zinc-100"
             >
               Valor Fixo
             </SelectItem>
@@ -107,10 +107,10 @@ export function DiscountInput({ value, onChange, label = "Valor do Desconto" }: 
           <Input
             value={amount}
             onChange={(e) => handleAmountChange(e.target.value)}
-            className="pl-8 bg-[#1a1b2d] border-[#131320]"
+            className="pl-8 bg-zinc-100 border-zinc-200"
             placeholder={type === "percentage" ? "10" : "50.00"}
           />
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[#7a7b9f]">
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400">
             {type === "percentage" ? "%" : "R$"}
           </span>
         </div>

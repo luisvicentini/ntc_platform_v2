@@ -56,7 +56,7 @@ export function PlanSelectionDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]">
+      <DialogContent className="bg-zinc-100 border-zinc-200 text-zinc-500">
         <DialogHeader>
           <DialogTitle>Selecione o Plano</DialogTitle>
         </DialogHeader>
@@ -64,11 +64,11 @@ export function PlanSelectionDialog({
           {prices.map((price) => (
             <div
               key={price.id}
-              className="flex items-center justify-between p-4 rounded-lg border border-[#1a1b2d]"
+              className="flex items-center justify-between p-4 rounded-lg border border-zinc-200"
             >
               <div>
                 <h3 className="font-medium">{price.product.name}</h3>
-                <p className="text-sm text-[#7a7b9f]">
+                <p className="text-sm text-zinc-400">
                   {formatPriceDisplay(price)}
                 </p>
               </div>
@@ -77,7 +77,7 @@ export function PlanSelectionDialog({
                   onSelectPlan(price.id, price)
                   onOpenChange(false)
                 }}
-                className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
+                className="bg-primary hover:bg-[#a85fdd] text-white"
               >
                 Selecionar
               </Button>

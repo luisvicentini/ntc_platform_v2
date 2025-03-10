@@ -51,15 +51,15 @@ export function BusinessHours({ value, onChange, label = "Horário de Funcioname
           value={startTime}
           onValueChange={(value) => handleTimeChange("start", value)}
         >
-          <SelectTrigger className="w-[180px] bg-[#1a1b2d] border-[#131320]">
+          <SelectTrigger className="w-[180px] bg-zinc-100 border-zinc-200">
             <SelectValue placeholder="Horário inicial" />
           </SelectTrigger>
-          <SelectContent className="bg-[#131320] border-[#1a1b2d]">
+          <SelectContent className="bg-zinc-100 border-zinc-200">
             {timeOptions.map((time) => (
               <SelectItem 
                 key={time} 
                 value={time}
-                className="hover:bg-[#1a1b2d] focus:bg-[#1a1b2d]"
+                className="hover:bg-zinc-100 focus:bg-zinc-100"
               >
                 {time}
               </SelectItem>
@@ -67,21 +67,21 @@ export function BusinessHours({ value, onChange, label = "Horário de Funcioname
           </SelectContent>
         </Select>
 
-        <span className="text-[#7a7b9f]">às</span>
+        <span className="text-zinc-400">às</span>
 
         <Select
           value={endTime}
           onValueChange={(value) => handleTimeChange("end", value)}
         >
-          <SelectTrigger className="w-[180px] bg-[#1a1b2d] border-[#131320]">
+          <SelectTrigger className="w-[180px] bg-zinc-100 border-zinc-200">
             <SelectValue placeholder="Horário final" />
           </SelectTrigger>
-          <SelectContent className="bg-[#131320] border-[#1a1b2d]">
+          <SelectContent className="bg-zinc-100 border-zinc-200">
             {timeOptions.map((time) => (
               <SelectItem 
                 key={time} 
                 value={time}
-                className="hover:bg-[#1a1b2d] focus:bg-[#1a1b2d]"
+                className="hover:bg-zinc-100 focus:bg-zinc-100"
               >
                 {time}
               </SelectItem>

@@ -194,7 +194,7 @@ export function SubscriptionManagementModal({
         {isOpen && (
           <div 
             ref={datePickerRef}
-            className="absolute z-50 mt-1 bg-[#1a1b2d] rounded-md shadow-lg"
+            className="absolute z-50 mt-1 bg-zinc-100 rounded-md shadow-lg"
           >
             <Calendar
               mode="single"
@@ -207,7 +207,7 @@ export function SubscriptionManagementModal({
               }}
               disabled={(date) => date < new Date()}
               initialFocus
-              className="bg-[#1a1b2d] rounded-md"
+              className="bg-zinc-100 rounded-md"
             />
           </div>
         )}
@@ -217,20 +217,20 @@ export function SubscriptionManagementModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl bg-[#131320] text-white p-0">
-        <DialogHeader className="p-6 border-b border-[#1a1b2d]">
+      <DialogContent className="max-w-4xl bg-zinc-100 text-white p-0">
+        <DialogHeader className="p-6 border-b border-zinc-200">
           <DialogTitle className="text-xl font-semibold">Vincular Assinante a uma assinatura de parceiro</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-6 p-6">
           {/* Coluna 1: Parceiros Disponíveis */}
           <div>
-            <Label className="text-gray-400 mb-2">Parceiros Disponíveis</Label>
+            <Label className="text-zinc-400 mb-2">Parceiros Disponíveis</Label>
             <Input
               placeholder="Buscar parceiro..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="mb-4 bg-[#1a1b2d] text-white"
+              className="mb-4 bg-zinc-100 text-white"
             />
             <div className="space-y-2 max-h-[400px] overflow-y-auto">
               {availablePartners
@@ -240,7 +240,7 @@ export function SubscriptionManagementModal({
                 .map((partner) => (
                   <div
                     key={partner.id}
-                    className="flex items-center justify-between p-3 bg-[#1a1b2d] rounded-lg"
+                    className="flex items-center justify-between p-3 bg-zinc-100 rounded-lg"
                   >
                     <span>{partner.displayName}</span>
                     <Button
@@ -258,20 +258,20 @@ export function SubscriptionManagementModal({
 
           {/* Coluna 2: Assinaturas */}
           <div>
-            <Label className="text-gray-400 mb-2">Assinaturas</Label>
+            <Label className="text-zinc-400 mb-2">Assinaturas</Label>
             <div className="space-y-4 max-h-[400px] overflow-y-auto">
               {/* Assinaturas Ativas */}
               {activeSubscriptions.length > 0 ? (
                 <div className="space-y-2">
-                  <Label className="text-sm text-gray-500">Assinaturas Ativas</Label>
+                  <Label className="text-sm text-zinc-500">Assinaturas Ativas</Label>
                   {activeSubscriptions.map((partner) => (
                     <div
                       key={partner.id}
-                      className="flex items-center justify-between p-3 bg-[#1a1b2d] rounded-lg"
+                      className="flex items-center justify-between p-3 bg-zinc-100 rounded-lg"
                     >
                       <div className="flex flex-col gap-1">
                         <span className="text-white">{partner.displayName}</span>
-                        <span className="text-xs text-gray-400">
+                        <span className="text-xs text-zinc-400">
                           Expira em: {format(new Date(partner.expirationDate), "dd/MM/yyyy", { locale: ptBR })}
                         </span>
                       </div>
@@ -288,7 +288,7 @@ export function SubscriptionManagementModal({
                   ))}
                 </div>
               ) : (
-                <div className="text-center text-gray-500 py-4">
+                <div className="text-center text-zinc-500 py-4">
                   Nenhuma assinatura ativa
                 </div>
               )}
@@ -296,11 +296,11 @@ export function SubscriptionManagementModal({
               {/* Novas Assinaturas */}
               {newSubscriptions.length > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-sm text-gray-500">Novas Assinaturas</Label>
+                  <Label className="text-sm text-zinc-500">Novas Assinaturas</Label>
                   {newSubscriptions.map((partner) => (
                     <div
                       key={partner.id}
-                      className="flex items-center justify-between p-3 bg-[#1a1b2d] rounded-lg"
+                      className="flex items-center justify-between p-3 bg-zinc-100 rounded-lg"
                     >
                       <div className="flex flex-col gap-1 w-full">
                         <span>{partner.displayName}</span>
@@ -325,11 +325,11 @@ export function SubscriptionManagementModal({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 p-6 border-t border-gray-800">
+        <div className="flex justify-end gap-3 p-6 border-t border-zinc-800">
           <Button
             variant="outline"
             onClick={onClose}
-            className="bg-transparent border-gray-800 text-white hover:bg-[#2D2C32]"
+            className="bg-transparent border-zinc-800 text-white hover:bg-[#2D2C32]"
           >
             Cancelar
           </Button>

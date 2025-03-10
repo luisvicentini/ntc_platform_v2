@@ -46,10 +46,10 @@ export function DeleteUserModal({ isOpen, onClose, user, onConfirm }: DeleteUser
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#131320] border-[#1a1b2d] text-[#e5e2e9] sm:max-w-[425px]">
+      <DialogContent className="bg-zinc-100 border-zinc-200 text-zinc-500 sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Confirmar Exclusão</DialogTitle>
-          <DialogDescription className="text-[#7a7b9f]">
+          <DialogDescription className="text-zinc-400">
             Você está prestes a excluir o usuário:
           </DialogDescription>
         </DialogHeader>
@@ -60,13 +60,13 @@ export function DeleteUserModal({ isOpen, onClose, user, onConfirm }: DeleteUser
             <p><strong>Tipo:</strong> {user.userType}</p>
           </div>
           <div className="space-y-2">
-            <p className="text-[#7a7b9f]">
+            <p className="text-zinc-400">
               Digite DELETE_USER para confirmar a exclusão:
             </p>
             <Input
               value={confirmText}
               onChange={(e) => setConfirmText(e.target.value)}
-              className="bg-[#1a1b2d] border-[#131320]"
+              className="bg-zinc-100 border-zinc-200"
               placeholder="DELETE_USER"
               disabled={isLoading}
             />
@@ -77,7 +77,7 @@ export function DeleteUserModal({ isOpen, onClose, user, onConfirm }: DeleteUser
             variant="outline"
             onClick={onClose}
             disabled={isLoading}
-            className="bg-[#1a1b2d] text-[#e5e2e9] border-[#131320] hover:bg-[#1a1b2d]/80"
+            className="bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-100/80"
           >
             Cancelar
           </Button>

@@ -101,17 +101,17 @@ function ResetPasswordForm() {
       <div className="container flex flex-col items-center justify-center min-h-screen py-6">
         <div className="mb-8">
           <Image
-            src="/ntc_logo.svg"
+            src="/logo.svg"
             alt="NTC Logo"
             width={120}
             height={120}
             className="dark:invert"
           />
         </div>
-        <Card className="w-[400px] bg-[#131320] text-[#e5e2e9] border-[#1a1b2d]">
+        <Card className="w-[400px] bg-zinc-100 text-zinc-500 border-zinc-200">
           <CardHeader>
             <CardTitle>Link Inválido</CardTitle>
-            <CardDescription className="text-[#7a7b9f]">
+            <CardDescription className="text-zinc-400">
               O link de recuperação é inválido ou expirou.
             </CardDescription>
           </CardHeader>
@@ -124,17 +124,17 @@ function ResetPasswordForm() {
     <div className="container flex flex-col items-center justify-center min-h-screen py-6">
       <div className="mb-8">
         <Image
-          src="/ntc_logo.svg"
+          src="/logo.svg"
           alt="NTC Logo"
           width={120}
           height={120}
           className="dark:invert"
         />
       </div>
-      <Card className="w-[400px] bg-[#131320] text-[#e5e2e9] border-[#1a1b2d]">
+      <Card className="w-[400px] bg-zinc-100 text-zinc-500 border-zinc-200">
         <CardHeader>
           <CardTitle>Redefinir Senha</CardTitle>
-          <CardDescription className="text-[#7a7b9f]">
+          <CardDescription className="text-zinc-400">
             Digite sua nova senha
           </CardDescription>
         </CardHeader>
@@ -144,19 +144,19 @@ function ResetPasswordForm() {
               <div className="space-y-2">
                 <Label>Requisitos da senha:</Label>
                 <ul className="text-sm space-y-1">
-                  <li className={passwordValidation.length ? "text-green-500" : "text-[#7a7b9f]"}>
+                  <li className={passwordValidation.length ? "text-green-500" : "text-zinc-400"}>
                     • Mínimo de 8 caracteres
                   </li>
-                  <li className={passwordValidation.number ? "text-green-500" : "text-[#7a7b9f]"}>
+                  <li className={passwordValidation.number ? "text-green-500" : "text-zinc-400"}>
                     • Pelo menos um número
                   </li>
-                  <li className={passwordValidation.special ? "text-green-500" : "text-[#7a7b9f]"}>
+                  <li className={passwordValidation.special ? "text-green-500" : "text-zinc-400"}>
                     • Pelo menos um caractere especial
                   </li>
-                  <li className={passwordValidation.uppercase ? "text-green-500" : "text-[#7a7b9f]"}>
+                  <li className={passwordValidation.uppercase ? "text-green-500" : "text-zinc-400"}>
                     • Pelo menos uma letra maiúscula
                   </li>
-                  <li className={passwordValidation.lowercase ? "text-green-500" : "text-[#7a7b9f]"}>
+                  <li className={passwordValidation.lowercase ? "text-green-500" : "text-zinc-400"}>
                     • Pelo menos uma letra minúscula
                   </li>
                 </ul>
@@ -169,14 +169,14 @@ function ResetPasswordForm() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={`bg-[#1a1b2d] border-[#131320] ${!password || isPasswordValid ? "" : "border-red-500"}`}
+                    className={`bg-zinc-100 border-zinc-200 ${!password || isPasswordValid ? "" : "border-red-500"}`}
                     disabled={isLoading}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-[#7a7b9f] hover:text-[#e5e2e9]"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-zinc-400 hover:text-zinc-500"
                     onClick={() => setShowPassword(!showPassword)}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -191,14 +191,14 @@ function ResetPasswordForm() {
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`bg-[#1a1b2d] border-[#131320] ${!confirmPassword || passwordsMatch ? "" : "border-red-500"}`}
+                    className={`bg-zinc-100 border-zinc-200 ${!confirmPassword || passwordsMatch ? "" : "border-red-500"}`}
                     disabled={isLoading}
                   />
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-[#7a7b9f] hover:text-[#e5e2e9]"
+                    className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-zinc-400 hover:text-zinc-500"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                   >
                     {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -211,7 +211,7 @@ function ResetPasswordForm() {
             </div>
             <Button 
               type="submit" 
-              className="w-full bg-[#7435db] hover:bg-[#7435db]/80"
+              className="w-full bg-primary hover:bg-primary/80"
               disabled={isLoading}
             >
               {isLoading ? (
@@ -235,7 +235,7 @@ export default function ResetPasswordPage() {
   return (
     <Suspense fallback={
       <div className="container flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-[#7435db]" />
+        <Loader2 className="h-8 w-8 animate-spin text-zinc-500" />
       </div>
     }>
       <ResetPasswordForm />

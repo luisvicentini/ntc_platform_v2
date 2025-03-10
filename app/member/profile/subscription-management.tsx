@@ -22,7 +22,7 @@ const statusMap = {
   active: { label: 'Ativa', color: 'bg-green-500' },
   canceled: { label: 'Cancelada', color: 'bg-red-500' },
   incomplete: { label: 'Incompleta', color: 'bg-yellow-500' },
-  incomplete_expired: { label: 'Expirada', color: 'bg-[#7a7b9f]' },
+  incomplete_expired: { label: 'Expirada', color: 'bg-zinc-400' },
   past_due: { label: 'Atrasada', color: 'bg-orange-500' },
   trialing: { label: 'Teste', color: 'bg-blue-500' },
   unpaid: { label: 'Não paga', color: 'bg-red-500' },
@@ -214,10 +214,10 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
 
   if (loading) {
     return (
-      <Card className="bg-[#131320] border-[#1a1b2d]">
+      <Card className="bg-zinc-100 border-zinc-200">
         <CardContent className="p-6">
           <div className="flex items-center justify-center">
-            <p className="text-[#e5e2e9]">Carregando...</p>
+            <p className="text-zinc-500">Carregando...</p>
           </div>
         </CardContent>
       </Card>
@@ -225,26 +225,26 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
   }
 
   return (
-    <Card className="bg-[#131320] border-[#1a1b2d]">
+    <Card className="bg-zinc-100 border-zinc-200">
       <CardHeader>
-        <CardTitle className="text-[#e5e2e9]">Gestão de Assinatura</CardTitle>
+        <CardTitle className="text-zinc-500">Gestão de Assinatura</CardTitle>
       </CardHeader>
       <CardContent>
         {loading ? (
           <div className="text-center py-4">
-            <p className="text-[#7a7b9f]">Carregando...</p>
+            <p className="text-zinc-400">Carregando...</p>
           </div>
         ) : subscriptions.length > 0 ? (
           <>
             {/* Assinatura Ativa */}
             {activeSubscription && (
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-[#e5e2e9] mb-4">
+                <h3 className="text-lg font-semibold text-zinc-500 mb-4">
                   Assinatura Atual
                 </h3>
-                <div className="bg-[#1a1b2d] p-6 rounded-lg">
+                <div className="bg-zinc-100 p-6 rounded-lg">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-xl font-semibold text-[#e5e2e9]">
+                    <h4 className="text-xl font-semibold text-zinc-500">
                       Detalhes da Assinatura
                     </h4>
                     <Badge className={`${statusMap[activeSubscription.status].color}`}>
@@ -254,12 +254,12 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
                   <div className="space-y-4 text-[#b5b6c9]">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <h4 className="text-sm font-medium text-[#7a7b9f] mb-1">Plano</h4>
-                        <p className="text-[#e5e2e9]">{activeSubscription.planName}</p>
+                        <h4 className="text-sm font-medium text-zinc-400 mb-1">Plano</h4>
+                        <p className="text-zinc-500">{activeSubscription.planName}</p>
                       </div>
                       <div>
-                        <h4 className="text-sm font-medium text-[#7a7b9f] mb-1">Valor</h4>
-                        <p className="text-[#e5e2e9]">
+                        <h4 className="text-sm font-medium text-zinc-400 mb-1">Valor</h4>
+                        <p className="text-zinc-500">
                           {new Intl.NumberFormat('pt-BR', {
                             style: 'currency',
                             currency: activeSubscription.currency,
@@ -271,24 +271,24 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <h4 className="text-sm font-medium text-[#7a7b9f] mb-1">Período Atual</h4>
+                        <h4 className="text-sm font-medium text-zinc-400 mb-1">Período Atual</h4>
                         <p>
                           {format(activeSubscription.currentPeriodStart * 1000, "dd/MM/yyyy", { locale: ptBR })} - {format(activeSubscription.currentPeriodEnd * 1000, "dd/MM/yyyy", { locale: ptBR })}
                         </p>
                       </div>
                       <div>
-                        <h4 className="text-sm font-medium text-[#7a7b9f] mb-1">Data de Adesão</h4>
+                        <h4 className="text-sm font-medium text-zinc-400 mb-1">Data de Adesão</h4>
                         <p>{format(activeSubscription.created * 1000, "dd/MM/yyyy", { locale: ptBR })}</p>
                       </div>
                     </div>
 
                     {activeSubscription.paymentMethod && (
                       <div>
-                        <h4 className="text-sm font-medium text-[#7a7b9f] mb-1">Forma de Pagamento</h4>
+                        <h4 className="text-sm font-medium text-zinc-400 mb-1">Forma de Pagamento</h4>
                         <p>
                           {cardBrandMap[activeSubscription.paymentMethod.brand] || activeSubscription.paymentMethod.brand} terminando em {activeSubscription.paymentMethod.last4}
                         </p>
-                        <p className="text-sm text-[#7a7b9f]">
+                        <p className="text-sm text-zinc-400">
                           Expira em {String(activeSubscription.paymentMethod.expiryMonth).padStart(2, '0')}/{activeSubscription.paymentMethod.expiryYear}
                         </p>
                       </div>
@@ -314,12 +314,12 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
                         </Button>
 
                         <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
-                          <AlertDialogContent className="bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]">
+                          <AlertDialogContent className="bg-zinc-100 border-zinc-200 text-zinc-500">
                             <AlertDialogHeader>
                               <AlertDialogTitle>Confirmar Cancelamento da Assinatura</AlertDialogTitle>
                               <AlertDialogDescription className="space-y-4">
-                                <div className="bg-[#1a1b2d] p-4 rounded-lg space-y-2">
-                                  <h4 className="font-medium text-[#e5e2e9]">Detalhes da Assinatura</h4>
+                                <div className="bg-zinc-100 p-4 rounded-lg space-y-2">
+                                  <h4 className="font-medium text-zinc-500">Detalhes da Assinatura</h4>
                                   <p>Plano: {activeSubscription.planName}</p>
                                   <p>Valor: {new Intl.NumberFormat('pt-BR', {
                                     style: 'currency',
@@ -340,18 +340,18 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
                                 >
                                   <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="end_of_period" id="end_of_period" />
-                                    <Label htmlFor="end_of_period" className="text-[#e5e2e9]">
+                                    <Label htmlFor="end_of_period" className="text-zinc-500">
                                       Cancelar renovação automática
-                                      <p className="text-sm text-[#7a7b9f]">
+                                      <p className="text-sm text-zinc-400">
                                         Mantenha acesso até {format(activeSubscription.currentPeriodEnd * 1000, "dd/MM/yyyy")}
                                       </p>
                                     </Label>
                                   </div>
                                   <div className="flex items-center space-x-2">
                                     <RadioGroupItem value="immediate" id="immediate" />
-                                    <Label htmlFor="immediate" className="text-[#e5e2e9]">
+                                    <Label htmlFor="immediate" className="text-zinc-500">
                                       Cancelar imediatamente
-                                      <p className="text-sm text-[#7a7b9f]">
+                                      <p className="text-sm text-zinc-400">
                                         Você perderá o acesso instantaneamente
                                       </p>
                                     </Label>
@@ -361,7 +361,7 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel 
-                                className="bg-transparent border-[#1a1b2d] text-[#e5e2e9] hover:bg-[#1a1b2d]"
+                                className="bg-transparent border-zinc-200 text-zinc-500 hover:bg-zinc-100"
                                 disabled={cancelLoading}
                               >
                                 Voltar
@@ -385,7 +385,7 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
 
             {/* Histórico de Assinaturas */}
             <div className="mt-8">
-              <h3 className="text-lg font-semibold text-[#e5e2e9] mb-4">
+              <h3 className="text-lg font-semibold text-zinc-500 mb-4">
                 Histórico de Assinaturas
               </h3>
               <div className="space-y-4">
@@ -394,17 +394,17 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
                   .map((subscription) => (
                     <div
                       key={subscription.id}
-                      className="bg-[#1a1b2d] p-4 rounded-lg"
+                      className="bg-zinc-100 p-4 rounded-lg"
                     >
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="text-[#e5e2e9] font-medium">
+                        <h4 className="text-zinc-500 font-medium">
                           {subscription.planName}
                         </h4>
                         <Badge className={`${statusMap[subscription.status].color}`}>
                           {statusMap[subscription.status].label}
                         </Badge>
                       </div>
-                      <div className="text-sm text-[#7a7b9f] space-y-1">
+                      <div className="text-sm text-zinc-400 space-y-1">
                         <p>
                           Valor:{' '}
                           {new Intl.NumberFormat('pt-BR', {
@@ -429,35 +429,35 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
 
             {/* Histórico de Transações */}
             <div className="mt-8">
-              <h3 className="text-lg font-semibold text-[#e5e2e9] mb-4">
+              <h3 className="text-lg font-semibold text-zinc-500 mb-4">
                 Histórico de Transações
               </h3>
-              <div className="rounded-md border border-[#1a1b2d]">
+              <div className="rounded-md border border-zinc-200">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-[#7a7b9f]">Data</TableHead>
-                      <TableHead className="text-[#7a7b9f]">Descrição</TableHead>
-                      <TableHead className="text-[#7a7b9f]">Valor</TableHead>
-                      <TableHead className="text-[#7a7b9f]">Status</TableHead>
+                      <TableHead className="text-zinc-400">Data</TableHead>
+                      <TableHead className="text-zinc-400">Descrição</TableHead>
+                      <TableHead className="text-zinc-400">Valor</TableHead>
+                      <TableHead className="text-zinc-400">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {transactions.map((transaction) => (
                       <TableRow key={transaction.id}>
-                        <TableCell className="text-[#e5e2e9]">
+                        <TableCell className="text-zinc-500">
                           {format(transaction.created * 1000, "dd/MM/yyyy", { locale: ptBR })}
                         </TableCell>
-                        <TableCell className="text-[#e5e2e9]">
+                        <TableCell className="text-zinc-500">
                           {transaction.description || 'Pagamento de assinatura'}
                         </TableCell>
-                        <TableCell className="text-[#e5e2e9]">
+                        <TableCell className="text-zinc-500">
                           {new Intl.NumberFormat('pt-BR', {
                             style: 'currency',
                             currency: transaction.currency,
                           }).format(transaction.amount / 100)}
                         </TableCell>
-                        <TableCell className="text-[#e5e2e9]">
+                        <TableCell className="text-zinc-500">
                           {transaction.status}
                         </TableCell>
                       </TableRow>
@@ -471,7 +471,7 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
             {hasOnlyCanceledSubscriptions && (
               
             <div className="text-center py-8">
-              <p className="text-[#7a7b9f] mb-4">
+              <p className="text-zinc-400 mb-4">
                 Você ainda não possui nenhuma assinatura ativa
               </p>
             </div>
@@ -479,7 +479,7 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
           </>
         ) : (
           <div className="text-center py-8">
-            <p className="text-[#7a7b9f] mb-4">
+            <p className="text-zinc-400 mb-4">
               Você ainda não possui nenhuma assinatura ativa
             </p>
           </div>

@@ -39,7 +39,7 @@ export function PartnerCombobox({ partners, onSelect }: PartnerComboboxProps) {
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="w-full justify-between bg-[#1a1b2d] border-[#131320] hover:bg-[#1a1b2d]/80"
+          className="w-full justify-between bg-zinc-100 border-zinc-200 hover:bg-zinc-100/80"
         >
           {value
             ? partners.find((partner) => partner.id === value)?.displayName
@@ -47,9 +47,9 @@ export function PartnerCombobox({ partners, onSelect }: PartnerComboboxProps) {
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-[#1a1b2d] border-[#131320]">
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-zinc-100 border-zinc-200">
         <Command>
-          <CommandInput placeholder="Buscar parceiro..." className="h-9 bg-[#1a1b2d]" />
+          <CommandInput placeholder="Buscar parceiro..." className="h-9 bg-zinc-100" />
           <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
           <CommandGroup>
             {partners.map((partner) => (
@@ -61,7 +61,7 @@ export function PartnerCombobox({ partners, onSelect }: PartnerComboboxProps) {
                   onSelect(partner)
                   setOpen(false)
                 }}
-                className="hover:bg-[#131320]"
+                className="hover:bg-zinc-100"
               >
                 <Check
                   className={cn(
@@ -71,7 +71,7 @@ export function PartnerCombobox({ partners, onSelect }: PartnerComboboxProps) {
                 />
                 <div>
                   <p className="font-medium">{partner.displayName}</p>
-                  <p className="text-sm text-[#7a7b9f]">{partner.email}</p>
+                  <p className="text-sm text-zinc-400">{partner.email}</p>
                 </div>
               </CommandItem>
             ))}

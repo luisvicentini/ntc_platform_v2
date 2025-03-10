@@ -80,7 +80,7 @@ export function ProfileForm() {
               id="photoURL"
               value={formData.photoURL}
               onChange={(e) => setFormData({ ...formData, photoURL: e.target.value })}
-              className="bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]"
+              className="bg-zinc-100 border-zinc-200 text-zinc-500"
               placeholder="https://exemplo.com/foto.jpg"
             />
           </div>
@@ -93,7 +93,7 @@ export function ProfileForm() {
           id="displayName"
           value={formData.displayName}
           onChange={(e) => setFormData({ ...formData, displayName: e.target.value })}
-          className="bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]"
+          className="bg-zinc-100 border-zinc-200 text-zinc-500"
         />
       </div>
 
@@ -103,7 +103,7 @@ export function ProfileForm() {
           id="phoneNumber"
           value={formData.phoneNumber}
           onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-          className="bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]"
+          className="bg-zinc-100 border-zinc-200 text-zinc-500"
         />
       </div>
 
@@ -113,7 +113,7 @@ export function ProfileForm() {
           id="bio"
           value={formData.bio}
           onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-          className="bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]"
+          className="bg-zinc-100 border-zinc-200 text-zinc-500"
         />
       </div>
 
@@ -125,7 +125,7 @@ export function ProfileForm() {
 
       <Button 
         type="submit" 
-        className="bg-[#7435db] hover:bg-[#5f2bb3] text-white"
+        className="bg-primary hover:bg-[#5f2bb3] text-white"
         disabled={loading}
       >
         {loading ? "Salvando..." : "Salvar alterações"}

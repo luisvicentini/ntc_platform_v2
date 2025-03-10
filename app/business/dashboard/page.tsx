@@ -126,7 +126,7 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
         )
       default:
         return (
-          <Badge className="bg-gray-900/50 text-gray-400">
+          <Badge className="bg-zinc-900/50 text-zinc-400">
             Desconhecido
           </Badge>
         )
@@ -140,7 +140,7 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
     <div className="space-y-6">
       <div className="grid grid-cols-3 gap-6">
         {/* Card de Vouchers */}
-        <div className="bg-[#131320] border border-[#1a1b2d] p-6 rounded-lg">
+        <div className="bg-zinc-100 border border-zinc-200 p-6 rounded-lg">
           <h3>Vouchers Gerados no período</h3>
           <div className="text-3xl font-bold">{dashboardData.todayMetrics.vouchers}</div>
           <div className="text-sm text-muted-foreground">
@@ -150,7 +150,7 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
         </div>
 
         {/* Card de Check-ins */}
-        <div className="bg-[#131320] border border-[#1a1b2d] p-6 rounded-lg">
+        <div className="bg-zinc-100 border border-zinc-200 p-6 rounded-lg">
           <h3>Check-ins Realizados no período</h3>
           <div className="text-3xl font-bold">{dashboardData.todayMetrics.checkins}</div>
           <div className="text-sm text-muted-foreground">
@@ -161,7 +161,7 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
         </div>
 
         {/* Card de Taxa de Conversão */}
-        <div className="bg-[#131320] border border-[#1a1b2d] p-6 rounded-lg">
+        <div className="bg-zinc-100 border border-zinc-200 p-6 rounded-lg">
           <h3>Taxa de Conversão no período</h3>
           <div className="text-3xl font-bold">
             {dashboardData.todayMetrics.conversionRate}%
@@ -171,7 +171,7 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
 
       {/* Gráficos */}
       <div className="grid grid-cols-2 gap-6">
-        <div className="bg-[#131320] border border-[#1a1b2d] p-6 rounded-lg">
+        <div className="bg-zinc-100 border border-zinc-200 p-6 rounded-lg">
           <h3>Vouchers e Check-ins</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dashboardData.monthlyData || []}>
@@ -190,7 +190,7 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="bg-[#131320] border border-[#1a1b2d] p-6 rounded-lg">
+        <div className="bg-zinc-100 border border-zinc-200 p-6 rounded-lg">
           <h3>Taxa de Conversão</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={dashboardData.monthlyData || []}>
@@ -218,44 +218,44 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
 
       
       <CardContent className="p-0">
-        <Card className="bg-[#131320] border-[#1a1b2d]">
+        <Card className="bg-zinc-100 border-zinc-200">
           <CardHeader>
-            <CardTitle className="text-[#e5e2e9]">Últimos Check-ins</CardTitle>
+            <CardTitle className="text-zinc-500">Últimos Check-ins</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="text-[#7a7b9f]">Cliente</TableHead>
-                  <TableHead className="text-[#7a7b9f]">Telefone</TableHead>
-                  <TableHead className="text-[#7a7b9f]">Data</TableHead>
-                  <TableHead className="text-[#7a7b9f]">Status</TableHead>
-                  <TableHead className="text-[#7a7b9f]">Código do Voucher</TableHead>
+                  <TableHead className="text-zinc-400">Cliente</TableHead>
+                  <TableHead className="text-zinc-400">Telefone</TableHead>
+                  <TableHead className="text-zinc-400">Data</TableHead>
+                  <TableHead className="text-zinc-400">Status</TableHead>
+                  <TableHead className="text-zinc-400">Código do Voucher</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {dashboardData.recentCheckins.map((checkIn) => (
                   <TableRow key={checkIn.id}>
-                    <TableCell className="font-medium text-[#e5e2e9]">
+                    <TableCell className="font-medium text-zinc-500">
                       {checkIn.customerName}
                     </TableCell>
-                    <TableCell className="text-[#7a7b9f]">
+                    <TableCell className="text-zinc-400">
                       {checkIn.customerPhone}
                     </TableCell>
-                    <TableCell className="text-[#7a7b9f]">
+                    <TableCell className="text-zinc-400">
                       {checkIn.checkInDate}
                     </TableCell>
                     <TableCell>
                       {getStatusBadge(checkIn.status)}
                     </TableCell>
-                    <TableCell className="font-medium text-[#e5e2e9]">
+                    <TableCell className="font-medium text-zinc-500">
                       {checkIn.voucherCode}
                     </TableCell>
                   </TableRow>
                 ))}
                 {(!dashboardData.recentCheckins || dashboardData.recentCheckins.length === 0) && (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-[#7a7b9f]">
+                    <TableCell colSpan={5} className="text-center text-zinc-400">
                       Nenhum check-in encontrado no período
                     </TableCell>
                   </TableRow>

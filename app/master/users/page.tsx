@@ -143,7 +143,7 @@ function UsersContent() {
       case "master":
         return "bg-yellow-500"
       default:
-        return "bg-[#7a7b9f]"
+        return "bg-zinc-400"
     }
   }
 
@@ -251,8 +251,8 @@ function UsersContent() {
   if (loading) {
     return (
       <div className="container py-6">
-        <h1 className="text-2xl font-bold text-[#e5e2e9] mb-6">Usuários</h1>
-        <div className="text-[#7a7b9f]">Carregando...</div>
+        <h1 className="text-2xl font-bold text-zinc-500 mb-6">Usuários</h1>
+        <div className="text-zinc-400">Carregando...</div>
       </div>
     )
   }
@@ -261,18 +261,18 @@ function UsersContent() {
     <div className="container py-6">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-[#e5e2e9]">Usuários</h1>
-          <p className="text-sm text-[#7a7b9f] mt-1">
+          <h1 className="text-2xl font-bold text-zinc-500">Usuários</h1>
+          <p className="text-sm text-zinc-400 mt-1">
             Total de registros: {totalRecords} | Exibindo: {getPaginatedUsers().length}
           </p>
         </div>
-        <Button onClick={() => setShowAddUserModal(true)}>Adicionar Usuário</Button>
+        <Button className="bg-primary text-white hover:bg-primary-dark" onClick={() => setShowAddUserModal(true)}>Adicionar Usuário</Button>
       </div>
 
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="bg-[#1a1b2d] text-[#e5e2e9]">
+            <TabsList className="bg-zinc-100 text-zinc-500">
               <TabsTrigger value="all">Todos</TabsTrigger>
               <TabsTrigger value="business">Estabelecimentos</TabsTrigger>
               <TabsTrigger value="member">Assinantes</TabsTrigger>
@@ -286,13 +286,13 @@ function UsersContent() {
               placeholder="Buscar usuários..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-64 bg-[#1a1b2d] border-[#131320]"
+              className="w-64 bg-zinc-100 border-zinc-200"
             />
             <Button
               variant="outline"
               size="icon"
               onClick={() => setViewMode(viewMode === "card" ? "table" : "card")}
-              className="bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
+              className="bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-100 hover:text-zinc-500 p-3"
             >
               {viewMode === "card" ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
             </Button>
@@ -357,7 +357,7 @@ function UsersContent() {
   function renderUserCards(users: UserProfile[]) {
     if (users.length === 0) {
       return (
-        <div className="text-[#7a7b9f]">Nenhum usuário encontrado.</div>
+        <div className="text-zinc-400">Nenhum usuário encontrado.</div>
       )
     }
 
@@ -367,10 +367,10 @@ function UsersContent() {
       <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {paginatedUsers.map((user) => (
-            <Card key={user.id} className="bg-[#131320] border-[#1a1b2d] p-6">
+            <Card key={user.id} className="bg-zinc-50 border-zinc-100 p-6">
               <div className="flex items-start justify-between">
                 <div className="flex items-end space-x-4">
-                  <Avatar className="h-12 w-12">
+                  <Avatar className="h-12 w-12 bg-zinc-200">
                     <AvatarImage src={user.photoURL || ""} alt={user.displayName || 'Usuário'} />
                     <AvatarFallback>
                       {user.displayName 
@@ -393,16 +393,16 @@ function UsersContent() {
                     variant="ghost"
                     size="icon"
                     onClick={() => setOpenDropdownId(openDropdownId === user.id ? null : user.id)}
-                    className="relative z-10"
+                    className="relative z-10 hover:bg-zinc-200 rounded-xl p-2"
                   >
-                    <MoreVertical className="h-4 w-4" />
+                    <MoreVertical className="h-4 w-4 text-zinc-500" />
                   </Button>
                   
                   {openDropdownId === user.id && (
-                    <div className="absolute right-0 top-full mt-1 min-w-[200px] rounded-md bg-[#1a1b2d] p-2 shadow-md border border-[#131320] z-50">
+                    <div className="absolute right-0 top-full mt-1 min-w-[200px] rounded-md bg-zinc-100 p-2 shadow-md border border-zinc-200 z-50">
                       <div className="flex flex-col space-y-1">
                         <button
-                          className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                          className="text-left px-2 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100 rounded-sm flex items-center"
                           onClick={() => {
                             setSelectedUser(user)
                             setShowSubscriptionSidebar(true)
@@ -415,7 +415,7 @@ function UsersContent() {
                         
                         {(user.status === "inactive" || user.status === "expired") && (
                           <button
-                            className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                            className="text-left px-2 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100 rounded-sm flex items-center"
                             onClick={() => {
                               handleResendActivation(user)
                               setOpenDropdownId(null)
@@ -427,7 +427,7 @@ function UsersContent() {
                         )}
                         
                         <button
-                          className="text-left px-2 py-1.5 text-sm text-red-500 hover:bg-[#131320] rounded-sm flex items-center"
+                          className="text-left px-2 py-1.5 text-sm text-red-500 hover:bg-zinc-100 rounded-sm flex items-center"
                           onClick={() => {
                             handleDeleteClick(user)
                             setOpenDropdownId(null)
@@ -439,7 +439,7 @@ function UsersContent() {
                         
                         {user.userType === "member" && (
                           <button
-                            className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                            className="text-left px-2 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100 rounded-sm flex items-center"
                             onClick={() => {
                               handleLinkSubscription(user)
                               setOpenDropdownId(null)
@@ -452,7 +452,7 @@ function UsersContent() {
                         
                         {user.userType === "business" && (
                           <button
-                            className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                            className="text-left px-2 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100 rounded-sm flex items-center"
                             onClick={() => {
                               handleLinkEstablishment(user)
                               setOpenDropdownId(null)
@@ -468,10 +468,10 @@ function UsersContent() {
                 </div>
               </div>
               <div className="mt-4">
-                <h3 className="text-[#e5e2e9] font-semibold truncate">{user.displayName}</h3>
-                <p className="text-[#7a7b9f] text-sm truncate">{user.email}</p>
+                <h3 className="text-zinc-500 font-semibold truncate">{user.displayName}</h3>
+                <p className="text-zinc-400 text-sm truncate">{user.email}</p>
                 <div className="flex items-center space-x-2 mt-2">
-                  <Badge variant="outline" className="border-[#1a1b2d]">
+                  <Badge className="bg-white border-zinc-100 text-zinc-500 hover:bg-white hover:text-zinc-500">
                     {user.status === "active" ? (
                       <Check className="h-3 w-3 text-green-500 mr-1" />
                     ) : (
@@ -483,10 +483,10 @@ function UsersContent() {
               </div>
               
               {user.userType === "business" && "establishment" in user && (
-                <p className="text-[#7a7b9f] text-sm mt-2">
+                <p className="text-zinc-400 text-sm mt-2">
                   Estabelecimento: {(user as any).establishment?.name || "Não vinculado"}
                   {(user as any).establishments?.length > 1 && (
-                    <span className="ml-1 text-sm text-[#7435db]">
+                    <span className="ml-1 text-sm text-zinc-500">
                       +{(user as any).establishments.length - 1}
                     </span>
                   )}
@@ -494,7 +494,7 @@ function UsersContent() {
               )}
 
               {user.userType === "member" && "partner" in user && (
-                <p className="text-[#7a7b9f] text-sm mt-2">
+                <p className="text-zinc-400 text-sm mt-2">
                   Parceiro: {(user as any).partner?.name || "Não vinculado"}
                 </p>
               )}
@@ -517,7 +517,7 @@ function UsersContent() {
   function renderUserTable(users: UserProfile[]) {
     if (users.length === 0) {
       return (
-        <div className="text-[#7a7b9f]">Nenhum usuário encontrado.</div>
+        <div className="text-zinc-400">Nenhum usuário encontrado.</div>
       )
     }
 
@@ -538,8 +538,8 @@ function UsersContent() {
           </TableHeader>
           <TableBody>
             {paginatedUsers.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium text-[#e5e2e9]">
+              <TableRow key={user.id} className="hover:bg-zinc-100">
+                <TableCell className="font-medium text-zinc-500">
                   <div className="flex items-center space-x-2">
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={user.photoURL || ""} alt={user.displayName || 'Usuário'} />
@@ -555,7 +555,7 @@ function UsersContent() {
                     <span>{user.displayName}</span>
                   </div>
                 </TableCell>
-                <TableCell className="text-[#7a7b9f]">{user.email}</TableCell>
+                <TableCell className="text-zinc-400">{user.email}</TableCell>
                 <TableCell>
                   <Badge className={getUserTypeColor(user.userType)}>
                     <span className="flex items-center space-x-1">
@@ -565,7 +565,7 @@ function UsersContent() {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className="border-[#1a1b2d]">
+                  <Badge className="bg-white border-zinc-100 text-zinc-500 hover:bg-white hover:text-zinc-500">
                     {user.status === "active" ? (
                       <Check className="h-3 w-3 text-green-500 mr-1" />
                     ) : (
@@ -574,12 +574,12 @@ function UsersContent() {
                     {user.status === "active" ? "Ativo" : "Inativo"}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-[#7a7b9f]">
+                <TableCell className="text-zinc-400">
                   {user.userType === "business" && (
                     <>
                       {(user as any).establishment?.name || "Não vinculado"}
                       {(user as any).establishments?.length > 1 && (
-                        <span className="ml-1 text-sm text-[#7435db]">
+                        <span className="ml-1 text-sm text-zinc-500">
                           +{(user as any).establishments.length - 1}
                         </span>
                       )}
@@ -589,7 +589,7 @@ function UsersContent() {
                     <>
                       {(user as any).partner?.name || "Não vinculado"}
                       {(user as any).partners?.length > 1 && (
-                        <span className="ml-1 text-sm text-[#7435db]">
+                        <span className="ml-1 text-sm text-zinc-500">
                           +{(user as any).partners.length - 1}
                         </span>
                       )}
@@ -608,10 +608,10 @@ function UsersContent() {
                     </Button>
                     
                     {openDropdownId === user.id && (
-                      <div className="absolute right-0 top-full mt-1 min-w-[200px] rounded-md bg-[#1a1b2d] p-2 shadow-md border border-[#131320] z-50">
+                      <div className="absolute right-0 top-full mt-1 min-w-[200px] rounded-md bg-zinc-100 p-2 shadow-md border border-zinc-200 z-50">
                         <div className="flex flex-col space-y-1">
                           <button
-                            className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                            className="text-left px-2 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100 rounded-sm flex items-center"
                             onClick={() => {
                               setSelectedUser(user)
                               setShowSubscriptionSidebar(true)
@@ -624,7 +624,7 @@ function UsersContent() {
                           
                           {(user.status === "inactive" || user.status === "expired") && (
                             <button
-                              className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                              className="text-left px-2 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100 rounded-sm flex items-center"
                               onClick={() => {
                                 handleResendActivation(user)
                                 setOpenDropdownId(null)
@@ -636,7 +636,7 @@ function UsersContent() {
                           )}
                           
                           <button
-                            className="text-left px-2 py-1.5 text-sm text-red-500 hover:bg-[#131320] rounded-sm flex items-center"
+                            className="text-left px-2 py-1.5 text-sm text-red-500 hover:bg-zinc-100 rounded-sm flex items-center"
                             onClick={() => {
                               handleDeleteClick(user)
                               setOpenDropdownId(null)
@@ -648,7 +648,7 @@ function UsersContent() {
                           
                           {user.userType === "member" && (
                             <button
-                              className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                              className="text-left px-2 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100 rounded-sm flex items-center"
                               onClick={() => {
                                 handleLinkSubscription(user)
                                 setOpenDropdownId(null)
@@ -661,7 +661,7 @@ function UsersContent() {
                           
                           {user.userType === "business" && (
                             <button
-                              className="text-left px-2 py-1.5 text-sm text-[#e5e2e9] hover:bg-[#131320] rounded-sm flex items-center"
+                              className="text-left px-2 py-1.5 text-sm text-zinc-500 hover:bg-zinc-100 rounded-sm flex items-center"
                               onClick={() => {
                                 handleLinkEstablishment(user)
                                 setOpenDropdownId(null)

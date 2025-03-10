@@ -84,7 +84,7 @@ const getStatusColor = (status: string) => {
     case "expired":
       return "bg-red-500/10 text-red-500"
     default:
-      return "bg-[#7a7b9f]/10 text-gray-500"
+      return "bg-zinc-400/10 text-zinc-500"
   }
 }
 
@@ -241,7 +241,7 @@ export default function ValidateVoucherPage() {
     switch (validationResult.status) {
       case "valid":
         return (
-          <Card className="mt-6 bg-[#131320] border-[#1a1b2d]">
+          <Card className="mt-6 bg-zinc-100 border-zinc-200">
             <CardContent className="p-6 space-y-4">
               <div className="flex items-center space-x-4">
                 <div className="flex-shrink-0">
@@ -252,15 +252,15 @@ export default function ValidateVoucherPage() {
                   />
                 </div>
                 <div>
-                  <h3 className="text-2xl font-bold text-[#e5e2e9]">Voucher Válido</h3>
-                  <p className="text-[#7a7b9f]">Check-in realizado em: {validationResult.checkInDate}</p>
+                  <h3 className="text-2xl font-bold text-zinc-500">Voucher Válido</h3>
+                  <p className="text-zinc-400">Check-in realizado em: {validationResult.checkInDate}</p>
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-[#e5e2e9]">
+                <p className="text-zinc-500">
                   <strong>Cliente:</strong> {validationResult.customerName}
                 </p>
-                <p className="text-[#7a7b9f]">
+                <p className="text-zinc-400">
                   <strong>Telefone:</strong> {validationResult.customerPhone}
                 </p>
               </div>
@@ -269,7 +269,7 @@ export default function ValidateVoucherPage() {
                 <p className="text-[#b5b6c9] text-sm">{validationResult.conditions}</p>
               </div>
               {!checkInDone ? (
-                <Button onClick={performCheckIn} className="w-full bg-[#7435db] hover:bg-[#a85fdd] text-white">
+                <Button onClick={performCheckIn} className="w-full bg-primary hover:bg-[#a85fdd] text-white">
                   Confirmar Check-in
                 </Button>
               ) : (
@@ -295,7 +295,7 @@ export default function ValidateVoucherPage() {
               setVoucherCode(["", "", "", "", "", ""])
               setValidationResult(null)
               setCheckInDone(false)
-            }} className="bg-[#7435db] hover:bg-[#a85fdd] text-white">
+            }} className="bg-primary hover:bg-[#a85fdd] text-white">
               Inserir outro voucher
             </Button>
           </div>
@@ -308,7 +308,7 @@ export default function ValidateVoucherPage() {
               setVoucherCode(["", "", "", "", "", ""])
               setValidationResult(null)
               setCheckInDone(false)
-            }} className="bg-[#7435db] hover:bg-[#a85fdd] text-white">
+            }} className="bg-primary hover:bg-[#a85fdd] text-white">
               Inserir outro voucher
             </Button>
           </div>
@@ -321,7 +321,7 @@ export default function ValidateVoucherPage() {
               setVoucherCode(["", "", "", "", "", ""])
               setValidationResult(null)
               setCheckInDone(false)
-            }} className="bg-[#7435db] hover:bg-[#a85fdd] text-white">
+            }} className="bg-primary hover:bg-[#a85fdd] text-white">
               Inserir outro voucher
             </Button>
           </div>
@@ -331,10 +331,10 @@ export default function ValidateVoucherPage() {
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
-      <h1 className="text-2xl font-bold text-[#e5e2e9] mb-6 text-center">Validar Voucher</h1>
+      <h1 className="text-2xl font-bold text-zinc-500 mb-6 text-center">Validar Voucher</h1>
 
-      <Card className="bg-[#131320] border-[#1a1b2d] p-6">
-        <h2 className="text-xl text-[#e5e2e9] mb-4 text-center">
+      <Card className="bg-zinc-100 border-zinc-200 p-6">
+        <h2 className="text-xl text-zinc-500 mb-4 text-center">
           Digite o código do cupom para validar e fazer Check-in
         </h2>
 
@@ -348,7 +348,7 @@ export default function ValidateVoucherPage() {
               onChange={(e) => handleInputChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
-              className="w-full h-24 text-center text-3xl bg-[#0f0f1a] text-[#e5e2e9] border-[#a85fdd] focus:ring-[#a85fdd] focus:border-[#a85fdd]"
+              className="w-full h-24 text-center text-3xl bg-white text-zinc-500 border-[#a85fdd] focus:ring-[#a85fdd] focus:border-[#a85fdd]"
               maxLength={index === 0 ? 6 : 1}
             />
           ))}
@@ -357,7 +357,7 @@ export default function ValidateVoucherPage() {
         {!validationResult && (
           <Button
             onClick={validateVoucher}
-            className="w-full bg-[#7435db] hover:bg-[#6229c5] text-lg text-white transition-all duration-300"
+            className="w-full bg-primary hover:bg-[#6229c5] text-lg text-white transition-all duration-300"
             disabled={voucherCode.some(v => !v)}
             size="xl"
           >
@@ -397,7 +397,7 @@ export default function ValidateVoucherPage() {
                 setCheckInDone(false)
               }}
               variant="outline"
-              className="w-full bg-[#1a1b2d] hover:bg-[#7a7b9f] border-[#1a1b2d] text-[#7a7b9f] hover:text-[#1a1b2d] text-lg transition-all duration-300"
+              className="w-full bg-zinc-100 hover:bg-zinc-400 border-zinc-200 text-zinc-400 hover:text-[#1a1b2d] text-lg transition-all duration-300"
               size="xl"
             >
               Inserir outro voucher

@@ -147,14 +147,14 @@ export default function MembersPage() {
     <div className="container mx-auto p-6">
       <div className="flex flex-col space-y-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-          <h1 className="text-2xl font-bold text-[#e5e2e9]">Assinantes</h1>
+          <h1 className="text-2xl font-bold text-zinc-500">Assinantes</h1>
           <div className="flex items-center gap-2 w-full md:w-auto">
             <div className="flex items-center space-x-2">
               <div className="relative flex-1">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-[#7a7b9f]" />
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-zinc-400" />
                 <Input
                   placeholder="Buscar Assinante..."
-                  className="pl-8 bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]"
+                  className="pl-8 bg-zinc-100 border-zinc-200 text-zinc-500"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -172,12 +172,12 @@ export default function MembersPage() {
               variant="outline"
               size="icon"
               onClick={() => setViewMode(viewMode === "grid" ? "list" : "grid")}
-              className="bg-[#131320] border-[#1a1b2d]"
+              className="bg-zinc-100 border-zinc-200"
             >
               {viewMode === "grid" ? (
-                <List className="h-4 w-4 text-[#7a7b9f]" />
+                <List className="h-4 w-4 text-zinc-400" />
               ) : (
-                <LayoutGrid className="h-4 w-4 text-[#7a7b9f]" />
+                <LayoutGrid className="h-4 w-4 text-zinc-400" />
               )}
             </Button>
           </div>
@@ -188,7 +188,7 @@ export default function MembersPage() {
             {filteredMembers.map((member) => (
               <Card
                 key={member.id}
-                className="bg-[#131320] border-[#1a1b2d] cursor-pointer hover:border-[#7435db] transition-colors"
+                className="bg-zinc-100 border-zinc-200 cursor-pointer hover:border-[#7435db] transition-colors"
                 onClick={() => setSelectedMember(member)}
               >
                 <CardHeader className="flex flex-row items-center space-y-0 pb-2">
@@ -200,17 +200,17 @@ export default function MembersPage() {
                         className="h-10 w-10 rounded-full"
                       />
                     ) : (
-                      <div className="h-10 w-10 rounded-full bg-[#1a1b2d] flex items-center justify-center">
-                        <User className="h-6 w-6 text-[#7a7b9f]" />
+                      <div className="h-10 w-10 rounded-full bg-zinc-100 flex items-center justify-center">
+                        <User className="h-6 w-6 text-zinc-400" />
                       </div>
                     )}
-                    <CardTitle className="text-sm font-medium text-[#e5e2e9]">
+                    <CardTitle className="text-sm font-medium text-zinc-500">
                       {member.displayName}
                     </CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-2 text-sm text-[#7a7b9f]">
+                  <div className="space-y-2 text-sm text-zinc-400">
                     <p>{member.email}</p>
                     <p>{member.phone || "Telefone não informado"}</p>
                     <div className="flex justify-between items-center">
@@ -234,25 +234,25 @@ export default function MembersPage() {
             ))}
           </div>
         ) : (
-          <div className="rounded-md border border-[#1a1b2d]">
+          <div className="rounded-md border border-zinc-200">
             <Table>
               <TableHeader>
-                <TableRow className="border-[#1a1b2d]">
-                  <TableHead className="text-[#7a7b9f]">Assinante</TableHead>
-                  <TableHead className="text-[#7a7b9f]">Email</TableHead>
-                  <TableHead className="text-[#7a7b9f]">Telefone</TableHead>
-                  <TableHead className="text-[#7a7b9f]">Status</TableHead>
-                  <TableHead className="text-[#7a7b9f]">Expira em</TableHead>
+                <TableRow className="border-zinc-200">
+                  <TableHead className="text-zinc-400">Assinante</TableHead>
+                  <TableHead className="text-zinc-400">Email</TableHead>
+                  <TableHead className="text-zinc-400">Telefone</TableHead>
+                  <TableHead className="text-zinc-400">Status</TableHead>
+                  <TableHead className="text-zinc-400">Expira em</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filteredMembers.map((member) => (
                   <TableRow
                     key={member.id}
-                    className="border-[#1a1b2d] cursor-pointer hover:bg-[#1a1b2d]"
+                    className="border-zinc-200 cursor-pointer hover:bg-zinc-100"
                     onClick={() => setSelectedMember(member)}
                   >
-                    <TableCell className="font-medium text-[#e5e2e9]">
+                    <TableCell className="font-medium text-zinc-500">
                       <div className="flex items-center space-x-3">
                         {member.photoURL ? (
                           <img
@@ -261,15 +261,15 @@ export default function MembersPage() {
                             className="h-8 w-8 rounded-full"
                           />
                         ) : (
-                          <div className="h-8 w-8 rounded-full bg-[#1a1b2d] flex items-center justify-center">
-                            <User className="h-4 w-4 text-[#7a7b9f]" />
+                          <div className="h-8 w-8 rounded-full bg-zinc-100 flex items-center justify-center">
+                            <User className="h-4 w-4 text-zinc-400" />
                           </div>
                         )}
                         <span>{member.displayName}</span>
                       </div>
                     </TableCell>
-                    <TableCell className="text-[#7a7b9f]">{member.email}</TableCell>
-                    <TableCell className="text-[#7a7b9f]">
+                    <TableCell className="text-zinc-400">{member.email}</TableCell>
+                    <TableCell className="text-zinc-400">
                       {member.phone || "Não informado"}
                     </TableCell>
                     <TableCell>
@@ -280,7 +280,7 @@ export default function MembersPage() {
                         {member.subscription?.status === "active" ? "Ativo" : "Inativo"}
                       </Badge>
                     </TableCell>
-                    <TableCell className="text-[#7a7b9f]">
+                    <TableCell className="text-zinc-400">
                       {member.subscription?.expiresAt
                         ? format(new Date(member.subscription.expiresAt), "dd/MM/yyyy", {
                             locale: ptBR,
@@ -295,7 +295,7 @@ export default function MembersPage() {
         )}
 
         {filteredMembers.length === 0 && (
-          <div className="text-center text-[#7a7b9f] py-10">
+          <div className="text-center text-zinc-400 py-10">
             {searchTerm ? "Nenhum Assinante encontrado" : "Nenhum Assinante cadastrado"}
           </div>
         )}

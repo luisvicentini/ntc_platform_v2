@@ -36,7 +36,7 @@ export function VoucherTicket({
       case "used":
         return "bg-emerald-500/10 text-emerald-500 text-xl"
       default:
-        return "bg-[#7a7b9f]/10 text-gray-500 text-xl"
+        return "bg-zinc-400/10 text-zinc-500 text-xl"
     }
   }
 
@@ -75,9 +75,9 @@ export function VoucherTicket({
 
       {/* Linha pontilhada decorativa */}
       <div className="absolute left-0 right-0 h-4 flex justify-between items-center left-[-10px] right-[-10px]" style={{ top: "184px" }}>
-        <div className="w-4 h-4 bg-[#131320] rounded-full" />
-        <div className="flex-1 border-t-2 border-dashed border-[#131320] mx-2" />
-        <div className="w-4 h-4 bg-[#131320] rounded-full" />
+        <div className="w-4 h-4 bg-zinc-100 rounded-full" />
+        <div className="flex-1 border-t-2 border-dashed border-zinc-200 mx-2" />
+        <div className="w-4 h-4 bg-zinc-100 rounded-full" />
       </div>
 
       {/* Conteúdo do ticket */}
@@ -92,15 +92,15 @@ export function VoucherTicket({
                   className="object-cover"
                 />
               )}
-              <AvatarFallback className="bg-[#7435db]/10 text-[#7435db]">
+              <AvatarFallback className="bg-primary/10 text-zinc-500">
                 {getInitials(customerName)}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-1">
-              <h3 className="font-semibold text-[#7a7b9f]">
+              <h3 className="font-semibold text-zinc-400">
                 {customerName || "Usuário"}
               </h3>
-              <p className="text-sm text-[#7a7b9f]">
+              <p className="text-sm text-zinc-400">
                 {customerPhone || "Telefone não informado"}
               </p>
             </div>
@@ -111,7 +111,7 @@ export function VoucherTicket({
         </div>
 
         <div className="space-y-3 pt-2">
-          <div className="flex items-center space-x-2 text-[#7a7b9f]">
+          <div className="flex items-center space-x-2 text-zinc-400">
             <Calendar className="h-4 w-4" />
             <div className="flex-1">
               <h4 className="text-sm">Data da Verificação:</h4>
@@ -119,7 +119,7 @@ export function VoucherTicket({
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 text-[#7a7b9f]">
+          <div className="flex items-center space-x-2 text-zinc-400">
             <Percent className="h-4 w-4" />
             <div className="flex-1">
               <h4 className="text-sm">Desconto:</h4>
@@ -127,7 +127,7 @@ export function VoucherTicket({
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 text-[#7a7b9f]">
+          <div className="flex items-center space-x-2 text-zinc-400">
             <Info className="h-4 w-4" />
             <div className="flex-1">
               <h4 className="text-sm">Regras do Desconto:</h4>
@@ -135,7 +135,7 @@ export function VoucherTicket({
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 text-[#7a7b9f]">
+          <div className="flex items-center space-x-2 text-zinc-400">
             <Users className="h-4 w-4" />
             <div className="flex-1">
               <h4 className="text-sm">Limite de Uso:</h4>

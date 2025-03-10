@@ -59,7 +59,7 @@ export function SubscriptionModal({ isOpen, onClose, memberId, memberName }: Sub
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#131320] text-[#e5e2e9] border-[#1a1b2d]">
+      <DialogContent className="bg-zinc-100 text-zinc-500 border-zinc-200">
         <DialogHeader>
           <DialogTitle>Vincular Assinante a Parceiro</DialogTitle>
         </DialogHeader>
@@ -73,7 +73,7 @@ export function SubscriptionModal({ isOpen, onClose, memberId, memberName }: Sub
                 id="member"
                 value={memberName}
                 disabled
-                className="col-span-3 bg-[#1a1b2d] border-[#131320]"
+                className="col-span-3 bg-zinc-100 border-zinc-200"
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
@@ -86,7 +86,7 @@ export function SubscriptionModal({ isOpen, onClose, memberId, memberName }: Sub
                     variant="outline"
                     role="combobox"
                     aria-expanded={open}
-                    className="col-span-3 justify-between bg-[#1a1b2d] border-[#131320] hover:bg-[#1a1b2d]/80"
+                    className="col-span-3 justify-between bg-zinc-100 border-zinc-200 hover:bg-zinc-100/80"
                   >
                     {selectedPartnerId
                       ? partners.find((partner) => partner.id === selectedPartnerId)?.displayName
@@ -94,9 +94,9 @@ export function SubscriptionModal({ isOpen, onClose, memberId, memberName }: Sub
                     <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-[#1a1b2d] border-[#131320]">
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0 bg-zinc-100 border-zinc-200">
                   <Command>
-                    <CommandInput placeholder="Buscar parceiro..." className="h-9 bg-[#1a1b2d]" />
+                    <CommandInput placeholder="Buscar parceiro..." className="h-9 bg-zinc-100" />
                     <CommandEmpty>Nenhum parceiro encontrado.</CommandEmpty>
                     <CommandGroup>
                       {partners.map((partner) => (
@@ -108,7 +108,7 @@ export function SubscriptionModal({ isOpen, onClose, memberId, memberName }: Sub
                             setSelectedPartnerName(partner.displayName)
                             setOpen(false)
                           }}
-                          className="hover:bg-[#131320]"
+                          className="hover:bg-zinc-100"
                         >
                           <Check
                             className={cn(
@@ -128,7 +128,7 @@ export function SubscriptionModal({ isOpen, onClose, memberId, memberName }: Sub
           <DialogFooter>
             <Button 
               type="submit" 
-              className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
+              className="bg-primary hover:bg-[#a85fdd] text-white"
               disabled={!selectedPartnerId}
             >
               Vincular

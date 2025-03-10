@@ -147,17 +147,17 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-[400px] bg-[#131320] border-l border-[#1a1b2d] text-[#e5e2e9]">
+      <SheetContent className="w-[400px] bg-zinc-100 border-l border-zinc-200 text-zinc-500">
         <SheetHeader className="flex flex-row items-center justify-between">
-          <SheetTitle className="text-[#e5e2e9]">Detalhes do Assinante</SheetTitle>
+          <SheetTitle className="text-zinc-500">Detalhes do Assinante</SheetTitle>
           {!isEditing ? (
             <Button
               variant="ghost"
               size="icon"
               onClick={handleEditClick}
-              className="hover:bg-[#1a1b2d]"
+              className="hover:bg-zinc-100"
             >
-              <Edit className="h-4 w-4 text-[#7a7b9f]" />
+              <Edit className="h-4 w-4 text-zinc-400" />
             </Button>
           ) : (
             <div className="flex gap-2">
@@ -165,7 +165,7 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
                 variant="ghost"
                 size="sm"
                 onClick={handleCancel}
-                className="hover:bg-[#1a1b2d]"
+                className="hover:bg-zinc-100"
               >
                 Cancelar
               </Button>
@@ -173,7 +173,7 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
                 variant="default"
                 size="sm"
                 onClick={handleSave}
-                className="bg-[#7435db] hover:bg-[#8445e9]"
+                className="bg-primary hover:bg-[#8445e9]"
               >
                 Salvar
               </Button>
@@ -190,8 +190,8 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
                 className="h-16 w-16 rounded-full"
               />
             ) : (
-              <div className="h-16 w-16 rounded-full bg-[#1a1b2d] flex items-center justify-center">
-                <span className="text-xl text-[#7a7b9f]">
+              <div className="h-16 w-16 rounded-full bg-zinc-100 flex items-center justify-center">
+                <span className="text-xl text-zinc-400">
                   {getInitials(member.displayName)}
                 </span>
               </div>
@@ -202,7 +202,7 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
                   <Input
                     value={editedMember?.displayName}
                     onChange={(e) => setEditedMember(prev => prev ? { ...prev, displayName: e.target.value } : null)}
-                    className="bg-[#1a1b2d] border-[#2a2b3d] text-[#e5e2e9]"
+                    className="bg-zinc-100 border-[#2a2b3d] text-zinc-500"
                     placeholder="Nome do Assinante"
                   />
                 </div>
@@ -215,16 +215,16 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[#7a7b9f]">Email</Label>
+            <Label className="text-zinc-400">Email</Label>
             <Input
               value={editedMember?.email || ""}
               disabled
-              className="bg-[#1a1b2d] border-[#2a2b3d] text-[#e5e2e9] opacity-50"
+              className="bg-zinc-100 border-[#2a2b3d] text-zinc-500 opacity-50"
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[#7a7b9f]">Telefone</Label>
+            <Label className="text-zinc-400">Telefone</Label>
             <div className="flex gap-2">
               <Select
                 value={selectedCountry}
@@ -242,7 +242,7 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
                 }}
                 disabled={!isEditing}
               >
-                <SelectTrigger className="w-[120px] bg-[#1a1b2d] border-[#2a2b3d] text-[#e5e2e9]">
+                <SelectTrigger className="w-[120px] bg-zinc-100 border-[#2a2b3d] text-zinc-500">
                   <SelectValue>
                     <div className="flex items-center gap-2">
                       <img
@@ -254,12 +254,12 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
                     </div>
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="bg-[#1a1b2d] border-[#2a2b3d]">
+                <SelectContent className="bg-zinc-100 border-[#2a2b3d]">
                   {countries.map((country) => (
                     <SelectItem
                       key={country.code}
                       value={country.code}
-                      className="text-[#e5e2e9]"
+                      className="text-zinc-500"
                     >
                       <div className="flex items-center gap-2">
                         <img
@@ -268,7 +268,7 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
                           className="w-6 h-4 object-cover rounded"
                         />
                         <span>{country.dial_code}</span>
-                        <span className="text-[#7a7b9f] text-xs">{country.name}</span>
+                        <span className="text-zinc-400 text-xs">{country.name}</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -280,13 +280,13 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
                 onChange={handlePhoneChange}
                 disabled={!isEditing}
                 placeholder={getPhoneMask(selectedCountry).placeholder}
-                className="flex-1 bg-[#1a1b2d] border-[#2a2b3d] text-[#e5e2e9] h-10 px-3 rounded-md"
+                className="flex-1 bg-zinc-100 border-[#2a2b3d] text-zinc-500 h-10 px-3 rounded-md"
               />
             </div>
           </div>
 
           <div className="space-y-2">
-            <h4 className="text-sm font-medium text-[#7a7b9f]">Status da Assinatura</h4>
+            <h4 className="text-sm font-medium text-zinc-400">Status da Assinatura</h4>
             {isEditing ? (
               <Select
                 value={editedMember?.subscription.status}
@@ -297,12 +297,12 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
                   } : null
                 )}
               >
-                <SelectTrigger className="bg-[#1a1b2d] border-[#2a2b3d] text-[#e5e2e9]">
+                <SelectTrigger className="bg-zinc-100 border-[#2a2b3d] text-zinc-500">
                   <SelectValue placeholder="Selecione o status" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1a1b2d] border-[#2a2b3d]">
-                  <SelectItem value="active" className="text-[#e5e2e9]">Ativo</SelectItem>
-                  <SelectItem value="inactive" className="text-[#e5e2e9]">Inativo</SelectItem>
+                <SelectContent className="bg-zinc-100 border-[#2a2b3d]">
+                  <SelectItem value="active" className="text-zinc-500">Ativo</SelectItem>
+                  <SelectItem value="inactive" className="text-zinc-500">Inativo</SelectItem>
                 </SelectContent>
               </Select>
             ) : (
@@ -316,23 +316,23 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
           </div>
 
           <div className="space-y-4">
-            <h4 className="text-sm font-medium text-[#7a7b9f]">Histórico de Assinaturas</h4>
-            <div className="rounded-md border border-[#1a1b2d] overflow-hidden">
+            <h4 className="text-sm font-medium text-zinc-400">Histórico de Assinaturas</h4>
+            <div className="rounded-md border border-zinc-200 overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow className="border-[#1a1b2d]">
-                    <TableHead className="text-[#7a7b9f]">Data Início</TableHead>
-                    <TableHead className="text-[#7a7b9f]">Data Fim</TableHead>
-                    <TableHead className="text-[#7a7b9f]">Status</TableHead>
+                  <TableRow className="border-zinc-200">
+                    <TableHead className="text-zinc-400">Data Início</TableHead>
+                    <TableHead className="text-zinc-400">Data Fim</TableHead>
+                    <TableHead className="text-zinc-400">Status</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {member.subscriptions?.map((sub, index) => (
-                    <TableRow key={index} className="border-[#1a1b2d]">
-                      <TableCell className="text-[#e5e2e9]">
+                    <TableRow key={index} className="border-zinc-200">
+                      <TableCell className="text-zinc-500">
                         {format(new Date(sub.createdAt), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
-                      <TableCell className="text-[#e5e2e9]">
+                      <TableCell className="text-zinc-500">
                         {format(new Date(sub.expiresAt), "dd/MM/yyyy", { locale: ptBR })}
                       </TableCell>
                       <TableCell>

@@ -97,7 +97,7 @@ export function ManageSubscriptions({ isOpen, onClose, memberId, memberName }: M
   return (
     <>
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="bg-[#1a1b2d] text-white border-[#131320]">
+        <DialogContent className="bg-zinc-100 text-white border-zinc-200">
           <DialogHeader>
             <DialogTitle>Gerenciar Assinaturas - {memberName}</DialogTitle>
           </DialogHeader>
@@ -119,7 +119,7 @@ export function ManageSubscriptions({ isOpen, onClose, memberId, memberName }: M
                 type="date"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
-                className="bg-[#131320] border border-[#2e2e3d] rounded-md px-3 py-2"
+                className="bg-zinc-100 border border-[#2e2e3d] rounded-md px-3 py-2"
               />
 
               <Button onClick={handleAddSubscription} disabled={loading}>
@@ -128,15 +128,15 @@ export function ManageSubscriptions({ isOpen, onClose, memberId, memberName }: M
             </div>
 
             <div className="space-y-2">
-              <h3 className="text-sm font-medium text-[#7a7b9f]">Parceiros Vinculados</h3>
+              <h3 className="text-sm font-medium text-zinc-400">Parceiros Vinculados</h3>
               {subscriptions.map((subscription) => (
                 <div
                   key={subscription.id}
-                  className="bg-[#131320] p-4 rounded-lg flex items-center justify-between"
+                  className="bg-zinc-100 p-4 rounded-lg flex items-center justify-between"
                 >
                   <div>
-                    <p className="text-[#e5e2e9]">{subscription.partnerName}</p>
-                    <p className="text-sm text-[#7a7b9f]">
+                    <p className="text-zinc-500">{subscription.partnerName}</p>
+                    <p className="text-sm text-zinc-400">
                       Expira em: {subscription.expiresAt 
                         ? format(new Date(subscription.expiresAt), "dd 'de' MMMM 'de' yyyy", { locale: ptBR })
                         : "Sem data"}
@@ -159,17 +159,17 @@ export function ManageSubscriptions({ isOpen, onClose, memberId, memberName }: M
       </Dialog>
 
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
-        <AlertDialogContent className="bg-[#1a1b2d] text-white border-[#131320]">
+        <AlertDialogContent className="bg-zinc-100 text-white border-zinc-200">
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar remoção</AlertDialogTitle>
-            <AlertDialogDescription className="text-[#7a7b9f]">
+            <AlertDialogDescription className="text-zinc-400">
               Tem certeza que deseja remover esta assinatura? Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel 
               onClick={handleCancelDelete}
-              className="bg-[#131320] text-white hover:bg-[#1a1b2d]"
+              className="bg-zinc-100 text-white hover:bg-zinc-100"
             >
               Cancelar
             </AlertDialogCancel>

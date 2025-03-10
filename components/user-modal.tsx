@@ -81,7 +81,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#131320] text-[#e5e2e9] border-[#1a1b2d] max-w-lg">
+      <DialogContent className="bg-zinc-100 text-zinc-500 border-zinc-200 max-w-lg">
         <DialogHeader>
           <DialogTitle>{user ? "Editar Usuário" : "Novo Usuário"}</DialogTitle>
         </DialogHeader>
@@ -92,7 +92,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
             <Input
               value={formData.displayName}
               onChange={(e) => handleChange("displayName", e.target.value)}
-              className="mt-2 bg-[#1a1b2d] border-[#131320]"
+              className="mt-2 bg-zinc-100 border-zinc-200"
             />
           </div>
 
@@ -102,7 +102,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
               type="email"
               value={formData.email}
               onChange={(e) => handleChange("email", e.target.value)}
-              className="mt-2 bg-[#1a1b2d] border-[#131320]"
+              className="mt-2 bg-zinc-100 border-zinc-200"
             />
           </div>
 
@@ -113,14 +113,14 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
               onValueChange={(value) => handleChange("userType", value)}
               disabled={!!user}
             >
-              <SelectTrigger className="mt-2 bg-[#1a1b2d] border-[#131320]">
+              <SelectTrigger className="mt-2 bg-zinc-100 border-zinc-200">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-[#1a1b2d] border-[#131320]">
-                <SelectItem value="member" className="text-[#e5e2e9]">Assinante</SelectItem>
-                <SelectItem value="business" className="text-[#e5e2e9]">Estabelecimento</SelectItem>
-                <SelectItem value="partner" className="text-[#e5e2e9]">Parceiro</SelectItem>
-                <SelectItem value="master" className="text-[#e5e2e9]">Master</SelectItem>
+              <SelectContent className="bg-zinc-100 border-zinc-200">
+                <SelectItem value="member" className="text-zinc-500">Assinante</SelectItem>
+                <SelectItem value="business" className="text-zinc-500">Estabelecimento</SelectItem>
+                <SelectItem value="partner" className="text-zinc-500">Parceiro</SelectItem>
+                <SelectItem value="master" className="text-zinc-500">Master</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -132,12 +132,12 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
                 value={formData.status}
                 onValueChange={(value) => handleChange("status", value)}
               >
-                <SelectTrigger className="mt-2 bg-[#1a1b2d] border-[#131320]">
+                <SelectTrigger className="mt-2 bg-zinc-100 border-zinc-200">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="bg-[#1a1b2d] border-[#131320]">
-                  <SelectItem value="active" className="text-[#e5e2e9]">Ativo</SelectItem>
-                  <SelectItem value="inactive" className="text-[#e5e2e9]">Inativo</SelectItem>
+                <SelectContent className="bg-zinc-100 border-zinc-200">
+                  <SelectItem value="active" className="text-zinc-500">Ativo</SelectItem>
+                  <SelectItem value="inactive" className="text-zinc-500">Inativo</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -145,12 +145,12 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} className="bg-[#1a1b2d] border-[#131320]">
+          <Button variant="outline" onClick={onClose} className="bg-zinc-100 border-zinc-200">
             Cancelar
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
+            className="bg-primary hover:bg-[#a85fdd] text-white"
             disabled={loading}
           >
             Salvar

@@ -166,7 +166,7 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
       <div className="mb-8 flex justify-center">
         <div className="relative w-32 h-32 rounded-full overflow-hidden bg-white shadow-lg border-4 border-purple-100">
           <Image
-            src="/ntc_logo.svg"
+            src="/logo.svg"
             alt="Logo NTC"
             fill
             className="object-contain p-6"
@@ -178,10 +178,10 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
       {/* Detalhes do Plano */}
       <div className="text-center space-y-6 mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          <h2 className="text-2xl font-bold text-zinc-800 mb-2">
             {partnerLink.planName}
           </h2>
-          <p className="text-gray-600">
+          <p className="text-zinc-600">
             {partnerLink.description}
           </p>
         </div>
@@ -194,15 +194,15 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
             {partnerLink.interval == 'month' && (
             <p className="text-4xl font-bold text-purple-600">
               R$ {calculateInstallment().toFixed(2)}
-              <span className="text-base font-normal text-gray-600">/mês</span>
+              <span className="text-base font-normal text-zinc-600">/mês</span>
             </p>
              )}
              
             {/* Valor total e período - só exibe se não for plano mensal */}
             {partnerLink.interval !== 'month' && (
-              <div className="text-sm text-gray-500">
+              <div className="text-sm text-zinc-500">
                 <p className="text-4xl font-bold text-purple-600">
-                  <span className="text-base font-normal text-gray-600">{getInstallments()}x de </span>R$ {calculateInstallment().toFixed(2)} <span className="text-base font-normal text-gray-600">/mês</span>
+                  <span className="text-base font-normal text-zinc-600">{getInstallments()}x de </span>R$ {calculateInstallment().toFixed(2)} <span className="text-base font-normal text-zinc-600">/mês</span>
                 </p>
                 <p>
                   Valor total: R$ {partnerLink.price.toFixed(2)}
@@ -224,7 +224,7 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
         ].map((benefit) => (
           <div key={benefit} className="flex items-center">
             <CheckCircle2 className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-            <span className="text-gray-700">{benefit}</span>
+            <span className="text-zinc-700">{benefit}</span>
           </div>
         ))}
       </div>
@@ -241,14 +241,14 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
       {/* Mostrar mensagem para usuários já logados */}
       {user?.userType === 'member' && (
         <div className="mt-3 flex items-center justify-center space-x-2">
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-zinc-500">
             Você já está logado como <b>{user.email}</b>
           </p>
           {user.photoURL ? (
             <img 
               src={user.photoURL} 
               alt="Avatar do usuário" 
-              className="w-6 h-6 rounded-full object-cover border border-gray-200"
+              className="w-6 h-6 rounded-full object-cover border border-zinc-200"
             />
           ) : (
             <div className="w-6 h-6 rounded-full bg-purple-200 flex items-center justify-center text-purple-700 text-xs font-bold">

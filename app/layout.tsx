@@ -17,9 +17,9 @@ const poppins = Poppins({
 
 
 export const metadata: Metadata = {
-  title: "NTC Platform",
-  description: "Plataforma de gerenciamento de vouchers e estabelecimentos",
-    generator: 'vnove.com.br'
+  title: "Passport Gourmet Orlando",
+  description: "Vouchers de descontos exclusivos em restaurantes de Orlando",
+    generator: 'passportgourmetorlando.com'
 }
 
 export default function RootLayout({
@@ -29,7 +29,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={cn("min-h-screen bg-[#0F0F1A] font-sans antialiased", poppins.variable)} style={{ position: 'relative' }}>
+      <body className={cn("min-h-screen bg-white font-sans antialiased", poppins.variable)} style={{ position: 'relative' }}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

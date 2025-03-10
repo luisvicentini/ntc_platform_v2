@@ -46,7 +46,7 @@ export function PhoneInput({ value, onChange, defaultDDI = "55", label = "Telefo
               variant="outline"
               role="combobox"
               aria-expanded={open}
-              className="w-[140px] justify-between bg-[#1a1b2d] border-[#131320] hover:bg-[#1a1b2d]/80"
+              className="w-[140px] justify-between bg-zinc-100 border-zinc-200 hover:bg-zinc-100/80"
             >
               {selectedCountry ? (
                 <>
@@ -59,9 +59,9 @@ export function PhoneInput({ value, onChange, defaultDDI = "55", label = "Telefo
               <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-[200px] p-0 bg-[#131320] border-[#1a1b2d]">
+          <PopoverContent className="w-[200px] p-0 bg-zinc-100 border-zinc-200">
             <Command>
-              <CommandInput placeholder="Buscar país..." className="h-9 bg-[#1a1b2d]" />
+              <CommandInput placeholder="Buscar país..." className="h-9 bg-zinc-100" />
               <CommandEmpty>Nenhum país encontrado.</CommandEmpty>
               <CommandGroup className="max-h-[300px] overflow-auto">
                 {phoneCodes.map((code) => (
@@ -69,7 +69,7 @@ export function PhoneInput({ value, onChange, defaultDDI = "55", label = "Telefo
                     key={code.code}
                     value={code.country}
                     onSelect={() => handleDDIChange(code.code)}
-                    className="hover:bg-[#1a1b2d]"
+                    className="hover:bg-zinc-100"
                   >
                     <Check
                       className={cn(
@@ -89,7 +89,7 @@ export function PhoneInput({ value, onChange, defaultDDI = "55", label = "Telefo
         <Input
           value={value}
           onChange={(e) => handlePhoneChange(e.target.value)}
-          className="flex-1 bg-[#1a1b2d] border-[#131320]"
+          className="flex-1 bg-zinc-100 border-zinc-200"
           placeholder={selectedCountry?.mask.replace(/9/g, "0")}
         />
       </div>

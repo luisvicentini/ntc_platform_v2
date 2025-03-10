@@ -63,7 +63,7 @@ export default function DashboardPage() {
 
   return (
     <div className="container mx-auto py-6 px-4">
-      <h2 className="text-3xl font-bold tracking-tight text-[#e5e2e9] mb-6">Dashboard</h2>
+      <h2 className="text-3xl font-bold tracking-tight text-zinc-500 mb-6">Dashboard</h2>
 
       <div className="mb-6">
         <DateRangePicker
@@ -77,52 +77,52 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Card className="bg-[#131320] border-[#1a1b2d]">
+        <Card className="bg-zinc-100 border-zinc-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-[#7a7b9f]">Total de Usuários</CardTitle>
-            <Users className="h-4 w-4 text-[#7a7b9f]" />
+            <CardTitle className="text-sm font-medium text-zinc-400">Total de Usuários</CardTitle>
+            <Users className="h-4 w-4 text-zinc-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">{dashboardData?.totalUsers}</div>
-            <p className="text-xs text-[#7a7b9f]">+5% em relação ao mês passado</p>
+            <div className="text-2xl font-bold text-zinc-500">{dashboardData?.totalUsers}</div>
+            <p className="text-xs text-zinc-400">+5% em relação ao mês passado</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#131320] border-[#1a1b2d]">
+        <Card className="bg-zinc-100 border-zinc-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-[#7a7b9f]">Parceiros Ativos</CardTitle>
-            <Building className="h-4 w-4 text-[#7a7b9f]" />
+            <CardTitle className="text-sm font-medium text-zinc-400">Parceiros Ativos</CardTitle>
+            <Building className="h-4 w-4 text-zinc-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">123</div>
-            <p className="text-xs text-[#7a7b9f]">3 novos esta semana</p>
+            <div className="text-2xl font-bold text-zinc-500">123</div>
+            <p className="text-xs text-zinc-400">3 novos esta semana</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#131320] border-[#1a1b2d]">
+        <Card className="bg-zinc-100 border-zinc-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-[#7a7b9f]">Total de Vouchers</CardTitle>
-            <Ticket className="h-4 w-4 text-[#7a7b9f]" />
+            <CardTitle className="text-sm font-medium text-zinc-400">Total de Vouchers</CardTitle>
+            <Ticket className="h-4 w-4 text-zinc-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">45,678</div>
-            <p className="text-xs text-[#7a7b9f]">+15% em relação ao mês passado</p>
+            <div className="text-2xl font-bold text-zinc-500">45,678</div>
+            <p className="text-xs text-zinc-400">+15% em relação ao mês passado</p>
           </CardContent>
         </Card>
-        <Card className="bg-[#131320] border-[#1a1b2d]">
+        <Card className="bg-zinc-100 border-zinc-200">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-[#7a7b9f]">Crescimento Mensal</CardTitle>
-            <TrendingUp className="h-4 w-4 text-[#7a7b9f]" />
+            <CardTitle className="text-sm font-medium text-zinc-400">Crescimento Mensal</CardTitle>
+            <TrendingUp className="h-4 w-4 text-zinc-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">8.5%</div>
-            <p className="text-xs text-[#7a7b9f]">+2.5% em relação ao mês anterior</p>
+            <div className="text-2xl font-bold text-zinc-500">8.5%</div>
+            <p className="text-xs text-zinc-400">+2.5% em relação ao mês anterior</p>
           </CardContent>
         </Card>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card className="bg-[#131320] border-[#1a1b2d]">
+        <Card className="bg-zinc-100 border-zinc-200">
           <CardHeader>
-            <CardTitle className="text-[#e5e2e9]">Vouchers e Check-ins</CardTitle>
+            <CardTitle className="text-zinc-500">Vouchers e Check-ins</CardTitle>
           </CardHeader>
           <CardContent>
             <ResponsiveContainer width="100%" height={300}>

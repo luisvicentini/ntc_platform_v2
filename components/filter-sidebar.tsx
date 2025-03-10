@@ -38,9 +38,9 @@ export function FilterSidebar({ onFilterChange }: { onFilterChange: (filters: an
       <SheetTrigger asChild>
         <Button variant="outline">Filtros</Button>
       </SheetTrigger>
-      <SheetContent className="w-[400px] bg-[#131320] border-[#1a1b2d] text-[#e5e2e9]">
+      <SheetContent className="w-[400px] bg-zinc-100 border-zinc-200 text-zinc-500">
         <SheetHeader>
-          <SheetTitle className="text-[#e5e2e9]">Filtros</SheetTitle>
+          <SheetTitle className="text-zinc-500">Filtros</SheetTitle>
         </SheetHeader>
         <div className="space-y-4 mt-4">
           <div className="space-y-2">
@@ -90,7 +90,7 @@ export function FilterSidebar({ onFilterChange }: { onFilterChange: (filters: an
                 <div
                   key={status}
                   className={`border rounded-md p-2 cursor-pointer ${
-                    filters.status.includes(status) ? "bg-[#1a1b2d] border-[#7435db]" : "border-[#1a1b2d]"
+                    filters.status.includes(status) ? "bg-zinc-100 border-[#7435db]" : "border-zinc-200"
                   }`}
                   onClick={() => handleStatusChange(status)}
                 >
@@ -107,7 +107,7 @@ export function FilterSidebar({ onFilterChange }: { onFilterChange: (filters: an
             />
           </div>
           <Button
-            className="w-full bg-[#7435db] hover:bg-[#7435db]/90"
+            className="w-full bg-primary hover:bg-primary/90"
             onClick={() => onFilterChange(filters)}
           >
             Aplicar Filtros

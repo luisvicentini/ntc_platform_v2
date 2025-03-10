@@ -41,7 +41,7 @@ export function BusinessUserSelect({ value, onChange }: BusinessUserSelectProps)
     return (
       <div className="grid grid-cols-4 items-center gap-4">
         <Label className="text-right">Usuário</Label>
-        <div className="col-span-3 text-[#7a7b9f]">Carregando...</div>
+        <div className="col-span-3 text-zinc-400">Carregando...</div>
       </div>
     )
   }
@@ -50,7 +50,7 @@ export function BusinessUserSelect({ value, onChange }: BusinessUserSelectProps)
     return (
       <div className="grid grid-cols-4 items-center gap-4">
         <Label className="text-right">Usuário</Label>
-        <div className="col-span-3 text-[#7a7b9f]">Nenhum usuário business disponível</div>
+        <div className="col-span-3 text-zinc-400">Nenhum usuário business disponível</div>
       </div>
     )
   }
@@ -59,12 +59,12 @@ export function BusinessUserSelect({ value, onChange }: BusinessUserSelectProps)
     <div className="grid grid-cols-4 items-center gap-4">
       <Label className="text-right">Usuário</Label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger className="col-span-3 bg-[#1a1b2d] border-[#131320]">
+        <SelectTrigger className="col-span-3 bg-zinc-100 border-zinc-200">
           <SelectValue placeholder="Selecione um usuário" />
         </SelectTrigger>
-        <SelectContent className="bg-[#1a1b2d] border-[#131320]">
+        <SelectContent className="bg-zinc-100 border-zinc-200">
           {users.map((user) => (
-            <SelectItem key={user.id} value={user.id} className="text-[#e5e2e9]">
+            <SelectItem key={user.id} value={user.id} className="text-zinc-500">
               {user.displayName} ({user.email})
             </SelectItem>
           ))}

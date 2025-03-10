@@ -163,20 +163,20 @@ export function SubscriptionManagementSidebar({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-[640px] bg-[#131320] text-[#e5e2e9] border-l border-[#1a1b2d] overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-[640px] bg-zinc-100 text-zinc-500 border-l border-zinc-200 overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="text-[#e5e2e9]">Gerenciar Usuário</SheetTitle>
+          <SheetTitle className="text-zinc-500">Gerenciar Usuário</SheetTitle>
         </SheetHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 mt-6">
           <Accordion type="single" collapsible className="space-y-4">
             {/* Informações do Parceiro */}
-            <AccordionItem value="info" className="border-[#1a1b2d]">
-              <AccordionTrigger className="text-[#e5e2e9] hover:text-[#7435db]">
+            <AccordionItem value="info" className="border-zinc-200">
+              <AccordionTrigger className="text-zinc-500 hover:text-zinc-500">
                 Informações do Parceiro
               </AccordionTrigger>
               <AccordionContent>
-                <Card className="bg-[#1a1b2d] border-[#131320]">
+                <Card className="bg-zinc-100 border-zinc-200">
                   <CardContent className="space-y-4 pt-4">
                     <div>
                       <Label htmlFor="displayName">Nome</Label>
@@ -184,7 +184,7 @@ export function SubscriptionManagementSidebar({
                         id="displayName"
                         value={userData.displayName}
                         onChange={(e) => setUserData({ ...userData, displayName: e.target.value })}
-                        className="bg-[#131320] border-[#1a1b2d]"
+                        className="bg-zinc-100 border-zinc-200"
                       />
                     </div>
 
@@ -194,7 +194,7 @@ export function SubscriptionManagementSidebar({
                         id="email"
                         value={userData.email}
                         disabled
-                        className="bg-[#131320] border-[#1a1b2d] opacity-50"
+                        className="bg-zinc-100 border-zinc-200 opacity-50"
                       />
                     </div>
 
@@ -204,7 +204,7 @@ export function SubscriptionManagementSidebar({
                         value={userData.phone}
                         onChange={(value) => setUserData({ ...userData, phone: value || "" })}
                         defaultCountry="BR"
-                        className="bg-[#131320]"
+                        className="bg-zinc-100"
                       />
                     </div>
 
@@ -214,10 +214,10 @@ export function SubscriptionManagementSidebar({
                         value={userData.userType}
                         onValueChange={(value) => setUserData({ ...userData, userType: value })}
                       >
-                        <SelectTrigger className="bg-[#131320] border-[#1a1b2d]">
+                        <SelectTrigger className="bg-zinc-100 border-zinc-200">
                           <SelectValue placeholder="Selecione o tipo" />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#1a1b2d] border-[#131320]">
+                        <SelectContent className="bg-zinc-100 border-zinc-200">
                           <SelectItem value="business">Estabelecimento</SelectItem>
                           <SelectItem value="member">Assinante</SelectItem>
                           <SelectItem value="partner">Parceiro</SelectItem>
@@ -232,34 +232,34 @@ export function SubscriptionManagementSidebar({
 
             {/* Links de Pagamento - apenas para parceiros */}
             {userData.userType === "partner" && (
-              <AccordionItem value="links" className="border-[#1a1b2d]">
-                <AccordionTrigger className="text-[#e5e2e9] hover:text-[#7435db]">
+              <AccordionItem value="links" className="border-zinc-200">
+                <AccordionTrigger className="text-zinc-500 hover:text-zinc-500">
                   Links de Pagamento
                 </AccordionTrigger>
                 <AccordionContent>
-                  <Card className="bg-[#1a1b2d] border-[#131320]">
+                  <Card className="bg-zinc-100 border-zinc-200">
                     <CardContent className="space-y-4 pt-4">
                       <div className="flex gap-2">
                         <Input
                           placeholder="Nome do link"
                           value={newLinkName}
                           onChange={(e) => setNewLinkName(e.target.value)}
-                          className="bg-[#131320] border-[#1a1b2d]"
+                          className="bg-zinc-100 border-zinc-200"
                         />
                         <Button
                           type="button"
                           onClick={() => setShowPlanDialog(true)}
                           disabled={loading}
-                          className="bg-[#7435db] hover:bg-[#a85fdd]"
+                          className="bg-primary hover:bg-[#a85fdd]"
                         >
                           Selecionar Plano
                         </Button>
                       </div>
 
                       {selectedPlan && (
-                        <div className="p-3 bg-[#131320] rounded-md">
+                        <div className="p-3 bg-zinc-100 rounded-md">
                           <p className="font-medium">{selectedPlan.name}</p>
-                          <p className="text-sm text-[#7a7b9f]">
+                          <p className="text-sm text-zinc-400">
                             {new Intl.NumberFormat('pt-BR', {
                               style: 'currency',
                               currency: selectedPlan.currency,
@@ -273,7 +273,7 @@ export function SubscriptionManagementSidebar({
                         type="button"
                         onClick={handleCreateLink}
                         disabled={loading || !selectedPriceId || !newLinkName}
-                        className="w-full bg-[#7435db] hover:bg-[#a85fdd]"
+                        className="w-full bg-primary hover:bg-[#a85fdd]"
                       >
                         {loading ? "Criando..." : "Criar Link"}
                       </Button>
@@ -282,11 +282,11 @@ export function SubscriptionManagementSidebar({
                         {salesLinks.map((link) => (
                           <div
                             key={link.id}
-                            className="flex items-center justify-between p-3 bg-[#131320] rounded-md"
+                            className="flex items-center justify-between p-3 bg-zinc-100 rounded-md"
                           >
                             <div>
                               <p className="font-medium">{link.name}</p>
-                              <p className="text-sm text-[#7a7b9f]">
+                              <p className="text-sm text-zinc-400">
                                 Cliques: {link.clicks} | Conversões: {link.conversions}
                               </p>
                             </div>
@@ -313,12 +313,12 @@ export function SubscriptionManagementSidebar({
 
             {/* Integrações - apenas para parceiros */}
             {userData.userType === "partner" && (
-              <AccordionItem value="integrations" className="border-[#1a1b2d]">
-                <AccordionTrigger className="text-[#e5e2e9] hover:text-[#7435db]">
+              <AccordionItem value="integrations" className="border-zinc-200">
+                <AccordionTrigger className="text-zinc-500 hover:text-zinc-500">
                   Integrações
                 </AccordionTrigger>
                 <AccordionContent>
-                  <Card className="bg-[#1a1b2d] border-[#131320]">
+                  <Card className="bg-zinc-100 border-zinc-200">
                     <CardContent className="space-y-4 pt-4">
                       <div>
                         <Label htmlFor="pixelId">Facebook Pixel ID</Label>
@@ -327,9 +327,9 @@ export function SubscriptionManagementSidebar({
                           value={userData.pixelId}
                           onChange={(e) => setUserData({ ...userData, pixelId: e.target.value })}
                           placeholder="Ex: 123456789012345"
-                          className="bg-[#131320] border-[#1a1b2d]"
+                          className="bg-zinc-100 border-zinc-200"
                         />
-                        <p className="text-sm text-[#7a7b9f] mt-1">
+                        <p className="text-sm text-zinc-400 mt-1">
                           Eventos: PageView, InitiateCheckout, Purchase
                         </p>
                       </div>
@@ -341,9 +341,9 @@ export function SubscriptionManagementSidebar({
                           value={userData.analyticsId}
                           onChange={(e) => setUserData({ ...userData, analyticsId: e.target.value })}
                           placeholder="Ex: G-XXXXXXXXXX"
-                          className="bg-[#131320] border-[#1a1b2d]"
+                          className="bg-zinc-100 border-zinc-200"
                         />
-                        <p className="text-sm text-[#7a7b9f] mt-1">
+                        <p className="text-sm text-zinc-400 mt-1">
                           Eventos: page_view, begin_checkout, purchase
                         </p>
                       </div>
@@ -359,14 +359,14 @@ export function SubscriptionManagementSidebar({
               type="button"
               variant="outline"
               onClick={onClose}
-              className="border-[#1a1b2d]"
+              className="border-zinc-200"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
               disabled={loading}
-              className="bg-[#7435db] hover:bg-[#a85fdd]"
+              className="bg-primary hover:bg-[#a85fdd]"
             >
               {loading ? "Salvando..." : "Salvar"}
             </Button>

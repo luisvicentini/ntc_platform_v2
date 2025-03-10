@@ -113,7 +113,7 @@ export default function FeedPage() {
       {establishments.map((establishment) => (
         <Card
           key={establishment.id}
-          className="overflow-hidden group cursor-pointer bg-[#131320] border-[#1a1b2d] relative"
+          className="overflow-hidden group cursor-pointer bg-zinc-100 border-zinc-200 relative"
           onClick={() => setSelectedEstablishment(establishment)}
         >
           <div className="relative aspect-video">
@@ -141,8 +141,8 @@ export default function FeedPage() {
             
           </div>
           <div className="p-4 space-y-2">
-            <h3 className="font-semibold text-[#e5e2e9] group-hover:text-[#7435db]">{establishment.name}</h3>
-            <p className="text-sm text-[#7a7b9f]">
+            <h3 className="font-semibold text-zinc-500 group-hover:text-zinc-500">{establishment.name}</h3>
+            <p className="text-sm text-zinc-400">
               {establishment.type.type} • {establishment.address.city}
             </p>
           </div>
@@ -154,14 +154,14 @@ export default function FeedPage() {
   return (
     <div className="container py-6">
       <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between mb-6">
-        <h1 className="text-2xl font-bold text-[#e5e2e9]">Cupons disponíveis</h1>
+        <h1 className="text-2xl font-bold text-zinc-500">Cupons disponíveis</h1>
 
         <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
           <div className="relative w-full sm:w-[400px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#7a7b9f]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
             <Input
               placeholder="Pesquisar local"
-              className="pl-10 bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
+              className="pl-10 bg-zinc-100 text-zinc-500 border-zinc-200"
               value={searchTerm}
               onChange={(e) => handleSearch(e.target.value)}
             />
@@ -171,28 +171,28 @@ export default function FeedPage() {
             <SheetTrigger asChild>
               <Button
                 variant="outline"
-                className="w-full sm:w-auto space-x-2 bg-[#1a1b2d] text-[#e5e2e9] border-[#131320]"
+                className="w-full sm:w-auto space-x-2 bg-zinc-100 text-zinc-500 border-zinc-200"
               >
                 <Filter className="h-4 w-4" />
                 <span>Filtrar</span>
               </Button>
             </SheetTrigger>
-            <SheetContent className="bg-[#131320] text-[#e5e2e9]">
+            <SheetContent className="bg-zinc-100 text-zinc-500">
               <SheetHeader>
-                <SheetTitle className="text-[#e5e2e9]">Filtros</SheetTitle>
-                <SheetDescription className="text-[#7a7b9f]">
+                <SheetTitle className="text-zinc-500">Filtros</SheetTitle>
+                <SheetDescription className="text-zinc-400">
                   Ajuste os filtros para encontrar o estabelecimento ideal
                 </SheetDescription>
               </SheetHeader>
 
               <div className="space-y-6 py-4">
                 <div className="space-y-2">
-                  <Label className="text-[#7a7b9f]">Cidade</Label>
+                  <Label className="text-zinc-400">Cidade</Label>
                   <Select
                     value={filters.city}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, city: value }))}
                   >
-                    <SelectTrigger className="bg-[#1a1b2d] border-[#282942] text-[#e5e2e9]">
+                    <SelectTrigger className="bg-zinc-100 border-[#282942] text-zinc-500">
                       <SelectValue placeholder="Selecione uma cidade" />
                     </SelectTrigger>
                     <SelectContent>
@@ -207,12 +207,12 @@ export default function FeedPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[#7a7b9f]">Categoria</Label>
+                  <Label className="text-zinc-400">Categoria</Label>
                   <Select
                     value={filters.category}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
                   >
-                    <SelectTrigger className="bg-[#1a1b2d] border-[#282942] text-[#e5e2e9]">
+                    <SelectTrigger className="bg-zinc-100 border-[#282942] text-zinc-500">
                       <SelectValue placeholder="Selecione uma categoria" />
                     </SelectTrigger>
                     <SelectContent>
@@ -227,12 +227,12 @@ export default function FeedPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[#7a7b9f]">Tipo</Label>
+                  <Label className="text-zinc-400">Tipo</Label>
                   <Select
                     value={filters.type}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
                   >
-                    <SelectTrigger className="bg-[#1a1b2d] border-[#282942] text-[#e5e2e9]">
+                    <SelectTrigger className="bg-zinc-100 border-[#282942] text-zinc-500">
                       <SelectValue placeholder="Selecione um tipo" />
                     </SelectTrigger>
                     <SelectContent>
@@ -247,12 +247,12 @@ export default function FeedPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label className="text-[#7a7b9f]">Partner</Label>
+                  <Label className="text-zinc-400">Partner</Label>
                   <Select
                     value={filters.partnerId}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, partnerId: value }))}
                   >
-                    <SelectTrigger className="bg-[#1a1b2d] border-[#282942] text-[#e5e2e9]">
+                    <SelectTrigger className="bg-zinc-100 border-[#282942] text-zinc-500">
                       <SelectValue placeholder="Selecione um partner" />
                     </SelectTrigger>
                     <SelectContent>
@@ -267,7 +267,7 @@ export default function FeedPage() {
                 </div>
 
                 <div className="space-y-4">
-                  <Label className="text-[#7a7b9f]">Avaliação Mínima</Label>
+                  <Label className="text-zinc-400">Avaliação Mínima</Label>
                   <Slider
                     min={0}
                     max={5}
@@ -275,7 +275,7 @@ export default function FeedPage() {
                     value={[filters.minRating]}
                     onValueChange={([value]) => setFilters(prev => ({ ...prev, minRating: value }))}
                   />
-                  <div className="text-right text-[#7a7b9f]">{filters.minRating} estrelas</div>
+                  <div className="text-right text-zinc-400">{filters.minRating} estrelas</div>
                 </div>
               </div>
             </SheetContent>
@@ -284,7 +284,7 @@ export default function FeedPage() {
       </div>
 
       <Tabs defaultValue="explore" className="mb-6">
-        <TabsList className="bg-[#1a1b2d] text-[#e5e2e9]">
+        <TabsList className="bg-zinc-100 text-zinc-500">
           <TabsTrigger value="explore" onClick={() => setActiveTab("explore")}>
             Explorar
           </TabsTrigger>

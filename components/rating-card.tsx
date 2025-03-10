@@ -57,9 +57,9 @@ export function RatingCard({ establishmentId, establishmentName, onRate, notific
   }
 
   return (
-    <div className="bg-[#1a1b2d] p-4 rounded-lg">
+    <div className="bg-zinc-100 p-4 rounded-lg">
       <h3 className="font-medium mb-2">Avalie sua experiência</h3>
-      <p className="text-sm text-[#7a7b9f] mb-4">
+      <p className="text-sm text-zinc-400 mb-4">
         Como foi sua experiência em {establishmentName}?
       </p>
       <div className="flex gap-2 justify-center" role="group" aria-label="Avaliação em estrelas">
@@ -77,7 +77,7 @@ export function RatingCard({ establishmentId, establishmentName, onRate, notific
               className={`w-8 h-8 transition-colors ${
                 star <= (hoveredRating || rating) 
                   ? "fill-yellow-400 text-yellow-400" 
-                  : "text-[#7a7b9f]"
+                  : "text-zinc-400"
               }`}
             />
           </button>

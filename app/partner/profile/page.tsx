@@ -91,9 +91,9 @@ export default function ProfilePage() {
 
   return (
     <div className="container max-w-4xl py-10">
-      <Card className="bg-[#131320] border-[#1a1b2d]">
+      <Card className="bg-zinc-100 border-zinc-200">
         <CardHeader>
-          <CardTitle className="text-[#e5e2e9]">Meu Perfil</CardTitle>
+          <CardTitle className="text-zinc-500">Meu Perfil</CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="flex items-center space-x-4">
@@ -185,7 +185,7 @@ export default function ProfilePage() {
             />
             <label
               htmlFor="avatar-upload"
-              className="absolute bottom-0 right-0 p-1 rounded-full bg-[#7435db] hover:bg-[#a85fdd] cursor-pointer"
+              className="absolute bottom-0 right-0 p-1 rounded-full bg-primary hover:bg-[#a85fdd] cursor-pointer"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -219,7 +219,7 @@ export default function ProfilePage() {
                 value={profile.name}
                 disabled={!isEditing}
                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                className="bg-[#1a1b2d] border-[#131320] text-[#e5e2e9]"
+                className="bg-zinc-100 border-zinc-200 text-zinc-500"
               />
             </div>
 
@@ -230,7 +230,7 @@ export default function ProfilePage() {
                 type="email"
                 value={profile.email}
                 disabled={true}
-                className="bg-[#1a1b2d] border-[#131320] text-[#e5e2e9] opacity-50"
+                className="bg-zinc-100 border-zinc-200 text-zinc-500 opacity-50"
               />
             </div>
 
@@ -241,7 +241,7 @@ export default function ProfilePage() {
                 value={profile.phone}
                 onChange={(value) => setProfile({ ...profile, phone: value || "" })}
                 disabled={!isEditing}
-                className="bg-[#1a1b2d] text-[#e5e2e9]"
+                className="bg-zinc-100 text-zinc-500"
               />
             </div>
 
@@ -252,13 +252,13 @@ export default function ProfilePage() {
                 value={profile.city}
                 disabled={!isEditing}
                 onChange={(e) => setProfile({ ...profile, city: e.target.value })}
-                className="bg-[#1a1b2d] border-[#131320] text-[#e5e2e9]"
+                className="bg-zinc-100 border-zinc-200 text-zinc-500"
               />
             </div>
 
             {isEditing && (
               <Button 
-                className="w-full bg-[#7435db] hover:bg-[#a85fdd] text-white"
+                className="w-full bg-primary hover:bg-[#a85fdd] text-white"
                 onClick={handleSave}
               >
                 Salvar Alterações

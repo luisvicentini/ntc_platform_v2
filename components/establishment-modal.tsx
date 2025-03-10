@@ -232,7 +232,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="bg-[#131320] text-[#e5e2e9] border-[#1a1b2d] max-w-3xl">
+      <DialogContent className="bg-zinc-100 text-zinc-500 border-zinc-200 max-w-3xl">
         <DialogHeader>
           <DialogTitle>{establishment ? "Editar Estabelecimento" : "Novo Estabelecimento"}</DialogTitle>
         </DialogHeader>
@@ -256,7 +256,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
+                    className="col-span-3 bg-zinc-100 border-zinc-200"
                   />
                 </div>
 
@@ -269,7 +269,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                     name="description"
                     value={formData.description}
                     onChange={handleChange}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
+                    className="col-span-3 bg-zinc-100 border-zinc-200"
                   />
                 </div>
 
@@ -306,7 +306,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                     name="voucherDescription"
                     value={formData.voucherDescription}
                     onChange={handleChange}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
+                    className="col-span-3 bg-zinc-100 border-zinc-200"
                   />
                 </div>
 
@@ -324,7 +324,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                     name="discountRules"
                     value={formData.discountRules}
                     onChange={handleChange}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
+                    className="col-span-3 bg-zinc-100 border-zinc-200"
                   />
                 </div>
 
@@ -337,7 +337,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                     name="usageLimit"
                     value={formData.usageLimit}
                     onChange={handleChange}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
+                    className="col-span-3 bg-zinc-100 border-zinc-200"
                   />
                 </div>
               </div>
@@ -364,9 +364,9 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                     </div>
                   ))}
                   {formData.images.length < 5 && (
-                    <div className="flex items-center justify-center w-full h-24 bg-[#1a1b2d] border-2 border-dashed border-[#131320] rounded">
+                    <div className="flex items-center justify-center w-full h-24 bg-zinc-100 border-2 border-dashed border-zinc-200 rounded">
                       <label htmlFor="image-upload" className="cursor-pointer">
-                        <Plus className="h-6 w-6 text-[#7a7b9f]" />
+                        <Plus className="h-6 w-6 text-zinc-400" />
                         <input
                           id="image-upload"
                           type="file"
@@ -408,7 +408,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                       type="number"
                       value={formData.voucherQuantity}
                       onChange={handleChange}
-                      className="col-span-3 bg-[#1a1b2d] border-[#131320]"
+                      className="col-span-3 bg-zinc-100 border-zinc-200"
                     />
                   </div>
                 )}
@@ -422,7 +422,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                     type="number"
                     value={formData.voucherCooldown}
                     onChange={handleChange}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
+                    className="col-span-3 bg-zinc-100 border-zinc-200"
                   />
                 </div>
                 <div className="grid grid-cols-4 items-center gap-4">
@@ -435,7 +435,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
                     type="number"
                     value={formData.voucherExpiration}
                     onChange={handleChange}
-                    className="col-span-3 bg-[#1a1b2d] border-[#131320]"
+                    className="col-span-3 bg-zinc-100 border-zinc-200"
                   />
                 </div>
               </div>
@@ -452,7 +452,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
           <DialogFooter>
             <Button 
               type="submit" 
-              className="bg-[#7435db] hover:bg-[#a85fdd] text-white"
+              className="bg-primary hover:bg-[#a85fdd] text-white"
               disabled={uploadingImages}
             >
               {uploadingImages ? "Salvando..." : "Salvar"}

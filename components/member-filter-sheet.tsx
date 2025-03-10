@@ -40,19 +40,19 @@ export function MemberFilterSheet({
         <Button 
           variant="outline" 
           size="icon"
-          className="bg-[#131320] border-[#1a1b2d] hover:bg-[#1a1b2d] hover:border-[#7435db]"
+          className="bg-zinc-100 border-zinc-200 hover:bg-zinc-100 hover:border-[#7435db]"
         >
-          <Filter className="h-4 w-4 text-[#7a7b9f]" />
+          <Filter className="h-4 w-4 text-zinc-400" />
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-[400px] bg-[#131320] border-l border-[#1a1b2d]">
+      <SheetContent className="w-[400px] bg-zinc-100 border-l border-zinc-200">
         <SheetHeader>
-          <SheetTitle className="text-[#e5e2e9]">Filtros</SheetTitle>
+          <SheetTitle className="text-zinc-500">Filtros</SheetTitle>
         </SheetHeader>
         
         <div className="mt-6 space-y-6">
           <div className="space-y-3">
-            <Label className="text-[#e5e2e9]">Status</Label>
+            <Label className="text-zinc-500">Status</Label>
             <RadioGroup 
               value={statusFilter} 
               onValueChange={onStatusChange}
@@ -60,22 +60,22 @@ export function MemberFilterSheet({
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="all" id="all" className="border-[#7435db]" />
-                <Label htmlFor="all" className="text-[#e5e2e9]">Todos</Label>
+                <Label htmlFor="all" className="text-zinc-500">Todos</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="active" id="active" className="border-[#7435db]" />
-                <Label htmlFor="active" className="text-[#e5e2e9]">Ativos</Label>
+                <Label htmlFor="active" className="text-zinc-500">Ativos</Label>
               </div>
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="inactive" id="inactive" className="border-[#7435db]" />
-                <Label htmlFor="inactive" className="text-[#e5e2e9]">Inativos</Label>
+                <Label htmlFor="inactive" className="text-zinc-500">Inativos</Label>
               </div>
             </RadioGroup>
           </div>
 
           <div className="space-y-3">
-            <Label className="text-[#e5e2e9]">Período de Expiração</Label>
-            <div className="rounded-md border border-[#1a1b2d] p-3">
+            <Label className="text-zinc-500">Período de Expiração</Label>
+            <div className="rounded-md border border-zinc-200 p-3">
               <Calendar
                 initialFocus
                 mode="range"
@@ -84,11 +84,11 @@ export function MemberFilterSheet({
                 onSelect={onDateRangeChange}
                 numberOfMonths={2}
                 locale={ptBR}
-                className="bg-[#131320]"
+                className="bg-zinc-100"
               />
             </div>
             {dateRange?.from && (
-              <div className="text-sm text-[#7a7b9f]">
+              <div className="text-sm text-zinc-400">
                 {format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })}
                 {dateRange.to && (
                   <> - {format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })}</>

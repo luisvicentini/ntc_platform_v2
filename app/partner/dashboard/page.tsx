@@ -55,7 +55,7 @@ export default function DashboardPage() {
   return (
     <div className="container mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-[#e5e2e9]">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-zinc-500">Dashboard</h1>
         <DateRangePicker 
           date={dateRange}
           onDateChange={(date) => {
@@ -65,51 +65,51 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-[#131320] border-[#1a1b2d]">
+        <Card className="bg-zinc-100 border-zinc-200">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-[#e5e2e9]">
+            <CardTitle className="text-sm font-medium text-zinc-500">
               Estabelecimentos
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">{metrics.totalEstablishments}</div>
+            <div className="text-2xl font-bold text-zinc-500">{metrics.totalEstablishments}</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#131320] border-[#1a1b2d]">
+        <Card className="bg-zinc-100 border-zinc-200">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-[#e5e2e9]">
+            <CardTitle className="text-sm font-medium text-zinc-500">
               Total de Assinantes
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">{metrics.totalMembers}</div>
-            <p className="text-xs text-[#7a7b9f]">
+            <div className="text-2xl font-bold text-zinc-500">{metrics.totalMembers}</div>
+            <p className="text-xs text-zinc-400">
               {metrics.activeMembers} ativos • {metrics.newMembers} novos • {metrics.canceledMembers} cancelados
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#131320] border-[#1a1b2d]">
+        <Card className="bg-zinc-100 border-zinc-200">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-[#e5e2e9]">
+            <CardTitle className="text-sm font-medium text-zinc-500">
               Vouchers Gerados
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">{metrics.totalVouchers}</div>
+            <div className="text-2xl font-bold text-zinc-500">{metrics.totalVouchers}</div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#131320] border-[#1a1b2d]">
+        <Card className="bg-zinc-100 border-zinc-200">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-[#e5e2e9]">
+            <CardTitle className="text-sm font-medium text-zinc-500">
               Check-ins Realizados
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-[#e5e2e9]">{metrics.totalCheckins}</div>
-            <p className="text-xs text-[#7a7b9f]">
+            <div className="text-2xl font-bold text-zinc-500">{metrics.totalCheckins}</div>
+            <p className="text-xs text-zinc-400">
               Taxa de conversão: {(metrics.conversionRate || 0).toFixed(1)}%
             </p>
           </CardContent>
@@ -118,9 +118,9 @@ export default function DashboardPage() {
 
       <div className="grid gap-6 mt-6">
         {/* Gráfico de Vouchers e Check-ins */}
-        <Card className="bg-[#131320] border-[#1a1b2d] p-6">
+        <Card className="bg-zinc-100 border-zinc-200 p-6">
           <CardHeader>
-            <CardTitle className="text-[#e5e2e9]">Vouchers e Check-ins</CardTitle>
+            <CardTitle className="text-zinc-500">Vouchers e Check-ins</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">
@@ -163,9 +163,9 @@ export default function DashboardPage() {
         </Card>
 
         {/* Gráfico de Assinantes */}
-        <Card className="bg-[#131320] border-[#1a1b2d] p-6">
+        <Card className="bg-zinc-100 border-zinc-200 p-6">
           <CardHeader>
-            <CardTitle className="text-[#e5e2e9]">Evolução de Assinantes</CardTitle>
+            <CardTitle className="text-zinc-500">Evolução de Assinantes</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-[300px]">

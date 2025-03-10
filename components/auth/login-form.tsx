@@ -193,8 +193,8 @@ export function LoginForm({
       </div>
       <div className="flex flex-col space-y-2 text-center">
         
-        <h1 className="text-2xl font-semibold tracking-tight text-ntc-purple">{title}</h1>
-        <p className="text-sm text-ntc-gray">{subtitle}</p>
+        <h1 className="text-2xl font-semibold tracking-tight text-custom-primary">{title}</h1>
+        <p className="text-sm text-zinc-500">{subtitle}</p>
       </div>
       <form onSubmit={handleSubmit} className="grid gap-6">
         {showSocialLogin && (
@@ -203,7 +203,7 @@ export function LoginForm({
               <Button 
                 variant="outline" 
                 type="button" 
-                className="bg-white text-black border-ntc-gray-light"
+                className="bg-white text-black border-zinc-500"
                 onClick={handleGoogleLogin}
                 disabled={loading}
               >
@@ -213,7 +213,7 @@ export function LoginForm({
               <Button 
                 variant="outline" 
                 type="button" 
-                className="bg-white text-black border-ntc-gray-light"
+                className="bg-white text-black border-zinc-500"
                 onClick={handleFacebookLogin}
                 disabled={loading}
               >
@@ -223,16 +223,16 @@ export function LoginForm({
             </div>
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-ntc-gray-light/10" />
+                <span className="w-full border-t border-zinc-500/10" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-[#0F0F1A] px-2 text-ntc-gray">Ou continue com</span>
+                <span className="bg-white px-2 text-zinc-500">Ou continue com</span>
               </div>
             </div>
           </>
         )}
         <div className="grid gap-2">
-          <Label htmlFor="email" className="text-ntc-gray">
+          <Label htmlFor="email" className="text-zinc-500">
             Email
           </Label>
           <Input
@@ -242,7 +242,7 @@ export function LoginForm({
             autoCapitalize="none"
             autoComplete="email"
             autoCorrect="off"
-            className="border-ntc-gray-light"
+            className="border-zinc-500"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             disabled={loading}
@@ -250,7 +250,7 @@ export function LoginForm({
           />
         </div>
         <div className="grid gap-2">
-          <Label htmlFor="password" className="text-ntc-gray">
+          <Label htmlFor="password" className="text-zinc-500">
             Senha
           </Label>
           <div className="relative">
@@ -260,7 +260,7 @@ export function LoginForm({
               type={showPassword ? "text" : "password"}
               autoCapitalize="none"
               autoComplete="current-password"
-              className="border-ntc-gray-light"
+              className="border-zinc-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               disabled={loading}
@@ -270,7 +270,7 @@ export function LoginForm({
               type="button"
               variant="ghost"
               size="icon"
-              className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-ntc-gray hover:text-ntc-purple"
+              className="absolute right-0 top-0 h-full px-3 hover:bg-transparent text-zinc-500 hover:text-custom-primary"
               onClick={() => setShowPassword(!showPassword)}
             >
               {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -287,27 +287,27 @@ export function LoginForm({
             <Checkbox id="remember" disabled={loading} />
             <label
               htmlFor="remember"
-              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-ntc-gray"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-zinc-500"
             >
               Manter conectado
             </label>
           </div>
-          <a href="/auth/forgot-password" className="text-sm font-medium text-ntc-purple hover:text-ntc-purple-dark">
+          <a href="/auth/forgot-password" className="text-sm font-medium text-custom-primary hover:text-custom-primary-dark">
             Esqueceu a senha?
           </a>
         </div>
         <Button 
           type="submit" 
-          className="w-full bg-ntc-purple hover:bg-ntc-purple-dark"
+          className="w-full bg-custom-primary hover:bg-custom-primary-dark"
           disabled={loading}
         >
           {loading ? "Entrando..." : "Entrar no sistema"}
         </Button>
       </form>
       {userType === "member" && (
-        <div className="text-center text-sm text-ntc-gray">
+        <div className="text-center text-sm text-zinc-500">
           Não tem uma conta?{" "}
-          <a href="/auth/register" className="text-ntc-purple hover:text-ntc-purple-dark underline underline-offset-4">
+          <a href="/auth/register" className="text-custom-primary hover:text-custom-primary-dark underline underline-offset-4">
             Criar conta
           </a>
         </div>
