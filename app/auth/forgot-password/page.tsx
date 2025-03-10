@@ -1,17 +1,17 @@
 "use client"
 
-import { useState } from "react"
+import { useState, Suspense } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import Image from "next/image"
 import { Loader2 } from "lucide-react"
 import { Logo } from "@/components/ui/logo"
 
-export default function ForgotPasswordPage() {
+// Componente com a lógica principal
+function ForgotPasswordForm() {
   const router = useRouter()
   const [email, setEmail] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -104,5 +104,18 @@ export default function ForgotPasswordPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// Componente principal com Suspense
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="container flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-[#7435db]" />
+      </div>
+    }>
+      <ForgotPasswordForm />
+    </Suspense>
   )
 }

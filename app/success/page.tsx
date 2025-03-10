@@ -1,13 +1,14 @@
 "use client"
 
-import { useState } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useState, Suspense } from "react"
+import { useSearchParams,useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Loader } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/auth-context"
 
-export default function SuccessPage() {
+// Componente que usa useSearchParams
+function SuccessContent() {
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
 
@@ -103,5 +104,17 @@ export default function SuccessPage() {
         </p>
       </div>
     </div>
+  )
+}
+
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="container flex items-center justify-center min-h-screen">
+        <Loader className="h-8 w-8 animate-spin text-purple-600" />
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   )
 } 

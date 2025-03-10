@@ -39,6 +39,7 @@ export function RegisterForm() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(userData),
+        credentials: 'include'
       })
 
       const registerData = await registerResponse.json()
@@ -47,6 +48,8 @@ export function RegisterForm() {
         setError(registerData.error || "Erro ao criar conta")
         return // Importante: retornar aqui para não continuar o processo
       }
+
+      console.log('Registro bem sucedido:', registerData)
 
       // 2. Recuperar dados do checkout do localStorage
       const checkoutData = localStorage.getItem('checkoutData')
@@ -84,8 +87,10 @@ export function RegisterForm() {
             phone: phone,
             name: userData.displayName
           },
-          planName: parsedCheckoutData.planName
+          planName: parsedCheckoutData.planName,
+          userId: registerData.user.id
         }),
+        credentials: 'include'
       })
 
       const stripeData = await stripeResponse.json()

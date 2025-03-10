@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +11,8 @@ import Image from "next/image"
 import { Loader2, Eye, EyeOff } from "lucide-react"
 import { Logo } from "@/components/ui/logo"
 
-export default function ActivateAccountPage() {
+// Componente que usa useSearchParams
+function ActivateForm() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams.get("token")
@@ -228,5 +229,18 @@ export default function ActivateAccountPage() {
         </CardContent>
       </Card>
     </div>
+  )
+}
+
+// Componente principal
+export default function ActivateAccountPage() {
+  return (
+    <Suspense fallback={
+      <div className="container flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-[#7435db]" />
+      </div>
+    }>
+      <ActivateForm />
+    </Suspense>
   )
 }
