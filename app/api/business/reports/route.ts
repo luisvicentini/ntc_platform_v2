@@ -97,7 +97,9 @@ export async function GET(request: Request) {
               id: data.memberId,
               name: memberData.displayName || "Usuário não encontrado",
               phone: memberData.phone || "Não informado",
-              photoURL: memberData.photoURL
+              photoURL: memberData.photoURL,
+              email: memberData.email || "Não informado"
+
             },
             establishment: {
               id: data.establishmentId,

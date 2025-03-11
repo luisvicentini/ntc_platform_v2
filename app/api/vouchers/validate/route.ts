@@ -92,18 +92,52 @@ export async function POST(request: Request) {
       })
     }
 
-    // Buscar dados do Assinante
+    // Buscar dados do Assinante - versão corrigida
+    let memberSnap;
+    let memberData;
+
+    // Primeiro, tenta buscar pelo memberId
     const memberRef = doc(db, "users", voucher.memberId)
-    const memberSnap = await getDoc(memberRef)
+    memberSnap = await getDoc(memberRef)
 
+    // Se não encontrar, tenta buscar por uma consulta alternativa
     if (!memberSnap.exists()) {
-      return NextResponse.json({
-        valid: false,
-        message: "Assinante não encontrado"
-      })
+      console.log(`Membro não encontrado diretamente pelo ID: ${voucher.memberId}, tentando buscar por query...`);
+      
+      // Tente verificar se o memberId armazenado pode ser o uid do Firebase Auth
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, where("firebaseUid", "==", voucher.memberId));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        // Encontrou o usuário pela consulta
+        memberSnap = querySnapshot.docs[0];
+        memberData = memberSnap.data();
+      } else {
+        // Ainda não encontrou - última tentativa: verificar pelo email
+        if (voucher.memberEmail) {
+          const emailQuery = query(usersRef, where("email", "==", voucher.memberEmail));
+          const emailSnapshot = await getDocs(emailQuery);
+          
+          if (!emailSnapshot.empty) {
+            memberSnap = emailSnapshot.docs[0];
+            memberData = memberSnap.data();
+          } else {
+            return NextResponse.json({
+              valid: false,
+              message: "Assinante não encontrado"
+            });
+          }
+        } else {
+          return NextResponse.json({
+            valid: false,
+            message: "Assinante não encontrado"
+          });
+        }
+      }
+    } else {
+      memberData = memberSnap.data();
     }
-
-    const memberData = memberSnap.data()
 
     // Atualizar status para verificado
     await updateDoc(doc(db, "vouchers", voucherDoc.id), {
@@ -118,7 +152,9 @@ export async function POST(request: Request) {
         ...voucher,
         member: {
           name: memberData.displayName,
-          phone: memberData.phone
+          phone: memberData.phoneNumber || memberData.phone,
+          email: memberData.email,
+          photoURL: memberData.photoURL
         },
         establishmentImage: establishmentData.images?.[0] || "/placeholder.svg"
       }

@@ -15,6 +15,7 @@ interface VoucherValidationResult {
   customerName?: string
   customerPhone?: string
   customerAvatar?: string
+  customerEmail?: string
   checkInDate?: string
   discount?: string
   conditions?: string
@@ -24,69 +25,6 @@ interface VoucherValidationResult {
   usageLimit?: string
 }
 
-// Simulated validation function - in a real app this would call your API
-const validateVoucherCode = (code: string): VoucherValidationResult => {
-  // Simulate different voucher statuses
-  switch (code) {
-    case "123456":
-      return {
-        isValid: true,
-        status: "valid",
-        customerName: "Luis Henrique Vicentini",
-        customerPhone: "+55 (19) 98430-5001",
-        customerAvatar: "/placeholder.svg?height=200&width=300",
-        checkInDate: new Date().toLocaleDateString(),
-        discount: "15% de desconto em qualquer prato",
-        conditions: "Válido apenas para consumo no local. Não cumulativo com outras promoções.",
-        establishmentImage: "/placeholder.svg?height=200&width=300",
-      }
-    case "222222":
-      return {
-        isValid: false,
-        status: "expired",
-      }
-    case "111111":
-      return {
-        isValid: false,
-        status: "used",
-      }
-    default:
-      return {
-        isValid: false,
-        status: "invalid",
-      }
-  }
-}
-
-const getStatusText = (status: string) => {
-  switch (status) {
-    case "pending":
-      return "Pendente"
-    case "verified":
-      return "Verificado"
-    case "used":
-      return "Utilizado"
-    case "expired":
-      return "Expirado"
-    default:
-      return "Status desconhecido"
-  }
-}
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case "pending":
-      return "bg-yellow-500/10 text-yellow-500"
-    case "verified":
-      return "bg-blue-500/10 text-blue-500"
-    case "used":
-      return "bg-emerald-500/10 text-emerald-500"
-    case "expired":
-      return "bg-red-500/10 text-red-500"
-    default:
-      return "bg-zinc-400/10 text-zinc-500"
-  }
-}
 
 export default function ValidateVoucherPage() {
   const [voucherCode, setVoucherCode] = useState(["", "", "", "", "", ""])
@@ -141,7 +79,7 @@ export default function ValidateVoucherPage() {
   const validateVoucher = async () => {
     try {
       const code = voucherCode.join("")
-      const sessionToken = localStorage.getItem("sessionToken")
+      const sessionToken = localStorage.getItem("session_token")
 
       const response = await fetch("/api/vouchers/validate", {
         method: "POST",
@@ -162,6 +100,7 @@ export default function ValidateVoucherPage() {
           customerName: data.voucher.member.name,
           customerPhone: data.voucher.member.phone || "Não informado",
           customerAvatar: data.voucher.member.photoURL,
+          customerEmail: data.voucher.member.email || "Não informado",
           checkInDate: new Date().toLocaleDateString(),
           discount: data.voucher.discount,
           voucherDescription: data.voucher.voucherDescription || "Sem descrição específica",
@@ -208,26 +147,34 @@ export default function ValidateVoucherPage() {
   const performCheckIn = async () => {
     try {
       const code = validationResult.code;
+      const sessionToken = localStorage.getItem("session_token");
+      
+      console.log("Realizando check-in para o voucher:", code);
       
       const response = await fetch("/api/vouchers/validate", {
-        method: "POST",
+        method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "x-session-token": sessionToken || ""
         },
-        body: JSON.stringify({ 
-          code,
-          action: "checkin" 
-        }),
-        credentials: "include",
+        body: JSON.stringify({ code })
       });
 
       const data = await response.json();
       
       if (response.ok) {
+        // Atualizar apenas o status, mantendo isValid como true para que o ticket continue visível
+        setValidationResult(prev => ({
+          ...prev,
+          status: "used",
+          isValid: true // Manter como válido para não mostrar a mensagem de erro
+        }));
+        
         setCheckInDone(true);
         toast.success("Check-in realizado com sucesso!");
       } else {
-        toast.error(data.message || "Erro ao realizar check-in");
+        toast.error(data.error || data.message || "Erro ao realizar check-in");
+        console.error("Erro no check-in:", data);
       }
     } catch (error) {
       console.error("Erro ao realizar check-in:", error);
@@ -237,6 +184,12 @@ export default function ValidateVoucherPage() {
 
   const renderValidationResult = () => {
     if (!validationResult) return null
+
+    // Se for um voucher válido com status "used" após check-in, não renderizar aqui
+    // pois o ticket já será mostrado na outra parte da interface
+    if (validationResult.isValid === true) {
+      return null;
+    }
 
     switch (validationResult.status) {
       case "valid":
@@ -369,6 +322,7 @@ export default function ValidateVoucherPage() {
           <div className="space-y-6">
             <VoucherTicket
               customerName={validationResult.customerName}
+              customerEmail={validationResult.customerEmail}
               customerPhone={validationResult.customerPhone}
               customerAvatar={validationResult.customerAvatar}
               checkInDate={validationResult.checkInDate}
@@ -388,6 +342,12 @@ export default function ValidateVoucherPage() {
               >
                 Confirmar Check-in
               </Button>
+            )}
+
+            {validationResult.status === "verified" && checkInDone && (
+              <div className="p-4 bg-emerald-500/10 rounded-lg text-center space-y-4 font-semibold">
+                <p className="text-emerald-500 text-xl">Check-in ralizado com sucesso!</p>
+              </div>
             )}
 
             <Button

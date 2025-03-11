@@ -13,7 +13,7 @@ export default async function CheckoutPage({ params }: { params: { code: string 
   return (
     <div className="min-h-screen bg-zinc-100">
       {/* Hero Section */}
-      <div className="relative h-48 bg-gradient-to-r from-purple-600 to-indigo-600">
+      <div className="relative h-48 bg-gradient-to-r from-red-600 to-orange-600">
         <div className="absolute inset-0 bg-[url('/images/pattern.png')] opacity-20" />
       </div>
 

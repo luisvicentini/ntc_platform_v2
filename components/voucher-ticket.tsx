@@ -2,10 +2,11 @@
 
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar"
-import { User, Calendar, Ticket, Percent, AlertCircle, Info, Users } from "lucide-react"
+import { User, Calendar, Ticket, Percent, AlertCircle, Info, Users, Mail, Phone } from "lucide-react"
 
 interface VoucherTicketProps {
   customerName: string
+  customerEmail: string
   customerPhone: string
   customerAvatar?: string | null
   checkInDate: string
@@ -19,6 +20,7 @@ interface VoucherTicketProps {
 
 export function VoucherTicket({
   customerName,
+  customerEmail,
   customerPhone,
   customerAvatar,
   checkInDate,
@@ -62,6 +64,25 @@ export function VoucherTicket({
       .slice(0, 2)
   }
 
+  // Formatar o telefone para exibição mais amigável
+  const formatPhoneNumber = (phone: string) => {
+    if (!phone || phone === "Não informado") return "Telefone não informado";
+    
+    // Se já estiver formatado com parênteses, retornar como está
+    if (phone.includes("(")) return phone;
+    
+    // Remove todos os caracteres não numéricos
+    const cleaned = phone.replace(/\D/g, '');
+    
+    // Formato brasileiro: +55 (XX) XXXXX-XXXX
+    if (cleaned.length === 13 && cleaned.startsWith('55')) {
+      return `+55 (${cleaned.slice(2, 4)}) ${cleaned.slice(4, 9)}-${cleaned.slice(9)}`;
+    }
+    
+    // Outros formatos, retorna como está
+    return phone;
+  }
+
   return (
     <div className="relative bg-white rounded-lg overflow-hidden">
       {/* Imagem do estabelecimento */}
@@ -74,9 +95,9 @@ export function VoucherTicket({
       </div>
 
       {/* Linha pontilhada decorativa */}
-      <div className="absolute left-0 right-0 h-4 flex justify-between items-center left-[-10px] right-[-10px]" style={{ top: "184px" }}>
+      <div className="absolute left-0 right-0 h-4 flex justify-between items-center left-[-10px] right-[-10px]" style={{ top: "183px" }}>
         <div className="w-4 h-4 bg-zinc-100 rounded-full" />
-        <div className="flex-1 border-t-2 border-dashed border-zinc-200 mx-2" />
+        <div className="flex-1 border-t-2 border-dashed border-zinc-100 mx-2" />
         <div className="w-4 h-4 bg-zinc-100 rounded-full" />
       </div>
 
@@ -84,7 +105,7 @@ export function VoucherTicket({
       <div className="p-6 pt-8 space-y-4">
         <div className="flex justify-between items-start">
           <div className="flex items-center space-x-3">
-            <Avatar className="h-10 w-10 border-2 border-primary">
+            <Avatar className="h-10 w-10 border-2 border-zinc-200">
               {customerAvatar && (
                 <AvatarImage 
                   src={customerAvatar} 
@@ -92,17 +113,22 @@ export function VoucherTicket({
                   className="object-cover"
                 />
               )}
-              <AvatarFallback className="bg-primary/10 text-zinc-500">
+              <AvatarFallback className="bg-zinc-100 text-zinc-500">
                 {getInitials(customerName)}
               </AvatarFallback>
             </Avatar>
             <div className="space-y-1">
-              <h3 className="font-semibold text-zinc-400">
+              <h3 className="font-semibold text-zinc-500">
                 {customerName || "Usuário"}
               </h3>
-              <p className="text-sm text-zinc-400">
-                {customerPhone || "Telefone não informado"}
-              </p>
+              <div className="flex items-center text-sm text-zinc-400">
+                <Phone className="h-3 w-3 mr-1" />
+                {formatPhoneNumber(customerPhone)}
+              </div>
+              <div className="flex items-center text-sm text-zinc-400">
+                <Mail className="h-3 w-3 mr-1" />
+                {customerEmail || "Email não informado"}
+              </div>
             </div>
           </div>
           <Badge className={getStatusColor(status)}>
@@ -111,35 +137,35 @@ export function VoucherTicket({
         </div>
 
         <div className="space-y-3 pt-2">
-          <div className="flex items-center space-x-2 text-zinc-400">
-            <Calendar className="h-4 w-4" />
+          <div className="flex items-center space-x-4 text-zinc-400">
+            <Calendar className="h-4 w-8" />
             <div className="flex-1">
               <h4 className="text-sm">Data da Verificação:</h4>
-              <p>{checkInDate}</p>
+              <p className="text-zinc-500 font-medium">{checkInDate}</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 text-zinc-400">
-            <Percent className="h-4 w-4" />
+          <div className="flex items-center space-x-4 text-zinc-400">
+            <Percent className="h-4 w-8" />
             <div className="flex-1">
               <h4 className="text-sm">Desconto:</h4>
-              <p>{discount}</p>
+              <p className="text-zinc-500 font-medium">{discount}</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 text-zinc-400">
-            <Info className="h-4 w-4" />
+          <div className="flex items-center space-x-4 text-zinc-400">
+            <Info className="h-4 w-8" />
             <div className="flex-1">
               <h4 className="text-sm">Regras do Desconto:</h4>
-              <p>{voucherDescription}</p>
+              <p className="text-zinc-500 font-medium">{voucherDescription}</p>
             </div>
           </div>
 
-          <div className="flex items-center space-x-2 text-zinc-400">
-            <Users className="h-4 w-4" />
+          <div className="flex items-center space-x-4 text-zinc-400">
+            <Users className="h-4 w-8" />
             <div className="flex-1">
               <h4 className="text-sm">Limite de Uso:</h4>
-              <p>{usageLimit}</p>
+              <p className="text-zinc-500 font-medium">{usageLimit}</p>
             </div>
           </div>
         </div>

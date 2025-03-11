@@ -119,7 +119,7 @@ export function RegisterForm() {
       <div className="mb-8">
         <Logo />
       </div>
-      <Card className="w-[400px] bg-zinc-100 text-zinc-500 border-zinc-200">
+      <Card className="w-[400px] bg-zinc-50 text-zinc-500 border-zinc-200">
         <CardHeader>
           <CardTitle>Crie sua Conta</CardTitle>
           <CardDescription className="text-zinc-400">
@@ -135,7 +135,7 @@ export function RegisterForm() {
               name="name"
               type="text"
               required
-              className="mt-1 bg-zinc-100 border-zinc-200"
+              className="mt-1 border-zinc-200"
             />
           </div>
 
@@ -146,7 +146,7 @@ export function RegisterForm() {
               name="email"
               type="email"
               required
-              className="mt-1 bg-zinc-100 border-zinc-200"
+              className="mt-1 border-zinc-200"
             />
           </div>
 
@@ -157,7 +157,7 @@ export function RegisterForm() {
               value={phone}
               onChange={(value) => setPhone(value)}
               required
-              className="mt-1 bg-zinc-100 border-zinc-200"
+              className="mt-1 border-zinc-200"
             />
           </div>
 
@@ -168,7 +168,7 @@ export function RegisterForm() {
               name="city"
               type="text"
               required
-              className="mt-1 bg-zinc-100 border-zinc-200"
+              className="mt-1 border-zinc-200"
             />
           </div>
 

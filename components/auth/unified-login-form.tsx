@@ -99,7 +99,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
           <CardDescription className="text-zinc-400">{subtitle}</CardDescription>
         </CardHeader>
         
-        <CardContent>
+        <CardContent className="mt-4">
           <form onSubmit={handleEmailSignIn} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
@@ -166,17 +166,17 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
             </div>
           </div>
           
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4">
             <Button
               variant="outline"
               onClick={handleGoogleSignIn}
               disabled={loading || authLoading}
-              className="bg-transparent border-zinc-200 hover:bg-white hover:text-zinc-500"
+              className="bg-white border-zinc-200 hover:bg-white hover:text-zinc-500"
             >
               <FcGoogle className="mr-2 h-4 w-4" />
               Google
             </Button>
-            <Button
+            {/* <Button
               variant="outline"
               onClick={handleFacebookSignIn}
               disabled={loading || authLoading}
@@ -184,7 +184,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
             >
               <FaFacebook className="mr-2 h-4 w-4 text-blue-600" />
               Facebook
-            </Button>
+            </Button> */}
           </div>
         </CardContent>
         

@@ -164,10 +164,10 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
     <div className="p-8">
       {/* Logo */}
       <div className="mb-8 flex justify-center">
-        <div className="relative w-32 h-32 rounded-full overflow-hidden bg-white shadow-lg border-4 border-purple-100">
+        <div className="relative w-32 h-32 rounded-full overflow-hidden bg-white shadow-lg border-4 border-zinc-100">
           <Image
             src="/logo.svg"
-            alt="Logo NTC"
+            alt="Logo"
             fill
             className="object-contain p-6"
             priority
@@ -178,21 +178,21 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
       {/* Detalhes do Plano */}
       <div className="text-center space-y-6 mb-8">
         <div>
-          <h2 className="text-2xl font-bold text-zinc-800 mb-2">
+          <h2 className="text-2xl font-bold text-zinc-600 mb-2">
             {partnerLink.planName}
           </h2>
-          <p className="text-zinc-600">
+          <p className="text-zinc-400">
             {partnerLink.description}
           </p>
         </div>
 
         {/* Preços */}
-        <div className="bg-purple-50 rounded-xl p-6">
+        <div className="bg-zinc-50 rounded-xl p-6">
           <div className="space-y-2">
             {/* Valor da parcela */}
             {/* Só exibe se for plano mensal */}
             {partnerLink.interval == 'month' && (
-            <p className="text-4xl font-bold text-purple-600">
+            <p className="text-4xl font-bold text-orange-600">
               R$ {calculateInstallment().toFixed(2)}
               <span className="text-base font-normal text-zinc-600">/mês</span>
             </p>
@@ -223,8 +223,8 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
           'Atualizações em tempo real'
         ].map((benefit) => (
           <div key={benefit} className="flex items-center">
-            <CheckCircle2 className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-            <span className="text-zinc-700">{benefit}</span>
+            <CheckCircle2 className="w-5 h-5 text-emerald-500 mr-3 flex-shrink-0" />
+            <span className="text-zinc-600">{benefit}</span>
           </div>
         ))}
       </div>
@@ -233,7 +233,7 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
       <Button
         onClick={handleStartOnboarding}
         disabled={loading}
-        className="w-full bg-purple-600 hover:bg-purple-700 text-white py-6 text-lg"
+        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-6 text-lg"
       >
         {loading ? 'Processando...' : user?.userType === 'member' ? 'Continuar para pagamento' : 'Quero esse plano'}
       </Button>

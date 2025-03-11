@@ -76,7 +76,7 @@ function SuccessContent() {
           <Button
             onClick={() => router.push('/login') || router.push('/member/feed')}
             size="lg"
-            className="w-full bg-purple-600 hover:bg-purple-700"
+            className="w-full bg-red-600 hover:bg-red-700"
           >
             {loading ? 'Processando...' : user?.userType === 'member' ? 'Ir para o feed de cupons' : 'Já ativou a conta? Faça login'}
           </Button>

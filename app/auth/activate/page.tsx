@@ -116,7 +116,7 @@ function ActivateForm() {
         <div className="mb-8">
           <Logo />
         </div>
-        <Card className="w-[400px] bg-zinc-100 text-zinc-500 border-zinc-200">
+        <Card className="w-[400px] bg-zinc-50 text-zinc-500 border-zinc-200">
           <CardHeader>
             <CardTitle>Link Inválido</CardTitle>
             <CardDescription className="text-zinc-400">
@@ -133,7 +133,7 @@ function ActivateForm() {
       <div className="mb-8">
         <Logo />
       </div>
-      <Card className="w-[400px] bg-zinc-100 text-zinc-500 border-zinc-200">
+      <Card className="w-[400px] bg-zinc-50 text-zinc-500 border-zinc-200">
         <CardHeader>
           <CardTitle>Ative sua Conta</CardTitle>
           <CardDescription className="text-zinc-400">
@@ -171,7 +171,7 @@ function ActivateForm() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={`bg-zinc-100 border-zinc-200 ${!password || isPasswordValid ? "" : "border-red-500"}`}
+                    className={`border-zinc-200 ${!password || isPasswordValid ? "" : "border-red-500"}`}
                     disabled={isLoading}
                   />
                   <Button
@@ -193,7 +193,7 @@ function ActivateForm() {
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`bg-zinc-100 border-zinc-200 ${!confirmPassword || passwordsMatch ? "" : "border-red-500"}`}
+                    className={`border-zinc-200 ${!confirmPassword || passwordsMatch ? "" : "border-red-500"}`}
                     disabled={isLoading}
                   />
                   <Button

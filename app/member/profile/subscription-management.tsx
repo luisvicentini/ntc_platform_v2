@@ -251,12 +251,12 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
                   <div className="space-y-4 text-[#b5b6c9]">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <h4 className="text-sm font-medium text-zinc-400 mb-1">Plano</h4>
-                        <p className="text-zinc-500">{activeSubscription.planName}</p>
+                        <h4 className="text-sm font-sm text-zinc-400 mb-1">Plano</h4>
+                        <p className="text-zinc-600">{activeSubscription.planName}</p>
                       </div>
                       <div>
-                        <h4 className="text-sm font-medium text-zinc-400 mb-1">Valor</h4>
-                        <p className="text-zinc-500">
+                        <h4 className="text-sm font-sm text-zinc-400 mb-1">Valor</h4>
+                        <p className="text-zinc-600">
                           {new Intl.NumberFormat('pt-BR', {
                             style: 'currency',
                             currency: activeSubscription.currency,
@@ -268,26 +268,28 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <h4 className="text-sm font-medium text-zinc-400 mb-1">Período Atual</h4>
-                        <p>
+                        <h4 className="text-sm font-sm text-zinc-400 mb-1">Período Atual</h4>
+                        <p className="text-zinc-600">
                           {format(activeSubscription.currentPeriodStart * 1000, "dd/MM/yyyy", { locale: ptBR })} - {format(activeSubscription.currentPeriodEnd * 1000, "dd/MM/yyyy", { locale: ptBR })}
                         </p>
                       </div>
                       <div>
-                        <h4 className="text-sm font-medium text-zinc-400 mb-1">Data de Adesão</h4>
-                        <p>{format(activeSubscription.created * 1000, "dd/MM/yyyy", { locale: ptBR })}</p>
+                        <h4 className="text-sm font-sm text-zinc-400 mb-1">Data de Adesão</h4>
+                        <p className="text-zinc-600">{format(activeSubscription.created * 1000, "dd/MM/yyyy", { locale: ptBR })}</p>
                       </div>
                     </div>
 
                     {activeSubscription.paymentMethod && (
                       <div>
-                        <h4 className="text-sm font-medium text-zinc-400 mb-1">Forma de Pagamento</h4>
-                        <p>
-                          {cardBrandMap[activeSubscription.paymentMethod.brand] || activeSubscription.paymentMethod.brand} terminando em {activeSubscription.paymentMethod.last4}
-                        </p>
-                        <p className="text-sm text-zinc-400">
-                          Expira em {String(activeSubscription.paymentMethod.expiryMonth).padStart(2, '0')}/{activeSubscription.paymentMethod.expiryYear}
-                        </p>
+                        <h4 className="text-sm font-sm text-zinc-400 mb-1">Forma de Pagamento</h4>
+                        <div className="flex flex-col items-left gap-2 bg-zinc-100 p-3 rounded-xl justify-between md:w-[55%] sm:max-w-[100%]">
+                          <p className="text-zinc-600">
+                            <span className="bg-white px-2 rounded-md font-medium text-indigo-400">{cardBrandMap[activeSubscription.paymentMethod.brand] || activeSubscription.paymentMethod.brand}</span> <span className="font-medium"> **** **** **** {activeSubscription.paymentMethod.last4}</span>
+                          </p>
+                          <p className="text-sm text-zinc-400">
+                          Exp date: {String(activeSubscription.paymentMethod.expiryMonth).padStart(2, '0')}/{activeSubscription.paymentMethod.expiryYear}
+                          </p>
+                        </div>
                       </div>
                     )}
 
