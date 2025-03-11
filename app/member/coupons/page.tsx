@@ -430,9 +430,9 @@ export default function CouponsPage() {
                 <div className="relative pb-1">
                   {/* Linha pontilhada decorativa */}
                   <div className="absolute  h-4 flex justify-between items-center left-[-33px] right-[-33px]" >
-                    <div className="w-4 h-4 bg-white rounded-full" />
-                    <div className="flex-1 border-t-2 border-dashed border-[#0F0F1A] mx-2" />
-                    <div className="w-4 h-4 bg-white rounded-full" />
+                    <div className="w-4 h-4 bg-white rounded-full border-1 border-zinc-200" />
+                    <div className="flex-1 border-t-2 border-dashed border-zinc-200 mx-2" />
+                    <div className="w-4 h-4 bg-white rounded-full border-1 border-zinc-200" />
                   </div>
                 </div>
 

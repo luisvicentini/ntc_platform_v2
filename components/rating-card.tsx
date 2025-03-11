@@ -57,7 +57,7 @@ export function RatingCard({ establishmentId, establishmentName, onRate, notific
   }
 
   return (
-    <div className="bg-zinc-100 p-4 rounded-lg">
+    <div className="bg-white p-4 rounded-lg">
       <h3 className="font-medium mb-2">Avalie sua experiência</h3>
       <p className="text-sm text-zinc-400 mb-4">
         Como foi sua experiência em {establishmentName}?

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
-import { ChevronRight } from "lucide-react"
+import { ChevronRight, Trash } from "lucide-react"
 import type { Establishment } from "@/types/establishment"
 
 interface EstablishmentLinkModalProps {
@@ -207,7 +207,7 @@ export function EstablishmentLinkModal({
             <Button
               onClick={handleAddSelected}
               disabled={selectedToAdd.length === 0}
-              className="w-full"
+              className="w-full text-white"
             >
               Adicionar Selecionados <ChevronRight className="ml-2 h-4 w-4" />
             </Button>
@@ -225,9 +225,9 @@ export function EstablishmentLinkModal({
                     size="sm"
                     onClick={() => handleRemoveEstablishment(establishment.id)}
                     disabled={loading}
-                    className="text-red-500 hover:text-red-600"
+                    className="text-red-500 hover:bg-zinc-200 hover:text-red-600"
                   >
-                    Remover
+                    <Trash className="h-4 w-4" />
                   </Button>
                 </div>
               ))}
@@ -246,7 +246,7 @@ export function EstablishmentLinkModal({
           </Button>
           <Button
             onClick={handleSave}
-            className="bg-primary hover:bg-[#a85fdd] text-white"
+            className="bg-primary hover:bg-secondary text-white"
             disabled={loading}
           >
             {loading ? "Salvando..." : "Salvar"}

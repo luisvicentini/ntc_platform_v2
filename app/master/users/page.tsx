@@ -135,15 +135,15 @@ function UsersContent() {
   const getUserTypeColor = (userType: string) => {
     switch (userType) {
       case "business":
-        return "bg-blue-500"
+        return "bg-blue-500 text-white font-medium"
       case "member":
-        return "bg-green-500"
+        return "bg-green-500 text-white font-medium"
       case "partner":
-        return "bg-purple-500"
+        return "bg-purple-500 text-white font-medium"
       case "master":
-        return "bg-yellow-500"
+        return "bg-yellow-500 text-white font-medium"
       default:
-        return "bg-zinc-400"
+        return "bg-zinc-400 text-white font-medium"
     }
   }
 
@@ -602,9 +602,9 @@ function UsersContent() {
                       variant="ghost"
                       size="icon"
                       onClick={() => setOpenDropdownId(openDropdownId === user.id ? null : user.id)}
-                      className="relative z-10"
+                      className="relative z-10 hover:bg-zinc-100"
                     >
-                      <MoreVertical className="h-4 w-4" />
+                      <MoreVertical className="h-4 w-4 text-zinc-500 hover:text-zinc-500" />
                     </Button>
                     
                     {openDropdownId === user.id && (

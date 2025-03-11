@@ -192,7 +192,7 @@ export default function FeedPage() {
                     value={filters.city}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, city: value }))}
                   >
-                    <SelectTrigger className="bg-zinc-100 border-[#282942] text-zinc-500">
+                    <SelectTrigger className="bg-zinc-100 border-zinc-300 text-zinc-500">
                       <SelectValue placeholder="Selecione uma cidade" />
                     </SelectTrigger>
                     <SelectContent>
@@ -212,7 +212,7 @@ export default function FeedPage() {
                     value={filters.category}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
                   >
-                    <SelectTrigger className="bg-zinc-100 border-[#282942] text-zinc-500">
+                    <SelectTrigger className="bg-zinc-100 border-zinc-300 text-zinc-500">
                       <SelectValue placeholder="Selecione uma categoria" />
                     </SelectTrigger>
                     <SelectContent>
@@ -232,7 +232,7 @@ export default function FeedPage() {
                     value={filters.type}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
                   >
-                    <SelectTrigger className="bg-zinc-100 border-[#282942] text-zinc-500">
+                    <SelectTrigger className="bg-zinc-100 border-zinc-300 text-zinc-500">
                       <SelectValue placeholder="Selecione um tipo" />
                     </SelectTrigger>
                     <SelectContent>
@@ -252,7 +252,7 @@ export default function FeedPage() {
                     value={filters.partnerId}
                     onValueChange={(value) => setFilters(prev => ({ ...prev, partnerId: value }))}
                   >
-                    <SelectTrigger className="bg-zinc-100 border-[#282942] text-zinc-500">
+                    <SelectTrigger className="bg-zinc-100 border-zinc-300 text-zinc-500">
                       <SelectValue placeholder="Selecione um partner" />
                     </SelectTrigger>
                     <SelectContent>

@@ -185,7 +185,7 @@ export function SubscriptionManagementModal({
           variant="outline"
           size="sm"
           onClick={() => setOpenDatePicker(isOpen ? null : partner.id)}
-          className="text-xs bg-transparent w-full justify-start"
+          className="text-xs bg-transparent w-full justify-start bg-zinc-100 border-0 hover:bg-white hover:text-zinc-500"
         >
           <CalendarIcon className="h-3 w-3 mr-1" />
           Data de Expiração: {format(new Date(partner.expirationDate), "dd/MM/yyyy", { locale: ptBR })}
@@ -217,7 +217,7 @@ export function SubscriptionManagementModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl bg-zinc-100 text-white p-0">
+      <DialogContent className="max-w-4xl bg-zinc-100 text-zinc-500 p-0">
         <DialogHeader className="p-6 border-b border-zinc-200">
           <DialogTitle className="text-xl font-semibold">Vincular Assinante a uma assinatura de parceiro</DialogTitle>
         </DialogHeader>
@@ -225,12 +225,12 @@ export function SubscriptionManagementModal({
         <div className="grid grid-cols-2 gap-6 p-6">
           {/* Coluna 1: Parceiros Disponíveis */}
           <div>
-            <Label className="text-zinc-400 mb-2">Parceiros Disponíveis</Label>
+            <Label className="text-zinc-500 mb-2">Parceiros Disponíveis</Label>
             <Input
               placeholder="Buscar parceiro..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="mb-4 bg-zinc-100 text-white"
+              className="mb-4 bg-zinc-100 text-zinc-500 border-zinc-200 placeholder:text-zinc-300"
             />
             <div className="space-y-2 max-h-[400px] overflow-y-auto">
               {availablePartners
@@ -240,14 +240,14 @@ export function SubscriptionManagementModal({
                 .map((partner) => (
                   <div
                     key={partner.id}
-                    className="flex items-center justify-between p-3 bg-zinc-100 rounded-lg"
+                    className="flex items-center justify-between p-3 bg-zinc-200 rounded-lg"
                   >
                     <span>{partner.displayName}</span>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleSelectPartner(partner)}
-                      className="text-white hover:bg-[#2D2C32]"
+                      className="text-zinc-500 hover:bg-zinc-200 hover:text-zinc-500"
                     >
                       <PlusCircle className="h-4 w-4" />
                     </Button>
@@ -258,7 +258,6 @@ export function SubscriptionManagementModal({
 
           {/* Coluna 2: Assinaturas */}
           <div>
-            <Label className="text-zinc-400 mb-2">Assinaturas</Label>
             <div className="space-y-4 max-h-[400px] overflow-y-auto">
               {/* Assinaturas Ativas */}
               {activeSubscriptions.length > 0 ? (
@@ -267,11 +266,11 @@ export function SubscriptionManagementModal({
                   {activeSubscriptions.map((partner) => (
                     <div
                       key={partner.id}
-                      className="flex items-center justify-between p-3 bg-zinc-100 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-zinc-200 rounded-lg"
                     >
                       <div className="flex flex-col gap-1">
-                        <span className="text-white">{partner.displayName}</span>
-                        <span className="text-xs text-zinc-400">
+                        <span className="text-zinc-500">{partner.displayName}</span>
+                        <span className="text-xs text-zinc-400 bg-zinc-100 border-0 hover:bg-white hover:text-zinc-500 rounded-md px-2 py-1">
                           Expira em: {format(new Date(partner.expirationDate), "dd/MM/yyyy", { locale: ptBR })}
                         </span>
                       </div>
@@ -279,7 +278,7 @@ export function SubscriptionManagementModal({
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemoveActiveSubscription(partner.id)}
-                        className="text-red-500 hover:bg-[#2D2C32]"
+                        className="text-red-500 hover:bg-zinc-200 hover:text-zinc-500"
                         disabled={loading}
                       >
                         <Trash2 className="h-4 w-4" />
@@ -288,7 +287,7 @@ export function SubscriptionManagementModal({
                   ))}
                 </div>
               ) : (
-                <div className="text-center text-zinc-500 py-4">
+                <div className="text-center text-zinc-300 py-4">
                   Nenhuma assinatura ativa
                 </div>
               )}
@@ -300,10 +299,10 @@ export function SubscriptionManagementModal({
                   {newSubscriptions.map((partner) => (
                     <div
                       key={partner.id}
-                      className="flex items-center justify-between p-3 bg-zinc-100 rounded-lg"
+                      className="flex items-center justify-between p-3 bg-zinc-200 rounded-lg"
                     >
                       <div className="flex flex-col gap-1 w-full">
-                        <span>{partner.displayName}</span>
+                        <span className="text-zinc-500">{partner.displayName}</span>
                         <DatePickerDropdown
                           partner={partner}
                           onSelect={(date) => handleUpdateExpiration(partner.id, date)}
@@ -313,7 +312,7 @@ export function SubscriptionManagementModal({
                         variant="ghost"
                         size="sm"
                         onClick={() => handleRemovePartner(partner)}
-                        className="text-red-500 hover:bg-[#2D2C32] ml-2"
+                        className="text-red-500 hover:bg-zinc-200 hover:text-zinc-500"
                       >
                         Remover
                       </Button>
@@ -325,18 +324,18 @@ export function SubscriptionManagementModal({
           </div>
         </div>
 
-        <div className="flex justify-end gap-3 p-6 border-t border-zinc-800">
+        <div className="flex justify-end gap-3 p-6 border-t border-zinc-200">
           <Button
             variant="outline"
             onClick={onClose}
-            className="bg-transparent border-zinc-800 text-white hover:bg-[#2D2C32]"
+            className="bg-transparent border-zinc-300 text-zinc-500 hover:bg-zinc-200 hover:text-zinc-500"
           >
             Cancelar
           </Button>
           <Button
             onClick={handleSave}
             disabled={loading || newSubscriptions.length === 0}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            className="bg-primary hover:bg-secondary text-white"
           >
             {loading ? "Salvando..." : "Salvar"}
           </Button>

@@ -185,7 +185,7 @@ export default function ProfilePage() {
             />
             <label
               htmlFor="avatar-upload"
-              className="absolute bottom-0 right-0 p-1 rounded-full bg-primary hover:bg-[#a85fdd] cursor-pointer"
+              className="absolute bottom-0 -right-2 p-2 rounded-full bg-primary hover:bg-secondary cursor-pointer"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -213,46 +213,46 @@ export default function ProfilePage() {
 
           <div className="space-y-4">
             <div className="grid gap-2">
-              <Label htmlFor="name">Nome</Label>
+              <Label htmlFor="name" className="text-zinc-500">Nome</Label>
               <Input
                 id="name"
                 value={profile.name}
                 disabled={!isEditing}
                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                className="bg-zinc-100 border-zinc-200 text-zinc-500"
+                className="bg-white border-zinc-200 text-zinc-500"
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-zinc-500">Email</Label>
               <Input
                 id="email"
                 type="email"
                 value={profile.email}
                 disabled={true}
-                className="bg-zinc-100 border-zinc-200 text-zinc-500 opacity-50"
+                className="bg-white border-zinc-200 text-zinc-500 opacity-50"
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="phone">Telefone</Label>
+              <Label htmlFor="phone" className="text-zinc-500">Telefone</Label>
               <PhoneNumberInput
                 defaultCountry="BR"
                 value={profile.phone}
                 onChange={(value) => setProfile({ ...profile, phone: value || "" })}
                 disabled={!isEditing}
-                className="bg-zinc-100 text-zinc-500"
+                className="border-zinc-300 text-zinc-500"
               />
             </div>
 
             <div className="grid gap-2">
-              <Label htmlFor="city">Cidade</Label>
+              <Label htmlFor="city" className="text-zinc-500">Cidade</Label>
               <Input
                 id="city"
                 value={profile.city}
                 disabled={!isEditing}
                 onChange={(e) => setProfile({ ...profile, city: e.target.value })}
-                className="bg-zinc-100 border-zinc-200 text-zinc-500"
+                className="bg-white border-zinc-200 text-zinc-500"
               />
             </div>
 

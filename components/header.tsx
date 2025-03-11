@@ -72,7 +72,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userData, user, theme = "da
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56 bg-zinc-50 border-zinc-200 text-zinc-500" align="end">
+      <DropdownMenuContent className="w-56 bg-white border-zinc-200 text-zinc-500" align="end">
         <div className="flex items-center justify-start gap-2 p-2">
           <div className="flex flex-col space-y-1 leading-none">
             <p className="font-medium">{userData.displayName || user?.displayName || "Nome não informado"}</p>
