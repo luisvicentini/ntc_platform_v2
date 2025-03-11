@@ -161,7 +161,7 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-[400px] sm:w-[540px] bg-white border-l-zinc-200 flex flex-col p-0">
+      <SheetContent className="w-[400px] sm:w-[540px] bg-white border-l-zinc-200 flex flex-col p-0 overflow-y-auto">
         <div className="p-6 border-b border-zinc-200">
           <SheetHeader>
             <SheetTitle className="text-zinc-500">{establishment.name}</SheetTitle>

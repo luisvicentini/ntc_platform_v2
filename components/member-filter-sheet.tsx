@@ -45,7 +45,7 @@ export function MemberFilterSheet({
           <Filter className="h-4 w-4 text-zinc-400" />
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-[400px] bg-zinc-100 border-l border-zinc-200">
+      <SheetContent className="w-[400px] bg-zinc-100 border-l border-zinc-200 overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-zinc-500">Filtros</SheetTitle>
         </SheetHeader>

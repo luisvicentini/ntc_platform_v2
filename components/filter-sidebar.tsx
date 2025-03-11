@@ -38,7 +38,7 @@ export function FilterSidebar({ onFilterChange }: { onFilterChange: (filters: an
       <SheetTrigger asChild>
         <Button variant="outline">Filtros</Button>
       </SheetTrigger>
-      <SheetContent className="w-[400px] bg-zinc-100 border-zinc-200 text-zinc-500">
+      <SheetContent className="w-[400px] bg-zinc-100 border-zinc-200 text-zinc-500 overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-zinc-500">Filtros</SheetTitle>
         </SheetHeader>

@@ -342,7 +342,7 @@ export default function CouponsPage() {
                 <Filter className="h-4 w-4 text-zinc-400" />
               </Button>
             </SheetTrigger>
-            <SheetContent className="bg-zinc-50 border-zinc-200">
+            <SheetContent className="bg-zinc-50 border-zinc-200 overflow-y-auto">
               <SheetHeader>
                 <SheetTitle className="text-zinc-500">Filtros</SheetTitle>
               </SheetHeader>

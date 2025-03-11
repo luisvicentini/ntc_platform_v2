@@ -177,7 +177,7 @@ export default function FeedPage() {
                 <span>Filtrar</span>
               </Button>
             </SheetTrigger>
-            <SheetContent className="bg-zinc-100 text-zinc-500">
+            <SheetContent className="bg-zinc-100 text-zinc-500 overflow-y-auto">
               <SheetHeader>
                 <SheetTitle className="text-zinc-500">Filtros</SheetTitle>
                 <SheetDescription className="text-zinc-400">

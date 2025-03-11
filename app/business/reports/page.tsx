@@ -109,7 +109,7 @@ const FilterSidebar = ({
 
   return (
     <Sheet open={isOpen} onOpenChange={onOpenChange}>
-      <SheetContent className="bg-zinc-100 border-l-[#1a1b2d] w-[400px]">
+      <SheetContent className="bg-zinc-100 border-l-[#1a1b2d] w-[400px]  overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-zinc-500">Filtros</SheetTitle>
         </SheetHeader>

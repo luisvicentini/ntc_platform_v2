@@ -113,7 +113,7 @@ const NotificationButton: React.FC<{ isOpen: boolean; onOpenChange: (open: boole
         {notifications.length > 0 && <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" />}
       </Button>
     </SheetTrigger>
-    <SheetContent className="w-[400px] bg-zinc-100 border-zinc-200 text-zinc-500">
+    <SheetContent className="w-[400px] bg-zinc-100 border-zinc-200 text-zinc-500 overflow-y-auto">
       <SheetHeader>
         <SheetTitle className="text-zinc-500">Notificações</SheetTitle>
       </SheetHeader>

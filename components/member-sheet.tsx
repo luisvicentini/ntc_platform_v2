@@ -147,7 +147,7 @@ export function MemberSheet({ member, isOpen, onClose, onEdit }: MemberSheetProp
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-[400px] bg-zinc-100 border-l border-zinc-200 text-zinc-500">
+      <SheetContent className="w-[400px] bg-zinc-100 border-l border-zinc-200 text-zinc-500 overflow-y-auto">
         <SheetHeader className="flex flex-row items-center justify-between">
           <SheetTitle className="text-zinc-500">Detalhes do Assinante</SheetTitle>
           {!isEditing ? (
