@@ -137,7 +137,7 @@ export default function MembersPage() {
     return (
       <div className="container mx-auto p-6">
         <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#7435db]"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       </div>
     )
@@ -188,7 +188,7 @@ export default function MembersPage() {
             {filteredMembers.map((member) => (
               <Card
                 key={member.id}
-                className="bg-zinc-100 border-zinc-200 cursor-pointer hover:border-[#7435db] transition-colors"
+                className="bg-zinc-50 border-zinc-100 cursor-pointer hover:border-primary transition-colors"
                 onClick={() => setSelectedMember(member)}
               >
                 <CardHeader className="flex flex-row items-center space-y-0 pb-2">
@@ -217,7 +217,7 @@ export default function MembersPage() {
                       <span>Status:</span>
                       <Badge
                         variant={member.subscription?.status === "active" ? "success" : "destructive"}
-                        className="bg-emerald-500/30 text-emerald-200 border-emerald-500"
+                        className="bg-opacity-15"
                       >
                         {member.subscription?.status === "active" ? "Ativo" : "Inativo"}
                       </Badge>

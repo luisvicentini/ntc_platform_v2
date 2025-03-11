@@ -83,9 +83,9 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userData, user, theme = "da
         <DropdownMenuItem>
           <Link href={`/${user?.userType}/profile`}>Editar Perfil</Link>
         </DropdownMenuItem>
-        {/* <DropdownMenuItem onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
-          {theme === "dark" ? <SunIcon className="mr-2 h-4 w-4" /> : <MoonIcon className="mr-2 h-4 w-4" />}
-          <span>{theme === "dark" ? "Modo Claro" : "Modo Escuro"}</span>
+        {/* <DropdownMenuItem onClick={() => setTheme(theme === "light" ? "dark" : "light")}>
+          {theme === "light" ? <MoonIcon className="mr-2 h-4 w-4" /> : <SunIcon className="mr-2 h-4 w-4" />}
+          <span>{theme === "light" ? "Modo Escuro" : "Modo Claro"}</span>
         </DropdownMenuItem> */}
         <DropdownMenuSeparator />
         <DropdownMenuItem 
@@ -218,7 +218,9 @@ export function Header({ menuItems = [] }: HeaderProps) {
       <footer className="fixed bottom-0 left-0 right-0 border-t bg-white border-zinc-200 md:hidden z-50">
         <div className="container mx-auto px-4">
           <div className="flex h-16 items-center justify-between">
-            <Logo />
+            <div className="relative w-[60px]">
+              <Logo />
+            </div>
 
             <nav className="flex items-center space-x-6">
               {menuItems.map((item) => (
@@ -239,13 +241,14 @@ export function Header({ menuItems = [] }: HeaderProps) {
                 removeNotification={removeNotification}
               />
             </nav>
-
-            <UserDropdown 
-              userData={userData}
-              user={user}
-              theme={theme}
-              setTheme={setTheme}
-            />
+            <div className="relative w-[60px]">
+              <UserDropdown 
+                userData={userData}
+                user={user}
+                theme={theme}
+                setTheme={setTheme}
+                />
+            </div>
           </div>
         </div>
       </footer>

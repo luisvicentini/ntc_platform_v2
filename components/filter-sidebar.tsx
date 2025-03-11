@@ -90,7 +90,7 @@ export function FilterSidebar({ onFilterChange }: { onFilterChange: (filters: an
                 <div
                   key={status}
                   className={`border rounded-md p-2 cursor-pointer ${
-                    filters.status.includes(status) ? "bg-zinc-100 border-[#7435db]" : "border-zinc-200"
+                    filters.status.includes(status) ? "bg-zinc-100 border-primary" : "border-zinc-200"
                   }`}
                   onClick={() => handleStatusChange(status)}
                 >

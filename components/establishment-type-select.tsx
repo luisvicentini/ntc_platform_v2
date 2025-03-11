@@ -55,10 +55,10 @@ export function EstablishmentTypeSelect({
             value={selectedType}
             onValueChange={handleTypeChange}
           >
-            <SelectTrigger className="w-full bg-zinc-100 border-zinc-200">
+            <SelectTrigger className="w-full border-zinc-200">
               <SelectValue placeholder="Selecione o tipo" />
             </SelectTrigger>
-            <SelectContent className="bg-zinc-100 border-zinc-200">
+            <SelectContent className="border-zinc-200">
               {establishmentTypes.map((type) => (
                 <SelectItem 
                   key={type.id} 
@@ -81,7 +81,7 @@ export function EstablishmentTypeSelect({
               value={selectedCategory}
               onValueChange={handleCategoryChange}
             >
-              <SelectTrigger className="w-full bg-zinc-100 border-zinc-200">
+              <SelectTrigger className="w-full border-zinc-200">
                 <SelectValue placeholder="Selecione a categoria" />
               </SelectTrigger>
               <SelectContent className="bg-zinc-100 border-zinc-200">

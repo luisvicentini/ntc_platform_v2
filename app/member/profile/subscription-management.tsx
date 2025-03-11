@@ -225,7 +225,7 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
   }
 
   return (
-    <Card className="bg-zinc-100 border-zinc-200">
+    <Card className="bg-zinc-50 border-zinc-100">
       <CardHeader>
         <CardTitle className="text-zinc-500">Gestão de Assinatura</CardTitle>
       </CardHeader>
@@ -239,14 +239,11 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
             {/* Assinatura Ativa */}
             {activeSubscription && (
               <div className="mb-8">
-                <h3 className="text-lg font-semibold text-zinc-500 mb-4">
-                  Assinatura Atual
-                </h3>
-                <div className="bg-zinc-100 p-6 rounded-lg">
+                <div className="bg-white border border-zinc-100 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h4 className="text-xl font-semibold text-zinc-500">
-                      Detalhes da Assinatura
-                    </h4>
+                    <h3 className="text-xl font-semibold text-zinc-500">
+                      Assinatura Ativa
+                    </h3>
                     <Badge className={`${statusMap[activeSubscription.status].color}`}>
                       {statusMap[activeSubscription.status].label}
                     </Badge>
@@ -307,7 +304,7 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
                         <Button
                           onClick={() => setShowCancelDialog(true)}
                           variant="outline"
-                          className="text-rose-500 hover:bg-rose-500/10"
+                          className="border-red-300 text-red-500 hover:bg-red-500/10 hover:text-red-500"
                           disabled={loading}
                         >
                           Cancelar Assinatura
@@ -385,17 +382,18 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
 
             {/* Histórico de Assinaturas */}
             <div className="mt-8">
-              <h3 className="text-lg font-semibold text-zinc-500 mb-4">
-                Histórico de Assinaturas
-              </h3>
+              
               <div className="space-y-4">
                 {subscriptions
                   .filter(sub => sub.status !== 'active')
                   .map((subscription) => (
                     <div
                       key={subscription.id}
-                      className="bg-zinc-100 p-4 rounded-lg"
+                      className="bg-white border border-zinc-100 p-4 rounded-xl"
                     >
+                      <h3 className="text-sm font-sm text-zinc-400/70 mb-4">
+                        Histórico de Assinaturas
+                      </h3>
                       <div className="flex items-center justify-between mb-2">
                         <h4 className="text-zinc-500 font-medium">
                           {subscription.planName}
@@ -429,17 +427,17 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
 
             {/* Histórico de Transações */}
             <div className="mt-8">
-              <h3 className="text-lg font-semibold text-zinc-500 mb-4">
+              <h3 className="text-sm font-sm text-zinc-400/70 mb-4">
                 Histórico de Transações
               </h3>
-              <div className="rounded-md border border-zinc-200">
+              <div className="rounded-xl border border-zinc-100 bg-white">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="text-zinc-400">Data</TableHead>
-                      <TableHead className="text-zinc-400">Descrição</TableHead>
-                      <TableHead className="text-zinc-400">Valor</TableHead>
-                      <TableHead className="text-zinc-400">Status</TableHead>
+                      <TableHead className="text-zinc-300">Data</TableHead>
+                      <TableHead className="text-zinc-300">Descrição</TableHead>
+                      <TableHead className="text-zinc-300">Valor</TableHead>
+                      <TableHead className="text-zinc-300">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

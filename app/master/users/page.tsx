@@ -292,7 +292,7 @@ function UsersContent() {
               variant="outline"
               size="icon"
               onClick={() => setViewMode(viewMode === "card" ? "table" : "card")}
-              className="bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-100 hover:text-zinc-500 p-3"
+              className="bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-100 hover:text-zinc-500"
             >
               {viewMode === "card" ? <List className="h-4 w-4" /> : <Grid className="h-4 w-4" />}
             </Button>

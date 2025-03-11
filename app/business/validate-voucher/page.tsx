@@ -291,11 +291,11 @@ export default function ValidateVoucherPage() {
         return (
           <div className="p-6 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-center space-y-4 mt-6">
             <p className="text-yellow-500 text-xl">Este voucher está expirado!</p>
-            <Button onClick={() => {
+            <Button size="xl" onClick={() => {
               setVoucherCode(["", "", "", "", "", ""])
               setValidationResult(null)
               setCheckInDone(false)
-            }} className="bg-primary hover:bg-[#a85fdd] text-white">
+            }} className="bg-zinc-800 hover:bg-zinc-700 text-white text-xl">
               Inserir outro voucher
             </Button>
           </div>
@@ -304,11 +304,11 @@ export default function ValidateVoucherPage() {
         return (
           <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-lg text-center space-y-4 mt-6">
             <p className="text-red-500 text-xl">Este voucher já foi utilizado!</p>
-            <Button onClick={() => {
+            <Button size="xl" onClick={() => {
               setVoucherCode(["", "", "", "", "", ""])
               setValidationResult(null)
               setCheckInDone(false)
-            }} className="bg-primary hover:bg-[#a85fdd] text-white">
+            }} className="bg-zinc-800 hover:bg-zinc-700 text-white text-xl">
               Inserir outro voucher
             </Button>
           </div>
@@ -317,11 +317,11 @@ export default function ValidateVoucherPage() {
         return (
           <div className="p-6 bg-red-500/10 border border-red-500/20 rounded-lg text-center space-y-4 mt-6">
             <p className="text-red-500 text-xl">Voucher inválido!</p>
-            <Button onClick={() => {
+            <Button size="xl" onClick={() => {
               setVoucherCode(["", "", "", "", "", ""])
               setValidationResult(null)
               setCheckInDone(false)
-            }} className="bg-primary hover:bg-[#a85fdd] text-white">
+            }} className="bg-zinc-800 hover:bg-zinc-700 text-white text-xl">
               Inserir outro voucher
             </Button>
           </div>
@@ -348,7 +348,7 @@ export default function ValidateVoucherPage() {
               onChange={(e) => handleInputChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
-              className="w-full h-24 text-center text-3xl bg-white text-zinc-500 border-[#a85fdd] focus:ring-[#a85fdd] focus:border-[#a85fdd]"
+              className="w-full h-24 text-center text-3xl bg-white text-zinc-500 border-zinc-400 border-2 focus:ring-[#a85fdd] focus:border-zinc-200"
               maxLength={index === 0 ? 6 : 1}
             />
           ))}
@@ -357,7 +357,7 @@ export default function ValidateVoucherPage() {
         {!validationResult && (
           <Button
             onClick={validateVoucher}
-            className="w-full bg-primary hover:bg-[#6229c5] text-lg text-white transition-all duration-300"
+            className="w-full bg-primary hover:bg-primary/80 text-lg text-white transition-all duration-300"
             disabled={voucherCode.some(v => !v)}
             size="xl"
           >
@@ -397,7 +397,7 @@ export default function ValidateVoucherPage() {
                 setCheckInDone(false)
               }}
               variant="outline"
-              className="w-full bg-zinc-100 hover:bg-zinc-400 border-zinc-200 text-zinc-400 hover:text-[#1a1b2d] text-lg transition-all duration-300"
+              className="w-full bg-zinc-100 hover:bg-zinc-200 border-zinc-200 text-zinc-400 hover:text-zinc-500 text-lg transition-all duration-300"
               size="xl"
             >
               Inserir outro voucher

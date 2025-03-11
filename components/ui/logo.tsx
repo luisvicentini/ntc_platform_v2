@@ -4,7 +4,7 @@ import Image from "next/image";
 export function Logo() {
   return (
     <div className="flex items-center gap-2">
-      <div className="relative w-[150px] h-[80px] items-center justify-center">
+      <div className="relative items-center justify-center w-[80px] h-[60px]">
         <Image
           src="/logo.svg"
           alt="Passport Gourmet Orlando"

@@ -15,16 +15,12 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Calendar, Filter, Columns3, List, ChevronLeft, ChevronRight, X, Search } from "lucide-react"
-import { format, parseISO, subDays, startOfDay, endOfDay } from "date-fns"
-import { ptBR } from "date-fns/locale"
+import { Calendar, Filter, Columns3, List, ChevronLeft, ChevronRight, X, Search, Eye } from "lucide-react"
+import { format, subDays, startOfDay, endOfDay } from "date-fns"
 import { toast } from "sonner"
-import { DatePicker } from "@/components/ui/date-picker"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Label } from "@/components/ui/label"
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { DateRangePicker } from "@/components/ui/date-range-picker"
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore"
+import { collection, query, where, getDocs } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
 interface Member {
@@ -147,7 +143,7 @@ const FilterSidebar = ({
               <Input
                 value={localFilters.code}
                 onChange={(e) => setLocalFilters(prev => ({ ...prev, code: e.target.value }))}
-                className="bg-zinc-100 border-[#282942] text-zinc-500"
+                className="bg-zinc-100 border-zinc-200 text-zinc-500"
                 placeholder="Digite o código"
               />
             </div>
@@ -157,7 +153,7 @@ const FilterSidebar = ({
               <Input
                 value={localFilters.name}
                 onChange={(e) => setLocalFilters(prev => ({ ...prev, name: e.target.value }))}
-                className="bg-zinc-100 border-[#282942] text-zinc-500"
+                className="bg-zinc-100 border-zinc-200 text-zinc-500"
                 placeholder="Digite o nome"
               />
             </div>
@@ -167,7 +163,7 @@ const FilterSidebar = ({
               <Input
                 value={localFilters.email}
                 onChange={(e) => setLocalFilters(prev => ({ ...prev, email: e.target.value }))}
-                className="bg-zinc-100 border-[#282942] text-zinc-500"
+                className="bg-zinc-100 border-zinc-200 text-zinc-500"
                 placeholder="Digite o email"
               />
             </div>
@@ -177,7 +173,7 @@ const FilterSidebar = ({
               <Input
                 value={localFilters.phone}
                 onChange={(e) => setLocalFilters(prev => ({ ...prev, phone: e.target.value }))}
-                className="bg-zinc-100 border-[#282942] text-zinc-500"
+                className="bg-zinc-100 border-zinc-200 text-zinc-500"
                 placeholder="Digite o telefone"
               />
             </div>
@@ -187,7 +183,7 @@ const FilterSidebar = ({
               <Input
                 value={localFilters.establishment}
                 onChange={(e) => setLocalFilters(prev => ({ ...prev, establishment: e.target.value }))}
-                className="bg-zinc-100 border-[#282942] text-zinc-500"
+                className="bg-zinc-100 border-zinc-200 text-zinc-500"
                 placeholder="Digite o estabelecimento"
               />
             </div>
@@ -200,7 +196,7 @@ const FilterSidebar = ({
                 <Button
                   key={status}
                   variant="outline"
-                  className={`bg-zinc-100 hover:bg-[#282942] border-[#282942] text-zinc-500 ${
+                  className={`bg-zinc-100 hover:bg-zinc-100 border-zinc-200 text-zinc-500 ${
                     localFilters.status.includes(status) 
                       ? "bg-primary text-white" 
                       : "text-zinc-400"
@@ -404,15 +400,15 @@ export default function ReportsPage() {
   const getStatusColor = (status: string) => {
     switch (status) {
       case "pending":
-        return "bg-yellow-500/10 text-yellow-500"
+        return "bg-yellow-500/10 text-yellow-500 hover:bg-yellow-500/20"
       case "verified":
-        return "bg-blue-500/10 text-blue-500"
+        return "bg-blue-500/10 text-blue-500 hover:bg-blue-500/20"
       case "used":
-        return "bg-emerald-500/10 text-emerald-500"
+        return "bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20"
       case "expired":
-        return "bg-red-500/10 text-red-500"
+        return "bg-red-500/10 text-red-500 hover:bg-red-500/20"
       default:
-        return "bg-zinc-400/10 text-zinc-400"
+        return "bg-zinc-400/10 text-zinc-400 hover:bg-zinc-400/20"
     }
   }
 
@@ -428,7 +424,7 @@ export default function ReportsPage() {
 
   const VoucherCard = ({ voucher }: { voucher: Voucher }) => (
     <Card 
-      className="bg-zinc-100 border-zinc-200 p-4 cursor-pointer hover:border-[#7435db] transition-colors"
+      className="bg-zinc-50 border-zinc-100 p-4 cursor-pointer hover:border-primary transition-colors"
       onClick={() => {
         setSelectedVoucher(voucher)
         setIsDetailsOpen(true)
@@ -468,7 +464,7 @@ export default function ReportsPage() {
     return (
       <div className="flex overflow-y-auto gap-4 flex-nowrap">
         {columns.map(status => (
-          <div key={status} className="space-y-4">
+          <div key={status} className="space-y-4 min-w-[300px]">
             <div className="flex items-center justify-between">
               <h3 className="text-zinc-500 font-medium capitalize">
                 {getStatusText(status)}
@@ -591,14 +587,14 @@ export default function ReportsPage() {
           {selectedVoucher && (
             <div className="space-y-6 mt-6">
               {/* Código do Voucher em destaque */}
-              <div className="bg-zinc-100 p-6 rounded-lg text-center">
-                <h3 className="text-sm font-medium text-zinc-400 mb-2">Código do Voucher</h3>
-                <p className="text-2xl font-bold text-zinc-500">{selectedVoucher.code}</p>
+              <div className="bg-white p-6 rounded-lg text-center border border-zinc-200">
+                <h3 className="text-sm font-sm text-zinc-400 mb-2">Código do Voucher</h3>
+                <p className="text-3xl font-bold text-emerald-500">{selectedVoucher.code}</p>
               </div>
               
               {/* Informações do Cliente */}
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-zinc-400">Informações do Cliente</h3>
+                <h3 className="text-sm font-sm text-zinc-400">Informações do Cliente</h3>
                 <div className="flex items-center space-x-3">
                   <Avatar>
                     {selectedVoucher.member.photoURL && (
@@ -609,15 +605,15 @@ export default function ReportsPage() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-zinc-500">{selectedVoucher.member.name}</p>
-                    <p className="text-sm text-zinc-400">{selectedVoucher.member.phone}</p>
+                    <p className="text-zinc-500 font-semibold">{selectedVoucher.member.name}</p>
+                    <p className="text-sm text-zinc-400 font-semibold">{selectedVoucher.member.phone}</p>
                   </div>
                 </div>
               </div>
 
               {/* Informações do Parceiro */}
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-zinc-400">Parceiro de origem</h3>
+                <h3 className="text-sm font-sm text-zinc-400">Partner Origem</h3>
                 <div className="flex items-center space-x-3">
                   <Avatar>
                     {partnerPhoto && (
@@ -628,52 +624,50 @@ export default function ReportsPage() {
                     </AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-zinc-500">{partnerName}</p>
-                    <p className="text-sm text-zinc-400">{partnerPhone}</p>
+                    <p className="text-zinc-500 font-semibold">{partnerName}</p>
+                    <p className="text-sm text-zinc-400 font-semibold">{partnerPhone}</p>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-zinc-400">Status do voucher</h3>
+                <h3 className="text-sm font-sm text-zinc-400">Status do voucher</h3>
                 <Badge className={getStatusColor(selectedVoucher.status)}>
                   {getStatusText(selectedVoucher.status)}
                 </Badge>
               </div>
 
-              <div className="space-y-2">
-                <div className="space-y-1 text-zinc-500">
-                  <span className="text-zinc-400">Data criação do voucher:</span> <p className="pb-4">{formatFirebaseDate(selectedVoucher.createdAt)}</p>
-                  <span className="text-zinc-400">Data de expiração do voucher:</span> <p className="pb-4">{formatFirebaseDate(selectedVoucher.expiresAt)}</p>
-                  {selectedVoucher.usedAt && (
-                    <><span className="text-zinc-400">Data de utilização do voucher:</span><p className="pb-4">{formatFirebaseDate(selectedVoucher.usedAt)}</p></>
-                  )}
-                </div>
+              <div className="space-y-1 text-zinc-500">
+                <span className="text-sm font-sm text-zinc-400">Data criação do voucher:</span> <p className="pb-4 font-semibold">{formatFirebaseDate(selectedVoucher.createdAt)}</p>
+                <span className="text-sm font-sm text-zinc-400">Data de expiração do voucher:</span> <p className="pb-4 font-semibold">{formatFirebaseDate(selectedVoucher.expiresAt)}</p>
+                {selectedVoucher.usedAt && (
+                  <><span className="text-sm font-sm text-zinc-400">Data de utilização do voucher:</span><p className="pb-4 font-semibold">{formatFirebaseDate(selectedVoucher.usedAt)}</p></>
+                )}
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-zinc-400">Desconto</h3>
-                <p className="text-zinc-500">{selectedVoucher.discount}</p>
+                <h3 className="text-sm font-sm text-zinc-400">Desconto</h3>
+                <p className="text-zinc-500 font-semibold">{selectedVoucher.discount}</p>
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-zinc-400">Descrição do Voucher</h3>
-                <p className="text-zinc-500">{selectedVoucher.voucherDescription}</p>
+                <h3 className="text-sm font-sm text-zinc-400">Descrição do Voucher</h3>
+                <p className="text-zinc-500 font-semibold">{selectedVoucher.voucherDescription}</p>
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-zinc-400">Limite de Uso</h3>
-                <p className="text-zinc-500">{selectedVoucher.usageLimit}</p>
+                <h3 className="text-sm font-sm text-zinc-400">Limite de Uso</h3>
+                <p className="text-zinc-500 font-semibold">{selectedVoucher.usageLimit}</p>
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-sm font-medium text-zinc-400">Regras do Desconto</h3>
-                <p className="text-zinc-500">{selectedVoucher.discountRules}</p>
+                <h3 className="text-sm font-sm text-zinc-400">Regras do Desconto</h3>
+                <p className="text-zinc-500 font-semibold">{selectedVoucher.discountRules}</p>
               </div>
 
               {selectedVoucher.status === "expired" ? (
                 <Button 
-                  className="w-full" 
+                  className="w-full bg-red-200 text-semibold text-red-800" 
                   variant="secondary" 
                   disabled
                 >
@@ -681,7 +675,7 @@ export default function ReportsPage() {
                 </Button>
               ) : selectedVoucher.status === "used" ? (
                 <Button 
-                  className="w-full" 
+                  className="w-full bg-zinc-400 text-white text-semibold" 
                   variant="secondary" 
                   disabled
                 >
@@ -689,7 +683,7 @@ export default function ReportsPage() {
                 </Button>
               ) : (
                 <Button
-                  className="w-full bg-emerald-600 hover:bg-emerald-700"
+                  className="w-full bg-emerald-500 text-white hover:bg-emerald-600" 
                   onClick={() => performCheckIn(selectedVoucher.code)}
                 >
                   Realizar Check-in
@@ -705,7 +699,7 @@ export default function ReportsPage() {
   if (loading) {
     return (
       <div className="container py-6">
-        <h1 className="text-2xl font-bold text-zinc-500 mb-6">Todos os vouchers gerados</h1>
+        <h1 className="text-2xl font-bold text-zinc-500">Relatório de Vouchers</h1>
         <div className="text-zinc-400">Carregando...</div>
       </div>
     )
@@ -728,7 +722,7 @@ export default function ReportsPage() {
                 setSearchTerm(e.target.value)
                 performGlobalSearch(e.target.value)
               }}
-              className="pl-10 bg-zinc-100 border-[#282942] text-zinc-500 w-full"
+              className="pl-10 bg-white border-zinc-200 text-zinc-400 w-full placeholder:text-zinc-400"
             />
             {searchTerm && (
               <Button
@@ -757,7 +751,7 @@ export default function ReportsPage() {
             {hasActiveFilters(filters) && (
               <Button
                 variant="outline"
-                className="border-zinc-200 text-red-500 hover:bg-red-500/10 space-x-2"
+                className="border-zinc-200 text-red-500 hover:bg-red-500/10 space-x-2 "
                 onClick={clearFilters}
               >
                 <X className="h-4 w-4" />
@@ -780,23 +774,33 @@ export default function ReportsPage() {
         <KanbanView vouchers={filteredVouchers} />
       ) : (
         <div className="space-y-4">
-          <Card className="bg-zinc-100 border-zinc-200">
+          <Card className="bg-zinc-50 border-zinc-100">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Cliente</TableHead>
-                  <TableHead>Data de Criação</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
+                  <TableHead className="text-zinc-400/60">Código</TableHead>
+                  <TableHead className="text-zinc-400/60">Cliente</TableHead>
+                  <TableHead className="text-zinc-400/60">Data de Criação</TableHead>
+                  <TableHead className="text-zinc-400/60">Status</TableHead>
+                  <TableHead className="text-zinc-400/60">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {currentVouchers.map((voucher) => (
-                  <TableRow key={voucher.id}>
-                    <TableCell>{voucher.code}</TableCell>
-                    <TableCell>{voucher.member.name}</TableCell>
-                    <TableCell>
+                  <TableRow key={voucher.id} className="hover:bg-zinc-200/50 transition-colors">
+                    <TableCell className="text-zinc-400 font-semibold">{voucher.code}</TableCell>
+                    <TableCell className="flex items-center space-x-3">
+                      <Avatar className="h-8 w-8 border border-zinc-200">
+                        {voucher.member.photoURL && (
+                          <AvatarImage src={voucher.member.photoURL} />
+                        )}
+                        <AvatarFallback className="bg-zinc-100 text-zinc-400">
+                          {voucher.member.name.slice(0, 2).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar> 
+                      <span className="text-zinc-400 font-semibold">{voucher.member.name}</span>
+                    </TableCell>
+                    <TableCell className="text-zinc-400 font-semibold">
                       {formatFirebaseDate(voucher.createdAt)}
                     </TableCell>
                     <TableCell>
@@ -807,13 +811,13 @@ export default function ReportsPage() {
                     <TableCell>
                       <Button
                         variant="ghost"
-                        className="text-zinc-400 hover:text-zinc-500"
+                        className="text-zinc-400 hover:text-zinc-500 hover:bg-zinc-200 rounded-xl"
                         onClick={() => {
                           setSelectedVoucher(voucher)
                           setIsDetailsOpen(true)
                         }}
                       >
-                        Detalhes
+                        <Eye size={30} className="h-6 w-6" />
                       </Button>
                     </TableCell>
                   </TableRow>

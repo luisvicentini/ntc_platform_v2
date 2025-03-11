@@ -113,7 +113,7 @@ export default function FeedPage() {
       {establishments.map((establishment) => (
         <Card
           key={establishment.id}
-          className="overflow-hidden group cursor-pointer bg-zinc-100 border-zinc-200 relative"
+          className="overflow-hidden group cursor-pointer bg-zinc-50 border-zinc-100 relative"
           onClick={() => setSelectedEstablishment(establishment)}
         >
           <div className="relative aspect-video">

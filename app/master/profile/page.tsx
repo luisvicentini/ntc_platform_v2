@@ -219,7 +219,7 @@ export default function ProfilePage() {
                 value={profile.name}
                 disabled={!isEditing}
                 onChange={(e) => setProfile({ ...profile, name: e.target.value })}
-                className="bg-white border-zinc-200 text-zinc-500"
+                className="border-zinc-200 text-zinc-500"
               />
             </div>
 
@@ -230,7 +230,7 @@ export default function ProfilePage() {
                 type="email"
                 value={profile.email}
                 disabled={true}
-                className="bg-white border-zinc-200 text-zinc-500 opacity-50"
+                className="border-zinc-200 text-zinc-500 opacity-50"
               />
             </div>
 
@@ -252,7 +252,7 @@ export default function ProfilePage() {
                 value={profile.city}
                 disabled={!isEditing}
                 onChange={(e) => setProfile({ ...profile, city: e.target.value })}
-                className="bg-white border-zinc-200 text-zinc-500"
+                className="border-zinc-200 text-zinc-500"
               />
             </div>
 

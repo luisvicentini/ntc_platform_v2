@@ -51,15 +51,15 @@ export function BusinessHours({ value, onChange, label = "Horário de Funcioname
           value={startTime}
           onValueChange={(value) => handleTimeChange("start", value)}
         >
-          <SelectTrigger className="w-[180px] bg-zinc-100 border-zinc-200">
+          <SelectTrigger className="w-[180px] border-zinc-200">
             <SelectValue placeholder="Horário inicial" />
           </SelectTrigger>
-          <SelectContent className="bg-zinc-100 border-zinc-200">
+          <SelectContent className="border-zinc-200">
             {timeOptions.map((time) => (
               <SelectItem 
                 key={time} 
                 value={time}
-                className="hover:bg-zinc-100 focus:bg-zinc-100"
+                className="hover:bg-zinc-100 "
               >
                 {time}
               </SelectItem>
@@ -73,15 +73,15 @@ export function BusinessHours({ value, onChange, label = "Horário de Funcioname
           value={endTime}
           onValueChange={(value) => handleTimeChange("end", value)}
         >
-          <SelectTrigger className="w-[180px] bg-zinc-100 border-zinc-200">
+          <SelectTrigger className="w-[180px] border-zinc-200">
             <SelectValue placeholder="Horário final" />
           </SelectTrigger>
-          <SelectContent className="bg-zinc-100 border-zinc-200">
+          <SelectContent className="border-zinc-200">
             {timeOptions.map((time) => (
               <SelectItem 
                 key={time} 
                 value={time}
-                className="hover:bg-zinc-100 focus:bg-zinc-100"
+                className="hover:bg-zinc-100 "
               >
                 {time}
               </SelectItem>

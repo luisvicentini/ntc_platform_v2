@@ -44,7 +44,7 @@ export function MemberFilter({
         <Button 
           variant="outline" 
           size="icon"
-          className="bg-zinc-100 border-zinc-200 hover:bg-zinc-100 hover:border-[#7435db]"
+          className="bg-zinc-100 border-zinc-200 hover:bg-zinc-100 hover:border-primary"
         >
           <Filter className="h-4 w-4 text-zinc-400" />
         </Button>

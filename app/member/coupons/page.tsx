@@ -342,7 +342,7 @@ export default function CouponsPage() {
                 <Filter className="h-4 w-4 text-zinc-400" />
               </Button>
             </SheetTrigger>
-            <SheetContent className="bg-[#0d0d1d] border-zinc-200">
+            <SheetContent className="bg-zinc-50 border-zinc-200">
               <SheetHeader>
                 <SheetTitle className="text-zinc-500">Filtros</SheetTitle>
               </SheetHeader>
@@ -386,7 +386,7 @@ export default function CouponsPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {paginatedVouchers.map((voucher) => (
-              <Card key={voucher.id} className="bg-zinc-100 border-zinc-200 p-6 space-y-4">
+              <Card key={voucher.id} className="bg-zinc-50 border-zinc-200 p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Ticket className="h-5 w-5 text-emerald-500" />
@@ -429,14 +429,15 @@ export default function CouponsPage() {
 
                 <div className="relative pb-1">
                   {/* Linha pontilhada decorativa */}
-                  <div className="absolute  h-4 flex justify-between items-center left-[-33px] right-[-33px]" >
-                    <div className="w-4 h-4 bg-white rounded-full border-1 border-zinc-200" />
+                  <div className="absolute h-4 flex justify-between items-center left-[-33px] right-[-33px]">
+                    <div className="w-4 h-4 bg-white rounded-full border-r-2 border-zinc-200" />
                     <div className="flex-1 border-t-2 border-dashed border-zinc-200 mx-2" />
-                    <div className="w-4 h-4 bg-white rounded-full border-1 border-zinc-200" />
+                    <div className="w-4 h-4 bg-white rounded-full border-l-2 border-zinc-200" />
                   </div>
+
                 </div>
 
-                <div className="mt-4 pt-4">
+                <div className="mt-4 pt-4 ">
                   <div className="text-center">
                     <p className="text-sm text-zinc-400 mb-1">Código do Voucher</p>
                     <p className="text-2xl font-bold text-zinc-500">{voucher.code}</p>
@@ -512,15 +513,15 @@ export default function CouponsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Estabelecimento</TableHead>
-                <TableHead>Código</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Expira em</TableHead>
-                <TableHead>Regras</TableHead>
-                <TableHead>Limite de uso</TableHead>
+                <TableHead className="text-zinc-400/70">Estabelecimento</TableHead>
+                <TableHead className="text-zinc-400/70">Código</TableHead>
+                <TableHead className="text-zinc-400/70">Status</TableHead>
+                <TableHead className="text-zinc-400/70">Expira em</TableHead>
+                <TableHead className="text-zinc-400/70">Regras</TableHead>
+                <TableHead className="text-zinc-400/70">Limite de uso</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
+            <TableBody className="bg-zinc-50 border-zinc-200 rounded-xl">
               {paginatedVouchers.map((voucher) => (
                 <TableRow key={voucher.id}>
                   <TableCell>{voucher.establishment?.name}</TableCell>

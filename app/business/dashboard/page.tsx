@@ -19,7 +19,7 @@ import {
 } from "recharts"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Search, Filter } from "lucide-react"
+import { Percent, BadgeCheck, Ticket } from "lucide-react"
 import { subDays, isToday } from "date-fns"
 import { DateRange } from "react-day-picker"
 
@@ -102,31 +102,31 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
     switch (status) {
       case "completed":
         return (
-          <Badge className="bg-[#042f2e] text-[#2dd4bf] hover:bg-[#042f2e]">
+          <Badge className="bg-emerald-200 text-emerald-700 hover:bg-emerald-300">
             Check-in Realizado
           </Badge>
         )
       case "verified":
         return (
-          <Badge className="bg-blue-900/50 text-blue-500">
+          <Badge className="bg-emerald-200 text-emerald-700 hover:bg-emerald-300">
             Verificado
           </Badge>
         )
       case "used":
         return (
-          <Badge className="bg-green-900/50 text-green-500">
+          <Badge className="bg-emerald-200 text-emerald-700 hover:bg-emerald-300">
             Utilizado
           </Badge>
         )
       case "expired":
         return (
-          <Badge className="bg-yellow-900/50 text-yellow-500">
+          <Badge className="bg-yellow-200 text-yellow-700 hover:bg-yellow-300">
             Voucher Expirado
           </Badge>
         )
       default:
         return (
-          <Badge className="bg-zinc-900/50 text-zinc-400">
+          <Badge className="bg-zinc-200 text-zinc-700 hover:bg-zinc-300">
             Desconhecido
           </Badge>
         )
@@ -140,9 +140,12 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
     <div className="space-y-6">
       <div className="grid grid-cols-3 gap-6">
         {/* Card de Vouchers */}
-        <div className="bg-zinc-100 border border-zinc-200 p-6 rounded-lg">
-          <h3>Vouchers Gerados no período</h3>
-          <div className="text-3xl font-bold">{dashboardData.todayMetrics.vouchers}</div>
+        <div className="bg-zinc-50 border border-zinc-100 p-6 rounded-lg">
+          <div className="flex items-center justify-between gap-2">            
+            <h3 className="text-sm font-sm text-zinc-400 mb-4">Vouchers Gerados no período</h3>
+            <Ticket className="text-zinc-400 w-6 h-6 mb-4" />
+          </div>
+          <div className="text-3xl font-bold text-zinc-600">{dashboardData.todayMetrics.vouchers}</div>
           <div className="text-sm text-muted-foreground">
             {dashboardData.todayMetrics.voucherGrowth > 0 ? "+" : ""}
             {dashboardData.todayMetrics.voucherGrowth}% em relação ao período anterior
@@ -150,9 +153,12 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
         </div>
 
         {/* Card de Check-ins */}
-        <div className="bg-zinc-100 border border-zinc-200 p-6 rounded-lg">
-          <h3>Check-ins Realizados no período</h3>
-          <div className="text-3xl font-bold">{dashboardData.todayMetrics.checkins}</div>
+        <div className="bg-zinc-50 border border-zinc-100 p-6 rounded-lg">
+          <div className="flex items-center justify-between gap-2">            
+            <h3 className="text-sm font-sm text-zinc-400 mb-4">Check-ins Realizados no período</h3>
+            <BadgeCheck className="text-zinc-400 w-6 h-6 mb-4" />
+          </div>
+          <div className="text-3xl font-bold text-zinc-600">{dashboardData.todayMetrics.checkins}</div>
           <div className="text-sm text-muted-foreground">
             {dashboardData.todayMetrics.vouchers > 0 
               ? `${dashboardData.todayMetrics.checkins / dashboardData.todayMetrics.vouchers * 100}% dos vouchers gerados`
@@ -161,9 +167,12 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
         </div>
 
         {/* Card de Taxa de Conversão */}
-        <div className="bg-zinc-100 border border-zinc-200 p-6 rounded-lg">
-          <h3>Taxa de Conversão no período</h3>
-          <div className="text-3xl font-bold">
+        <div className="bg-zinc-50 border border-zinc-100 p-6 rounded-lg">
+          <div className="flex items-center justify-between gap-2">            
+            <h3 className="text-sm font-sm text-zinc-400 mb-4">Taxa de Conversão no período</h3>
+            <Percent className="text-zinc-400 w-6 h-6 mb-4" />
+          </div>
+          <div className="text-3xl font-bold text-zinc-600">
             {dashboardData.todayMetrics.conversionRate}%
           </div>
         </div>
@@ -171,36 +180,36 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
 
       {/* Gráficos */}
       <div className="grid grid-cols-2 gap-6">
-        <div className="bg-zinc-100 border border-zinc-200 p-6 rounded-lg">
-          <h3>Vouchers e Check-ins</h3>
+        <div className="bg-zinc-50 border border-zinc-100 p-6 rounded-lg">
+          <h3 className="text-sm font-sm text-zinc-400 mb-4">Vouchers e Check-ins</h3>
           <ResponsiveContainer width="100%" height={300}>
             <BarChart data={dashboardData.monthlyData || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#282942" />
-              <XAxis dataKey="name" stroke="#7a7b9f" />
-              <YAxis stroke="#7a7b9f" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#c4c4c4" />
+              <XAxis dataKey="name" stroke="#c4c4c4" />
+              <YAxis stroke="#c4c4c4" />
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: '#1a1b2d',
-                  border: '1px solid #282942'
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #c4c4c4'
                 }}
               />
               <Legend />
-              <Bar dataKey="vouchers" name="Vouchers" fill="#2563eb" />
-              <Bar dataKey="checkins" name="Check-ins" fill="#16a34a" />
+              <Bar dataKey="vouchers" name="Vouchers" fill="#791cc8" />
+              <Bar dataKey="checkins" name="Check-ins" fill="#10b981" />
             </BarChart>
           </ResponsiveContainer>
         </div>
-        <div className="bg-zinc-100 border border-zinc-200 p-6 rounded-lg">
-          <h3>Taxa de Conversão</h3>
+        <div className="bg-zinc-50 border border-zinc-100 p-6 rounded-lg">
+          <h3 className="text-sm font-sm text-zinc-400 mb-4">Taxa de Conversão</h3>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={dashboardData.monthlyData || []}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#282942" />
-              <XAxis dataKey="name" stroke="#7a7b9f" />
-              <YAxis stroke="#7a7b9f" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#c4c4c4" />
+              <XAxis dataKey="name" stroke="#c4c4c4" />
+              <YAxis stroke="#c4c4c4" />
               <Tooltip 
                 contentStyle={{ 
-                  backgroundColor: '#1a1b2d',
-                  border: '1px solid #282942'
+                  backgroundColor: '#ffffff',
+                  border: '1px solid #c4c4c4'
                 }}
               />
               <Legend />
@@ -208,7 +217,7 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
                 type="monotone" 
                 dataKey="conversionRate" 
                 name="Taxa de Conversão (%)" 
-                stroke="#8b5cf6" 
+                stroke="#791cc8" 
                 strokeWidth={2}
               />
             </LineChart>
@@ -218,9 +227,9 @@ function DashboardContent({ dateRange }: { dateRange: DateRange }) {
 
       
       <CardContent className="p-0">
-        <Card className="bg-zinc-100 border-zinc-200">
+        <Card className="bg-zinc-50 border-zinc-100">
           <CardHeader>
-            <CardTitle className="text-zinc-500">Últimos Check-ins</CardTitle>
+            <CardTitle className="text-sm font-sm text-zinc-400 mb-4">Últimos Check-ins</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
@@ -280,7 +289,7 @@ export default function DashboardPage() {
     <div className="p-8">
       {/* Parte estática - não será re-renderizada com os dados */}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        <h1 className="text-2xl font-bold text-zinc-500">Dashboard</h1>
         <DateRangePicker
           date={dateRange}
           onDateChange={(date) => {

@@ -46,8 +46,8 @@ export function MemberFilterModal({
             variant="outline" 
             size="icon"
             className={cn(
-              "bg-zinc-100 border-zinc-200 hover:bg-zinc-100 hover:border-[#7435db]",
-              hasActiveFilters && "border-[#7435db]"
+              "bg-zinc-100 border-zinc-200 hover:bg-zinc-100 hover:border-primary",
+              hasActiveFilters && "border-primary"
             )}
           >
             <Filter className="h-4 w-4 text-zinc-400" />
@@ -70,15 +70,15 @@ export function MemberFilterModal({
                 className="flex flex-col space-y-2"
               >
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="all" id="all" className="border-[#7435db]" />
+                  <RadioGroupItem value="all" id="all" className="border-primary" />
                   <Label htmlFor="all" className="text-zinc-500">Todos</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="active" id="active" className="border-[#7435db]" />
+                  <RadioGroupItem value="active" id="active" className="border-primary" />
                   <Label htmlFor="active" className="text-zinc-500">Ativos</Label>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <RadioGroupItem value="inactive" id="inactive" className="border-[#7435db]" />
+                  <RadioGroupItem value="inactive" id="inactive" className="border-primary" />
                   <Label htmlFor="inactive" className="text-zinc-500">Inativos</Label>
                 </div>
               </RadioGroup>

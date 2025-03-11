@@ -84,7 +84,7 @@ export function VoucherTicket({
       <div className="p-6 pt-8 space-y-4">
         <div className="flex justify-between items-start">
           <div className="flex items-center space-x-3">
-            <Avatar className="h-10 w-10 border-2 border-[#7435db]">
+            <Avatar className="h-10 w-10 border-2 border-primary">
               {customerAvatar && (
                 <AvatarImage 
                   src={customerAvatar} 

@@ -32,9 +32,9 @@ export default function RootLayout({
       <body className={cn("min-h-screen bg-white font-sans antialiased", poppins.variable)} style={{ position: 'relative' }}>
         <ThemeProvider
           attribute="class"
-          defaultTheme="dark"
+          defaultTheme="light"
           enableSystem={false}
-          storageKey="ntc-theme"
+          storageKey="theme"
         >
           <AuthProvider>
             <NotificationProvider>

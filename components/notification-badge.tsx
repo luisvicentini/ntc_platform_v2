@@ -45,7 +45,7 @@ export function NotificationBadge({ userName }: NotificationBadgeProps) {
             <Button
               onClick={handleDismiss}
               variant="outline"
-              className="bg-zinc-100 text-zinc-500 border-[#7435db] hover:bg-primary hover:text-zinc-500"
+              className="bg-zinc-100 text-zinc-500 border-primary hover:bg-primary hover:text-zinc-500"
             >
               Avaliar depois
             </Button>

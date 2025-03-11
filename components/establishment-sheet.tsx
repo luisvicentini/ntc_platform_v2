@@ -161,7 +161,7 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-[400px] sm:w-[540px] bg-zinc-100 border-l-[#1a1b2d] flex flex-col p-0">
+      <SheetContent className="w-[400px] sm:w-[540px] bg-white border-l-zinc-200 flex flex-col p-0">
         <div className="p-6 border-b border-zinc-200">
           <SheetHeader>
             <SheetTitle className="text-zinc-500">{establishment.name}</SheetTitle>
@@ -236,11 +236,11 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             </div>
           </div>
 
-          <div className="bg-zinc-100 p-4 rounded-lg flex items-center space-x-4">
+          <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg flex items-center space-x-4">
             <Ticket className="h-8 w-8 text-emerald-500" />
             <div>
-              <p className="text-zinc-500 font-semibold">{establishment.voucherDescription}</p>
               <p className="text-xl font-bold text-emerald-500">{establishment.discountValue} de desconto</p>
+              <p className="text-sm text-emerald-800 font-sm">{establishment.voucherDescription}</p>
             </div>
           </div>
 
@@ -271,9 +271,9 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
           </div>
 
           {currentVoucher && (
-            <Card className="bg-zinc-100 border-[#a85fdd]">
+            <Card className="bg-zinc-100 border border-zinc-200">
               <CardContent className="p-6 text-center">
-                <h3 className="text-lg font-semibold text-[#e1e1e6] mb-2">Seu Voucher</h3>
+                <h3 className="text-lg font-semibold text-zinc-400 mb-2">Seu Voucher</h3>
                 <p className="text-3xl font-bold text-primary mb-2">{currentVoucher.code}</p>
                 {timeLeft > 0 && (
                   <p className="text-sm text-muted-foreground">
