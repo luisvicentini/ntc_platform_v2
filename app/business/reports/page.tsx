@@ -580,7 +580,7 @@ export default function ReportsPage() {
 
     return (
       <Sheet open={isDetailsOpen} onOpenChange={setIsDetailsOpen}>
-        <SheetContent className="bg-zinc-100 border-l-[#1a1b2d]">
+        <SheetContent className="bg-zinc-100 border-l-[#1a1b2d] overflow-y-auto">
           <SheetHeader>
             <SheetTitle className="text-zinc-500">Detalhes do Voucher</SheetTitle>
           </SheetHeader>
