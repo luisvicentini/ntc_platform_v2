@@ -7,7 +7,7 @@ export function Logo() {
       <div className="relative items-center justify-center w-[80px] h-[60px]">
         <Image
           src="/logo.svg"
-          alt="Passport Gourmet Orlando"
+          alt="Clube Não Tem Chef"
           fill
           className="object-contain p-1 text-black"
           priority

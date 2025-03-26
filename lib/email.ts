@@ -26,7 +26,7 @@ export async function sendActivationEmail({ to, name, activationUrl, userType }:
   }[userType]
 
   const html = `
-    <h1>Bem-vindo(a) ao Passport Gourmet Orlando</h1>
+    <h1>Bem-vindo(a) ao Clube Não Tem Chef</h1>
     <p>Olá ${name},</p>
     <p>Você foi cadastrado(a) como ${userTypeText} em nossa plataforma.</p>
     <p>Para ativar sua conta e definir sua senha, clique no link abaixo:</p>
@@ -36,9 +36,9 @@ export async function sendActivationEmail({ to, name, activationUrl, userType }:
   `
 
   await transporter.sendMail({
-    from: `"Passport Gourmet Orlando" <${process.env.SMTP_FROM}>`,
+    from: `"Clube Não Tem Chef" <${process.env.SMTP_FROM}>`,
     to,
-    subject: "Ative sua conta na Passport Gourmet Orlando",
+    subject: "Ative sua conta na Clube Não Tem Chef",
     html
   })
 }

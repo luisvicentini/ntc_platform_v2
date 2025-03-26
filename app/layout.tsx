@@ -17,9 +17,9 @@ const poppins = Poppins({
 
 
 export const metadata: Metadata = {
-  title: "Passport Gourmet Orlando",
-  description: "Vouchers de descontos exclusivos em restaurantes de Orlando",
-    generator: 'passportgourmetorlando.com'
+  title: "Clube Não Tem Chef",
+  description: "Vouchers de descontos exclusivos em restaurantes",
+    generator: 'naotemchef.com.br'
 }
 
 export default function RootLayout({

@@ -24,7 +24,7 @@ export async function POST(request: Request) {
       // já que temos os dados necessários no corpo da requisição
       try {
         // Usar a variável de ambiente correta que já existe no seu .env.local
-        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://passportgourmetorlando.com'
+        const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://naotemchef.com.br'
         
         console.log("Usando URL base:", baseUrl)
         

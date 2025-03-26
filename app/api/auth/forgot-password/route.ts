@@ -50,10 +50,10 @@ export async function POST(request: Request) {
     await transporter.sendMail({
       from: process.env.SMTP_FROM,
       to: email,
-      subject: "Recuperação de Senha - Passport Gourmet Orlando",
+      subject: "Recuperação de Senha - Clube Não Tem Chef",
       html: `
         <h1>Recuperação de Senha</h1>
-        <p>Você solicitou a recuperação de senha da sua conta na Passport Gourmet Orlando. Para definir uma nova senha, clique no link abaixo:</p>
+        <p>Você solicitou a recuperação de senha da sua conta na Clube Não Tem Chef. Para definir uma nova senha, clique no link abaixo:</p>
         <p><a href="${resetUrl}">Redefinir minha senha</a></p>
         <p>Este link é válido por 1 hora.</p>
         <p>Se você não solicitou a recuperação de senha, por favor ignore este email.</p>
