@@ -85,8 +85,11 @@ export function RegisterForm() {
         // 3A. Redirecionar para o Lastlink
         console.log('Redirecionando para o Lastlink')
         
+        // Definir URL de callback
+        const callbackUrl = `${window.location.origin}/api/lastlink/callback`
+        
         // Buscar URL de redirecionamento do Lastlink
-        const lastlinkResponse = await fetch(`/api/lastlink/redirect?linkId=${parsedCheckoutData.partnerLinkId}&userId=${registerData.user.id}`, {
+        const lastlinkResponse = await fetch(`/api/lastlink/redirect?linkId=${parsedCheckoutData.partnerLinkId}&userId=${registerData.user.id}&callback=${encodeURIComponent(callbackUrl)}`, {
           method: 'GET',
           credentials: 'include'
         })

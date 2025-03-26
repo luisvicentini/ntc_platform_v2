@@ -25,7 +25,7 @@ export default function PartnerLayout({ children }: { children: React.ReactNode 
     {
       href: "/partner/members",
       icon: <Users className="h-4 w-4" />,
-      label: "Members"
+      label: "Assinantes"
     },
   ]
 

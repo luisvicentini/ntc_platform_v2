@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, addDoc, query, where, getDocs, doc, updateDoc, increment, serverTimestamp } from "firebase/firestore"
+import { collection, addDoc, query, where, getDocs, doc, updateDoc, increment, serverTimestamp, getDoc } from "firebase/firestore"
 
 // Interface para os eventos do Lastlink
 interface LastlinkEventData {
@@ -38,6 +38,12 @@ interface LastlinkEventData {
     Affiliate?: any
     Pix?: any
     BankSlip?: any
+    Metadata?: {
+      userId?: string
+      partnerId?: string
+      partnerLinkId?: string
+      [key: string]: any
+    }
   }
   Seller?: {
     Id?: string
@@ -250,6 +256,14 @@ async function handleNewFormatEvent(eventType: string, data: LastlinkEventData) 
     const purchase = data.Purchase || {}
     const subscriptions = data.Subscriptions || []
     
+    // Extrair metadados
+    const metadata = purchase.Metadata || {}
+    const userId = metadata.userId
+    const partnerId = metadata.partnerId
+    const partnerLinkId = metadata.partnerLinkId
+    
+    console.log("Metadados do webhook:", { userId, partnerId, partnerLinkId })
+    
     // Buscar o usuário pelo e-mail
     let memberId: string | null = null
     if (buyer.Email) {
@@ -260,6 +274,21 @@ async function handleNewFormatEvent(eventType: string, data: LastlinkEventData) 
       if (!userSnapshot.empty) {
         const userData = userSnapshot.docs[0].data()
         memberId = userData.uid || userSnapshot.docs[0].id
+      }
+    }
+    
+    // Também buscar pelo userId se fornecido nos metadados
+    if (!memberId && userId) {
+      try {
+        const userRef = doc(db, "users", userId)
+        const userDoc = await getDoc(userRef)
+        
+        if (userDoc.exists()) {
+          const userData = userDoc.data()
+          memberId = userData.uid || userId
+        }
+      } catch (err) {
+        console.error("Erro ao buscar usuário pelo userId:", err)
       }
     }
     
@@ -291,7 +320,14 @@ async function handleNewFormatEvent(eventType: string, data: LastlinkEventData) 
         
         // Se temos um membro identificado, criar assinatura
         if (memberId) {
-          await createOrUpdateSubscription(memberId, "active", purchase.PaymentId || null)
+          await createOrUpdateSubscription(
+            memberId, 
+            "active", 
+            purchase.PaymentId || null,
+            null,
+            partnerId,
+            partnerLinkId
+          )
         }
         break
         
@@ -368,7 +404,14 @@ async function handleNewFormatEvent(eventType: string, data: LastlinkEventData) 
         
         // Se temos um membro identificado, atualizar assinatura
         if (memberId) {
-          await createOrUpdateSubscription(memberId, "active", purchase.PaymentId || null)
+          await createOrUpdateSubscription(
+            memberId, 
+            "active", 
+            purchase.PaymentId || null,
+            null,
+            partnerId,
+            partnerLinkId
+          )
         }
         break
         
@@ -398,16 +441,54 @@ async function createOrUpdateSubscription(
   memberId: string, 
   status: string, 
   orderId: string | null = null, 
-  reason: string | null = null
+  reason: string | null = null,
+  partnerId: string | null = null,
+  partnerLinkId: string | null = null
 ) {
   try {
+    // Se não temos o partnerId, tente buscar do link
+    if (partnerLinkId && !partnerId) {
+      try {
+        const linkRef = doc(db, "partnerLinks", partnerLinkId)
+        const linkDoc = await getDoc(linkRef)
+        
+        if (linkDoc.exists()) {
+          partnerId = linkDoc.data().partnerId
+          console.log(`Parceiro encontrado através do link: ${partnerId}`)
+        }
+      } catch (err) {
+        console.error("Erro ao buscar parceiro através do link:", err)
+      }
+    }
+    
+    // Se ainda não temos o partnerId, não podemos criar a assinatura
+    if (!partnerId && status === "active") {
+      console.error("Não foi possível criar assinatura: falta o ID do parceiro")
+      return
+    }
+    
+    // Query base para buscar assinaturas
+    let subscriptionQuery
     const subscriptionsRef = collection(db, "subscriptions")
-    const subscriptionQuery = query(
-      subscriptionsRef,
-      where("memberId", "==", memberId),
-      where("paymentProvider", "==", "lastlink"),
-      where("status", "==", "active")
-    )
+    
+    if (partnerId) {
+      // Se temos um partnerId, buscamos assinaturas específicas desse parceiro
+      subscriptionQuery = query(
+        subscriptionsRef,
+        where("memberId", "==", memberId),
+        where("partnerId", "==", partnerId),
+        where("paymentProvider", "==", "lastlink"),
+        where("status", "==", "active")
+      )
+    } else {
+      // Caso contrário, buscamos todas as assinaturas Lastlink ativas do membro
+      subscriptionQuery = query(
+        subscriptionsRef,
+        where("memberId", "==", memberId),
+        where("paymentProvider", "==", "lastlink"),
+        where("status", "==", "active")
+      )
+    }
     
     const subscriptionSnapshot = await getDocs(subscriptionQuery)
     
@@ -421,20 +502,60 @@ async function createOrUpdateSubscription(
     if (status === "canceled" && reason) updateData.cancelReason = reason
     if (status === "expired") updateData.expiredAt = new Date().toISOString()
     
-    if (subscriptionSnapshot.empty && status === "active") {
-      // Criar nova assinatura se não existir e o status for active
-      await addDoc(subscriptionsRef, {
+    // Criar nova assinatura se não existir e temos partnerId
+    if (subscriptionSnapshot.empty && status === "active" && partnerId) {
+      console.log(`Criando nova assinatura para membro ${memberId} com parceiro ${partnerId}`)
+      
+      // Obter nome do parceiro
+      let partnerName = "Parceiro"
+      try {
+        const partnerRef = doc(db, "users", partnerId)
+        const partnerDoc = await getDoc(partnerRef)
+        
+        if (partnerDoc.exists()) {
+          partnerName = partnerDoc.data().displayName || partnerDoc.data().name || "Parceiro"
+        }
+      } catch (err) {
+        console.error("Erro ao buscar nome do parceiro:", err)
+      }
+      
+      // Criar a assinatura
+      const subscriptionData = {
         memberId,
+        partnerId,
+        partnerName,
         status: "active",
         paymentProvider: "lastlink",
         orderId,
+        partnerLinkId: partnerLinkId || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      })
+      }
+      
+      const docRef = await addDoc(subscriptionsRef, subscriptionData)
+      console.log(`Assinatura criada com sucesso: ${docRef.id}`)
+      
+      // Incrementar contagem de conversões se houver linkId
+      if (partnerLinkId) {
+        try {
+          const linkRef = doc(db, "partnerLinks", partnerLinkId)
+          await updateDoc(linkRef, {
+            conversions: increment(1),
+            updatedAt: new Date().toISOString()
+          })
+          console.log(`Conversão incrementada para o link ${partnerLinkId}`)
+        } catch (err) {
+          console.error("Erro ao incrementar conversões:", err)
+        }
+      }
     } else if (!subscriptionSnapshot.empty) {
       // Atualizar assinatura existente
-      const subscriptionDoc = subscriptionSnapshot.docs[0].ref
-      await updateDoc(subscriptionDoc, updateData)
+      const batch = subscriptionSnapshot.docs.map(async (doc) => {
+        await updateDoc(doc.ref, updateData)
+        console.log(`Assinatura ${doc.id} atualizada para status: ${status}`)
+      })
+      
+      await Promise.all(batch)
     }
   } catch (error) {
     console.error("Erro ao atualizar assinatura:", error)

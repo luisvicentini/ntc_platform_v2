@@ -490,9 +490,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           parsedCheckoutData.priceId?.startsWith('lastlink_')
         
         if (isLastlink && parsedCheckoutData.partnerLinkId) {
-          // Redirecionar para o endpoint da Lastlink
-          console.log('Redirecionando para o endpoint da Lastlink...')
-          window.location.href = `/api/lastlink/redirect?linkId=${parsedCheckoutData.partnerLinkId}&userId=${user?.uid}`
+          // Definir URL de callback
+          const callbackUrl = `${window.location.origin}/api/lastlink/callback`
+          
+          // Redirecionar para o endpoint da Lastlink com callback
+          console.log('Redirecionando para o endpoint da Lastlink com callback...')
+          window.location.href = `/api/lastlink/redirect?linkId=${parsedCheckoutData.partnerLinkId}&userId=${user?.uid}&callback=${encodeURIComponent(callbackUrl)}`
           return
         }
       } catch (error) {

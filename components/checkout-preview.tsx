@@ -221,9 +221,31 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
     
     // Se o usuário já estiver logado, redirecionar para o lastlink
     if (user && user.uid && user.userType === 'member') {
+      // Verificar se temos o link direto ou precisamos buscar
       const lastlinkUrl = getLastlinkUrl()
+      
       if (lastlinkUrl) {
-        window.location.href = lastlinkUrl
+        // Preparar URL com metadados e callback
+        const baseUrl = lastlinkUrl
+        const callbackUrl = `${window.location.origin}/api/lastlink/callback`
+        
+        // Construir a URL com parâmetros
+        const url = new URL(baseUrl)
+        
+        // Adicionar metadados
+        url.searchParams.append('metadata[userId]', user.uid)
+        url.searchParams.append('metadata[partnerId]', partnerLink.partnerId)
+        url.searchParams.append('metadata[partnerLinkId]', partnerLink.id)
+        
+        // Adicionar informações do usuário se disponíveis
+        if (user.email) url.searchParams.append('email', user.email)
+        if (user.displayName) url.searchParams.append('name', user.displayName)
+        
+        // Adicionar callback URL
+        url.searchParams.append('callback_url', callbackUrl)
+        
+        console.log('Redirecionando para Lastlink com metadados:', url.toString())
+        window.location.href = url.toString()
       } else {
         toast.error('URL de checkout não encontrada')
       }
