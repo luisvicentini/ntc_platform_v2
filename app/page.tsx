@@ -14,7 +14,7 @@ export default function HomePage() {
         // Redirecionar com base no tipo de usuário
         switch (user.userType) {
           case 'member':
-            router.push('/member/profile')
+            router.push('/member/feed')
             break
           case 'partner':
             router.push('/partner/dashboard')
