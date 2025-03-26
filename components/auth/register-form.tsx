@@ -16,6 +16,9 @@ export function RegisterForm() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [phone, setPhone] = useState("")
+  
+  // Verifica se está vindo de um checkout do Lastlink
+  const isLastlinkCheckout = searchParams.get('checkout') === 'lastlink'
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,40 +73,70 @@ export function RegisterForm() {
         router.push('/')
         return
       }
-
-      // 3. Criar a sessão de checkout no Stripe
-      const stripeResponse = await fetch('/api/stripe/create-checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          priceId: parsedCheckoutData.priceId,
-          partnerId: parsedCheckoutData.partnerId,
-          partnerLinkId: parsedCheckoutData.partnerLinkId,
-          email: userData.email,
-          customer_data: {
-            email: userData.email,
-            phone: phone,
-            name: userData.displayName
+      
+      // Verificar o tipo de checkout (Stripe ou Lastlink)
+      const checkoutType = parsedCheckoutData.checkoutType || 
+                           (isLastlinkCheckout ? 'lastlink' : 'stripe') ||
+                           (parsedCheckoutData.priceId?.startsWith('lastlink_') ? 'lastlink' : 'stripe')
+      
+      console.log('Tipo de checkout identificado:', checkoutType)
+      
+      if (checkoutType === 'lastlink') {
+        // 3A. Redirecionar para o Lastlink
+        console.log('Redirecionando para o Lastlink')
+        
+        // Buscar URL de redirecionamento do Lastlink
+        const lastlinkResponse = await fetch(`/api/lastlink/redirect?linkId=${parsedCheckoutData.partnerLinkId}&userId=${registerData.user.id}`, {
+          method: 'GET',
+          credentials: 'include'
+        })
+        
+        const lastlinkData = await lastlinkResponse.json()
+        
+        if (!lastlinkResponse.ok || !lastlinkData.redirectUrl) {
+          setError(lastlinkData.error || "Erro ao obter URL de redirecionamento")
+          return
+        }
+        
+        // 4A. Limpar dados e redirecionar
+        localStorage.removeItem('checkoutData')
+        toast.success("Redirecionando para o pagamento...")
+        window.location.href = lastlinkData.redirectUrl
+      } else {
+        // 3B. Criar a sessão de checkout no Stripe
+        const stripeResponse = await fetch('/api/stripe/create-checkout', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
           },
-          planName: parsedCheckoutData.planName,
-          userId: registerData.user.id
-        }),
-        credentials: 'include'
-      })
+          body: JSON.stringify({
+            priceId: parsedCheckoutData.priceId,
+            partnerId: parsedCheckoutData.partnerId,
+            partnerLinkId: parsedCheckoutData.partnerLinkId,
+            email: userData.email,
+            customer_data: {
+              email: userData.email,
+              phone: phone,
+              name: userData.displayName
+            },
+            planName: parsedCheckoutData.planName,
+            userId: registerData.user.id
+          }),
+          credentials: 'include'
+        })
 
-      const stripeData = await stripeResponse.json()
+        const stripeData = await stripeResponse.json()
 
-      if (!stripeResponse.ok) {
-        setError(stripeData.error || "Erro ao criar sessão de pagamento")
-        return
+        if (!stripeResponse.ok) {
+          setError(stripeData.error || "Erro ao criar sessão de pagamento")
+          return
+        }
+
+        // 4B. Limpar dados e redirecionar
+        localStorage.removeItem('checkoutData')
+        toast.success("Redirecionando para o pagamento...")
+        window.location.href = stripeData.url
       }
-
-      // 4. Limpar dados e redirecionar
-      localStorage.removeItem('checkoutData')
-      toast.success("Redirecionando para o pagamento...")
-      window.location.href = stripeData.url
 
     } catch (error: any) {
       console.error("Erro detalhado:", error)

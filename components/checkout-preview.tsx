@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { useAuth } from "@/contexts/auth-context"
 import { toast } from "sonner"
-import { CheckCircle2, CreditCard } from "lucide-react"
+import { CheckCircle2 } from "lucide-react"
 import Image from "next/image"
 
 interface PartnerLink {
@@ -19,12 +19,34 @@ interface PartnerLink {
   interval: string
   intervalCount: number
   code: string
+  lastlinkUrl?: string // URL para o checkout da Lastlink
+  checkoutType?: 'stripe' | 'lastlink' // Tipo de checkout
 }
 
 export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
   const router = useRouter()
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [partnerData, setPartnerData] = useState<any>(null)
+  
+  useEffect(() => {
+    // Buscar informações do parceiro para saber o tipo de checkout
+    const fetchPartnerData = async () => {
+      try {
+        if (partnerLink.partnerId) {
+          const response = await fetch(`/api/users/${partnerLink.partnerId}`)
+          if (response.ok) {
+            const data = await response.json()
+            setPartnerData(data)
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao buscar dados do parceiro:", error)
+      }
+    }
+    
+    fetchPartnerData()
+  }, [partnerLink.partnerId])
 
   // Função para calcular o valor da parcela
   const calculateInstallment = () => {
@@ -68,7 +90,53 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
     }
   }
 
-  // Nova função para criar a sessão do Stripe diretamente para usuários logados
+  // Verificar se o checkout é Lastlink
+  const isLastlinkCheckout = () => {
+    // Verificar se o priceId começa com "lastlink_" ou se o checkoutType é explicitamente 'lastlink'
+    if (partnerLink.checkoutType === 'lastlink') return true
+    if (partnerLink.priceId?.startsWith('lastlink_')) return true
+    
+    // Verificar nas configurações do parceiro
+    if (partnerData?.checkoutOptions) {
+      // Se apenas Lastlink estiver habilitado
+      if (partnerData.checkoutOptions.lastlinkEnabled && !partnerData.checkoutOptions.stripeEnabled) {
+        return true
+      }
+      
+      // Se ambos estiverem habilitados, verifique se o priceId corresponde a um plano Lastlink
+      if (partnerData.checkoutOptions.lastlinkEnabled) {
+        const lastlinkPlanNames = partnerData.checkoutOptions.lastlinkPlans.map((plan: any) => 
+          `lastlink_${plan.name.replace(/\s/g, '_').toLowerCase()}`
+        )
+        return lastlinkPlanNames.includes(partnerLink.priceId)
+      }
+    }
+    
+    return false
+  }
+  
+  // Função para obter a URL do Lastlink para o plano específico
+  const getLastlinkUrl = () => {
+    // Se a URL estiver diretamente no partnerLink
+    if (partnerLink.lastlinkUrl) return partnerLink.lastlinkUrl
+    
+    // Buscar a URL nas configurações do parceiro
+    if (partnerData?.checkoutOptions?.lastlinkPlans) {
+      // Extrair o nome do plano do priceId (lastlink_nome_do_plano)
+      const planNameFromId = partnerLink.priceId?.replace('lastlink_', '').replace(/_/g, ' ')
+      
+      // Encontrar o plano correspondente
+      const plan = partnerData.checkoutOptions.lastlinkPlans.find(
+        (plan: any) => plan.name.toLowerCase() === planNameFromId
+      )
+      
+      if (plan) return plan.link
+    }
+    
+    return null
+  }
+
+  // Função para criar a sessão do Stripe para usuários logados
   const createCheckoutSession = async () => {
     try {
       setLoading(true)
@@ -83,7 +151,7 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
       
       // Obter dados do usuário do contexto de autenticação
       const userData = {
-        userId: user?.id || user?.uid,
+        userId: user?.uid,
         email: user?.email,
         displayName: user?.displayName
       }
@@ -138,7 +206,42 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
     }
   }
 
+  const handleLastlinkCheckout = () => {
+    // Salvar dados para uso após o registro, se necessário
+    const checkoutData = {
+      priceId: partnerLink.priceId,
+      partnerId: partnerLink.partnerId,
+      partnerLinkId: partnerLink.id,
+      planName: partnerLink.planName,
+      price: partnerLink.price,
+      interval: partnerLink.interval,
+      checkoutType: 'lastlink'
+    }
+    localStorage.setItem('checkoutData', JSON.stringify(checkoutData))
+    
+    // Se o usuário já estiver logado, redirecionar para o lastlink
+    if (user && user.uid && user.userType === 'member') {
+      const lastlinkUrl = getLastlinkUrl()
+      if (lastlinkUrl) {
+        window.location.href = lastlinkUrl
+      } else {
+        toast.error('URL de checkout não encontrada')
+      }
+      return
+    }
+    
+    // Se não estiver logado, redirecionar para registro
+    router.push(`/auth/register?redirect=onboarding&partnerId=${partnerLink.partnerId}&ref=${partnerLink.id}&checkout=lastlink`)
+  }
+
   const handleStartOnboarding = () => {
+    // Verificar se é checkout da Lastlink
+    if (isLastlinkCheckout()) {
+      handleLastlinkCheckout()
+      return
+    }
+    
+    // Se for checkout do Stripe
     // Se o usuário já estiver logado, criar a sessão do Stripe diretamente
     if (user && user.uid && user.userType === 'member') {
       createCheckoutSession()
@@ -152,7 +255,8 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
       partnerLinkId: partnerLink.id,
       planName: partnerLink.planName,
       price: partnerLink.price,
-      interval: partnerLink.interval
+      interval: partnerLink.interval,
+      checkoutType: 'stripe'
     }
     localStorage.setItem('checkoutData', JSON.stringify(checkoutData))
     

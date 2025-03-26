@@ -1,7 +1,7 @@
 import { getCheckoutLinkByCode } from '@/lib/firebase/checkout-links'
 import { redirect } from "next/navigation"
 import { CheckoutPreview } from "@/components/checkout-preview"
-import { Shield, Lock, CheckCircle2, CreditCard } from "lucide-react"
+import { CreditCard } from "lucide-react"
 
 export default async function CheckoutPage({ params }: { params: { code: string } }) {
   const link = await getCheckoutLinkByCode(params.code)

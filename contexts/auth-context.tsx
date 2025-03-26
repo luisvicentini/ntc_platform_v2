@@ -477,6 +477,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const redirectBasedOnUserType = (userType: UserType) => {
+    // Verificar se há dados de checkout pendentes
+    const checkoutData = localStorage.getItem('checkoutData')
+    
+    if (checkoutData) {
+      try {
+        const parsedCheckoutData = JSON.parse(checkoutData)
+        
+        // Verificar se é um checkout da Lastlink
+        const isLastlink = 
+          parsedCheckoutData.checkoutType === 'lastlink' || 
+          parsedCheckoutData.priceId?.startsWith('lastlink_')
+        
+        if (isLastlink && parsedCheckoutData.partnerLinkId) {
+          // Redirecionar para o endpoint da Lastlink
+          console.log('Redirecionando para o endpoint da Lastlink...')
+          window.location.href = `/api/lastlink/redirect?linkId=${parsedCheckoutData.partnerLinkId}&userId=${user?.uid}`
+          return
+        }
+      } catch (error) {
+        console.error('Erro ao processar dados de checkout:', error)
+      }
+    }
+    
+    // Se não houver dados de checkout ou não for Lastlink, seguir o fluxo normal
     switch (userType) {
       case 'member':
         window.location.href = '/member/profile'

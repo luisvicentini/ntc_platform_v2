@@ -87,16 +87,32 @@ export async function PATCH(
       )
     }
 
-    // Atualizar usuário
-    const userRef = doc(db, "users", params.id)
+    // Preparar dados para atualização
     const updatedUser = {
-      displayName: data.displayName,
-      email: data.email,
-      userType: data.userType,
-      status: data.status,
+      ...data,
       updatedAt: new Date().toISOString()
     }
 
+    // Remover campos que não devem ser atualizados
+    delete updatedUser.id
+    delete updatedUser.uid
+    delete updatedUser.firebaseUid
+    delete updatedUser.createdAt
+    
+    // Verificar e garantir que checkoutOptions será salvo corretamente
+    if (data.checkoutOptions) {
+      console.log("Salvando opções de checkout:", data.checkoutOptions)
+      updatedUser.checkoutOptions = {
+        stripeEnabled: Boolean(data.checkoutOptions.stripeEnabled),
+        lastlinkEnabled: Boolean(data.checkoutOptions.lastlinkEnabled),
+        lastlinkPlans: Array.isArray(data.checkoutOptions.lastlinkPlans) 
+          ? data.checkoutOptions.lastlinkPlans 
+          : []
+      }
+    }
+
+    // Atualizar usuário
+    const userRef = doc(db, "users", params.id)
     await updateDoc(userRef, updatedUser)
 
     return NextResponse.json({
