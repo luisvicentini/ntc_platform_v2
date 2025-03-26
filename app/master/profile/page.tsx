@@ -258,7 +258,7 @@ export default function ProfilePage() {
 
             {isEditing && (
               <Button 
-                className="w-full bg-primary hover:bg-[#a85fdd] text-white"
+                className="w-full bg-primary hover:bg-red-700 text-white"
                 onClick={handleSave}
               >
                 Salvar Alterações

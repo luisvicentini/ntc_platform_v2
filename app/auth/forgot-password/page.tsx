@@ -42,7 +42,7 @@ function ForgotPasswordForm() {
       }
 
       toast.success("Email de recuperação enviado com sucesso!")
-      router.push("/auth/master") // Redireciona para a página de login
+      router.push("/login") // Redireciona para a página de login
 
     } catch (error: any) {
       toast.error(error.message)
@@ -95,7 +95,7 @@ function ForgotPasswordForm() {
               type="button"
               variant="ghost"
               className="w-full hover:bg-zinc-100"
-              onClick={() => router.push("/auth/master")}
+              onClick={() => router.push("/login")}
               disabled={isLoading}
             >
               Voltar para o Login

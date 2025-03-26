@@ -87,7 +87,7 @@ function ResetPasswordForm() {
       }
 
       toast.success("Senha redefinida com sucesso!")
-      router.push("/auth/master") // Redireciona para a página de login
+      router.push("/login") // Redireciona para a página de login
 
     } catch (error: any) {
       toast.error(error.message)

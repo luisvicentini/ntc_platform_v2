@@ -77,7 +77,7 @@ export function PlanSelectionDialog({
                   onSelectPlan(price.id, price)
                   onOpenChange(false)
                 }}
-                className="bg-primary hover:bg-[#a85fdd] text-white"
+                className="bg-primary hover:bg-red-700 text-white"
               >
                 Selecionar
               </Button>

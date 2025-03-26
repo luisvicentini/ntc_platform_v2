@@ -54,7 +54,7 @@ export function EstablishmentCard({ establishment, onGetVoucher }: Establishment
           </div>
           <Button
             onClick={onGetVoucher}
-            className="bg-primary hover:bg-[#a85fdd] text-white"
+            className="bg-primary hover:bg-red-700 text-white"
             size="sm"
           >
             <Ticket className="h-4 w-4 mr-1" />

@@ -185,7 +185,7 @@ export default function ProfilePage() {
             />
             <label
               htmlFor="avatar-upload"
-              className="absolute bottom-0 right-0 p-1 rounded-full bg-primary hover:bg-[#a85fdd] cursor-pointer"
+              className="absolute bottom-0 right-0 p-1 rounded-full bg-primary hover:bg-red-700 cursor-pointer"
             >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -258,7 +258,7 @@ export default function ProfilePage() {
 
             {isEditing && (
               <Button 
-                className="w-full bg-primary hover:bg-[#a85fdd] text-white"
+                className="w-full bg-primary hover:bg-red-700 text-white"
                 onClick={handleSave}
               >
                 Salvar Alterações

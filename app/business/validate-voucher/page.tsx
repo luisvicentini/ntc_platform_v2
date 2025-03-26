@@ -222,7 +222,7 @@ export default function ValidateVoucherPage() {
                 <p className="text-[#b5b6c9] text-sm">{validationResult.conditions}</p>
               </div>
               {!checkInDone ? (
-                <Button onClick={performCheckIn} className="w-full bg-primary hover:bg-[#a85fdd] text-white">
+                <Button onClick={performCheckIn} className="w-full bg-primary hover:bg-red-700 text-white">
                   Confirmar Check-in
                 </Button>
               ) : (
@@ -232,7 +232,7 @@ export default function ValidateVoucherPage() {
                     setVoucherCode(["", "", "", "", "", ""])
                     setValidationResult(null)
                     setCheckInDone(false)
-                  }} className="w-full bg-[#a85fdd] hover:bg-[#a85fdd]/80 text-white">
+                  }} className="w-full bg-red-700 hover:bg-red-700/80 text-white">
                     Validar outro voucher
                   </Button>
                 </div>
@@ -301,7 +301,7 @@ export default function ValidateVoucherPage() {
               onChange={(e) => handleInputChange(index, e.target.value)}
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
-              className="w-full h-24 text-center text-3xl bg-white text-zinc-500 border-zinc-400 border-2 focus:ring-[#a85fdd] focus:border-zinc-200"
+              className="w-full h-24 text-center text-3xl bg-white text-zinc-500 border-zinc-400 border-2 focus:ring-red-600 focus:border-zinc-200"
               maxLength={index === 0 ? 6 : 1}
             />
           ))}

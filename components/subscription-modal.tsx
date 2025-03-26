@@ -128,7 +128,7 @@ export function SubscriptionModal({ isOpen, onClose, memberId, memberName }: Sub
           <DialogFooter>
             <Button 
               type="submit" 
-              className="bg-primary hover:bg-[#a85fdd] text-white"
+              className="bg-primary hover:bg-red-700 text-white"
               disabled={!selectedPartnerId}
             >
               Vincular

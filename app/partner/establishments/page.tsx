@@ -81,7 +81,7 @@ export default function EstablishmentsPage() {
           )}
           <Button
             onClick={() => handleOpenModal()}
-            className="bg-primary hover:bg-[#a85fdd] text-white"
+            className="bg-primary hover:bg-red-700 text-white"
           >
             <Plus className="mr-2 h-4 w-4" /> Novo Estabelecimento
           </Button>

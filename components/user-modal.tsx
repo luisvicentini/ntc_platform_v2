@@ -150,7 +150,7 @@ export function UserModal({ isOpen, onClose, user }: UserModalProps) {
           </Button>
           <Button
             onClick={handleSubmit}
-            className="bg-primary hover:bg-[#a85fdd] text-white"
+            className="bg-primary hover:bg-red-700 text-white"
             disabled={loading}
           >
             Salvar

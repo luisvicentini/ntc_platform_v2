@@ -183,7 +183,7 @@ export default function ProfilePage() {
     <div className="container max-w-4xl py-10">
       {/* Savings Overview Card */}
       {/*<Card className="mb-8 overflow-hidden">
-        <div className="relative bg-gradient-to-r from-[#7435db] to-[#a85fdd] p-6">
+        <div className="relative bg-gradient-to-r from-[#7435db] to-red-600 p-6">
           <div className="absolute top-6 right-6 flex items-center space-x-2 text-white/90">
             <Badge variant="outline" className="border-white/20 bg-white/10">
               {subscription.status}
@@ -330,7 +330,7 @@ export default function ProfilePage() {
                 />
                 <label
                   htmlFor="avatar-upload"
-                  className="absolute bottom-0 right-0 p-1 rounded-full bg-primary hover:bg-[#a85fdd] cursor-pointer"
+                  className="absolute bottom-0 right-0 p-1 rounded-full bg-primary hover:bg-red-700 cursor-pointer"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -403,7 +403,7 @@ export default function ProfilePage() {
 
                 {isEditing && (
                   <Button 
-                    className="w-full bg-primary hover:bg-[#a85fdd] text-white"
+                    className="w-full bg-primary hover:bg-red-700 text-white"
                     onClick={handleSave}
                   >
                     Salvar Alterações

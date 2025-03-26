@@ -175,7 +175,7 @@ export function ManageSubscriptions({ isOpen, onClose, memberId, memberName }: M
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleConfirmDelete}
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-red-500 hover:bg-red-700"
             >
               Remover
             </AlertDialogAction>

@@ -49,7 +49,7 @@ export function NotificationBadge({ userName }: NotificationBadgeProps) {
             >
               Avaliar depois
             </Button>
-            <Button onClick={handleDismiss} className="bg-primary text-zinc-500 hover:bg-[#a85fdd]">
+            <Button onClick={handleDismiss} className="bg-primary text-zinc-500 hover:bg-red-700">
               Avaliar agora
             </Button>
           </div>

@@ -309,7 +309,7 @@ export function SubscriptionManagementSidebar({
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-full sm:max-w-[640px] bg-zinc-100 text-zinc-500 border-l border-zinc-200 overflow-y-auto">
+      <SheetContent className="w-full sm:max-w-[640px] bg-white text-zinc-500 border-l border-zinc-200 overflow-y-auto">
         <SheetHeader>
           <SheetTitle className="text-zinc-500">Gerenciar Usuário</SheetTitle>
         </SheetHeader>
@@ -413,7 +413,7 @@ export function SubscriptionManagementSidebar({
                       </div>
 
                       {userData.checkoutOptions.lastlinkEnabled && (
-                        <div className="mt-4 space-y-4 p-4 border border-zinc-200 rounded-md">
+                        <div className="pt-6 space-y-4">
                           <h3 className="font-medium">Configuração do Lastlink</h3>
                           
                           <div className="space-y-4">
@@ -426,7 +426,7 @@ export function SubscriptionManagementSidebar({
                                   ...newLastlinkPlan,
                                   name: e.target.value
                                 })}
-                                className="bg-zinc-100 border-zinc-200"
+                                className="bg-white border-zinc-200"
                                 placeholder="Ex: Plano Mensal Premium"
                               />
                             </div>
@@ -440,7 +440,7 @@ export function SubscriptionManagementSidebar({
                                   ...newLastlinkPlan,
                                   link: e.target.value
                                 })}
-                                className="bg-zinc-100 border-zinc-200"
+                                className="bg-white border-zinc-200"
                                 placeholder="Ex: https://pay.lastlink.com/checkout/123456"
                               />
                             </div>
@@ -454,10 +454,10 @@ export function SubscriptionManagementSidebar({
                                   interval: value
                                 })}
                               >
-                                <SelectTrigger className="bg-zinc-100 border-zinc-200">
+                                <SelectTrigger className="bg-white border-zinc-200">
                                   <SelectValue placeholder="Selecione o período" />
                                 </SelectTrigger>
-                                <SelectContent className="bg-zinc-100 border-zinc-200">
+                                <SelectContent className="bg-white border-zinc-200">
                                   <SelectItem value="month">1 mês</SelectItem>
                                   <SelectItem value="quarter">3 meses</SelectItem>
                                   <SelectItem value="semester">6 meses</SelectItem>
@@ -475,7 +475,7 @@ export function SubscriptionManagementSidebar({
                                   ...newLastlinkPlan,
                                   description: e.target.value
                                 })}
-                                className="bg-zinc-100 border-zinc-200"
+                                className="bg-white border-zinc-200"
                                 placeholder="Descreva os benefícios do plano"
                               />
                             </div>
@@ -483,7 +483,7 @@ export function SubscriptionManagementSidebar({
                             <Button
                               type="button"
                               onClick={handleAddLastlinkPlan}
-                              className="w-full bg-primary hover:bg-[#a85fdd]"
+                              className="w-full bg-primary hover:bg-red-700"
                             >
                               Adicionar Plano
                             </Button>
@@ -516,7 +516,7 @@ export function SubscriptionManagementSidebar({
                                       variant="destructive"
                                       size="sm"
                                       onClick={() => handleRemoveLastlinkPlan(index)}
-                                      className="h-8 bg-red-500 hover:bg-red-600"
+                                      className="h-8 bg-red-500 hover:bg-red-700"
                                     >
                                       Remover
                                     </Button>
@@ -544,49 +544,53 @@ export function SubscriptionManagementSidebar({
                     <CardContent className="space-y-4 pt-4">
                       <Tabs defaultValue="stripe" onValueChange={setActiveCheckoutTab}>
                         <TabsList className="grid w-full grid-cols-2 mb-4">
-                          <TabsTrigger value="stripe">Stripe</TabsTrigger>
-                          <TabsTrigger value="lastlink">Lastlink</TabsTrigger>
+                          <TabsTrigger className="bg-white border-zinc-200" value="stripe">Stripe</TabsTrigger>
+                          <TabsTrigger className="bg-white border-zinc-200" value="lastlink">Lastlink</TabsTrigger>
                         </TabsList>
                         
                         <TabsContent value="stripe">
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Nome do link"
-                              value={newLinkName}
-                              onChange={(e) => setNewLinkName(e.target.value)}
-                              className="bg-zinc-100 border-zinc-200"
-                            />
+                          <div className="flex gap-4 flex-1 pt-4">
+                            <div className="flex gap-2 flex-1">
+                              <Input
+                                placeholder="Nome do link"
+                                value={newLinkName}
+                                onChange={(e) => setNewLinkName(e.target.value)}
+                                className="bg-white border-zinc-200 flex-1"
+                              />
+                              <Button
+                                type="button"
+                                onClick={() => setShowPlanDialog(true)}
+                                disabled={loading || !userData.checkoutOptions.stripeEnabled}
+                                className="bg-white hover:bg-primary text-zinc-500 border border-zinc-200 hover:text-white"
+                              >
+                                Selecionar Plano
+                              </Button>
+                            </div>
+
+                            {selectedPlan && (
+                              <div className="p-3 bg-zinc-100 rounded-md mt-3">
+                                <p className="font-medium">{selectedPlan.name}</p>
+                                <p className="text-sm text-zinc-400">
+                                  {new Intl.NumberFormat('pt-BR', {
+                                    style: 'currency',
+                                    currency: selectedPlan.currency,
+                                  }).format(selectedPlan.price / 100)}
+                                  /{selectedPlan.interval}
+                                </p>
+                              </div>
+                            )}
+
+                            <div className="">
                             <Button
                               type="button"
-                              onClick={() => setShowPlanDialog(true)}
-                              disabled={loading || !userData.checkoutOptions.stripeEnabled}
-                              className="bg-primary hover:bg-[#a85fdd]"
+                              onClick={handleCreateLink}
+                              disabled={loading || !selectedPriceId || !newLinkName || !userData.checkoutOptions.stripeEnabled}
+                              className="w-full bg-primary hover:bg-red-700"
                             >
-                              Selecionar Plano
+                              {loading ? "Criando..." : "Criar Link"}
                             </Button>
-                          </div>
-
-                          {selectedPlan && (
-                            <div className="p-3 bg-zinc-100 rounded-md mt-3">
-                              <p className="font-medium">{selectedPlan.name}</p>
-                              <p className="text-sm text-zinc-400">
-                                {new Intl.NumberFormat('pt-BR', {
-                                  style: 'currency',
-                                  currency: selectedPlan.currency,
-                                }).format(selectedPlan.price / 100)}
-                                /{selectedPlan.interval}
-                              </p>
                             </div>
-                          )}
-
-                          <Button
-                            type="button"
-                            onClick={handleCreateLink}
-                            disabled={loading || !selectedPriceId || !newLinkName || !userData.checkoutOptions.stripeEnabled}
-                            className="w-full bg-primary hover:bg-[#a85fdd] mt-3"
-                          >
-                            {loading ? "Criando..." : "Criar Link"}
-                          </Button>
+                          </div>
 
                           <div className="space-y-2 mt-4">
                             <h4 className="font-medium">Links Stripe</h4>
@@ -622,78 +626,83 @@ export function SubscriptionManagementSidebar({
                         </TabsContent>
                         
                         <TabsContent value="lastlink">
-                          <div className="flex gap-2">
-                            <Input
-                              placeholder="Nome do link"
-                              value={newLinkName}
-                              onChange={(e) => setNewLinkName(e.target.value)}
-                              className="bg-zinc-100 border-zinc-200"
-                            />
-                            <Select
-                              disabled={userData.checkoutOptions.lastlinkPlans.length === 0 || !userData.checkoutOptions.lastlinkEnabled}
-                              onValueChange={(value) => setSelectedPriceId(value)}
-                            >
-                              <SelectTrigger className="bg-zinc-100 border-zinc-200">
-                                <SelectValue placeholder="Selecione o plano" />
-                              </SelectTrigger>
-                              <SelectContent className="bg-zinc-100 border-zinc-200">
-                                {userData.checkoutOptions.lastlinkPlans.map((plan, index) => (
-                                  <SelectItem 
-                                    key={index} 
-                                    value={`lastlink_${plan.name.replace(/\s/g, '_').toLowerCase()}`}
-                                  >
-                                    {plan.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-
-                          <Button
-                            type="button"
-                            onClick={handleCreateLink}
-                            disabled={
-                              loading || 
-                              !newLinkName || 
-                              !userData.checkoutOptions.lastlinkEnabled || 
-                              userData.checkoutOptions.lastlinkPlans.length === 0
-                            }
-                            className="w-full bg-primary hover:bg-[#a85fdd] mt-3"
-                          >
-                            {loading ? "Criando..." : "Criar Link"}
-                          </Button>
-
-                          <div className="space-y-2 mt-4">
-                            <h4 className="font-medium">Links Lastlink</h4>
-                            {lastlinkSalesLinks.length === 0 && (
-                              <p className="text-sm text-zinc-400">Nenhum link Lastlink criado</p>
-                            )}
-                            {lastlinkSalesLinks.map((link) => (
-                              <div
-                                key={link.id}
-                                className="flex items-center justify-between p-3 bg-zinc-100 rounded-md"
+                          <div className="flex gap-4 flex-1 pt-4">
+                            <div className="flex gap-2 flex-1">
+                              <Input
+                                placeholder="Nome do link"
+                                value={newLinkName}
+                                onChange={(e) => setNewLinkName(e.target.value)}
+                                className="bg-white border-zinc-200"
+                              />
+                              <Select
+                                disabled={userData.checkoutOptions.lastlinkPlans.length === 0 || !userData.checkoutOptions.lastlinkEnabled}
+                                onValueChange={(value) => setSelectedPriceId(value)}
                               >
-                                <div>
-                                  <p className="font-medium">{link.name}</p>
-                                  <p className="text-sm text-zinc-400">
-                                    Cliques: {link.clicks} | Conversões: {link.conversions}
-                                  </p>
-                                </div>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => {
-                                    navigator.clipboard.writeText(
-                                      `${window.location.origin}/checkout/${link.code}`
-                                    )
-                                    toast.success("Link copiado!")
-                                  }}
-                                >
-                                  <Copy className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            ))}
+                                <SelectTrigger className="bg-white border-zinc-200">
+                                  <SelectValue placeholder="Selecione o plano" />
+                                </SelectTrigger>
+                                <SelectContent className="bg-white border-zinc-200">
+                                  {userData.checkoutOptions.lastlinkPlans.map((plan, index) => (
+                                    <SelectItem 
+                                      key={index} 
+                                      value={`lastlink_${plan.name.replace(/\s/g, '_').toLowerCase()}`}
+                                    >
+                                      {plan.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="">
+                            <Button
+                              type="button"
+                              onClick={handleCreateLink}
+                              disabled={
+                                loading || 
+                                !newLinkName || 
+                                !userData.checkoutOptions.lastlinkEnabled || 
+                                userData.checkoutOptions.lastlinkPlans.length === 0
+                              }
+                              className="w-full bg-primary hover:bg-red-700"
+                            >
+                              {loading ? "Criando..." : "Criar Link"}
+                            </Button>
+                            </div>
                           </div>
+
+                            <div className="space-y-2 mt-4">
+                              <h4 className="font-medium">Links Lastlink</h4>
+                              {lastlinkSalesLinks.length === 0 && (
+                                <p className="text-sm text-zinc-400">Nenhum link Lastlink criado</p>
+                              )}
+                              {lastlinkSalesLinks.map((link) => (
+                                <div
+                                  key={link.id}
+                                  className="flex items-center justify-between p-3 bg-white rounded-md border border-zinc-200"
+                                >
+                                  <div>
+                                    <p className="font-medium">{link.name}</p>
+                                    <p className="text-sm text-zinc-400">
+                                      Cliques: {link.clicks} | Conversões: {link.conversions}
+                                    </p>
+                                  </div>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText(
+                                        `${window.location.origin}/checkout/${link.code}`
+                                      )
+                                      toast.success("Link copiado!")
+                                    }}
+                                  >
+                                    <Copy className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          
                         </TabsContent>
                       </Tabs>
                     </CardContent>
@@ -757,7 +766,7 @@ export function SubscriptionManagementSidebar({
             <Button
               type="submit"
               disabled={loading}
-              className={`${hasUnsavedChanges ? 'bg-orange-500 hover:bg-orange-600' : 'bg-primary hover:bg-[#a85fdd]'}`}
+              className={`${hasUnsavedChanges ? 'bg-orange-500 hover:bg-orange-600' : 'bg-primary hover:bg-red-700'}`}
             >
               {loading ? "Salvando..." : hasUnsavedChanges ? "Salvar alterações" : "Salvar"}
             </Button>
