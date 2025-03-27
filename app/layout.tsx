@@ -17,7 +17,7 @@ const poppins = Poppins({
 
 
 export const metadata: Metadata = {
-  title: `${process.env.NEXT_PUBLIC_APP_NAME}`,
+  title: process.env.NEXT_PUBLIC_APP_PROJECTNAME,
   description: "Vouchers de descontos exclusivos em restaurantes",
     generator: 'naotemchef.com.br'
 }

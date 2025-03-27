@@ -88,10 +88,10 @@ export async function POST(request: Request) {
     await transporter.sendMail({
       from: process.env.SMTP_FROM,
       to: email,
-      subject: `Recuperação de Senha - ${process.env.NEXT_PUBLIC_APP_NAME}`,
+      subject: `Recuperação de Senha - ${process.env.NEXT_PUBLIC_APP_PROJECTNAME}`,
       html: `
         <h1>Recuperação de Senha</h1>
-        <p>Você solicitou a recuperação de senha da sua conta na ${process.env.NEXT_PUBLIC_APP_NAME}. Para definir uma nova senha, clique no link abaixo:</p>
+        <p>Você solicitou a recuperação de senha da sua conta na ${process.env.NEXT_PUBLIC_APP_PROJECTNAME}. Para definir uma nova senha, clique no link abaixo:</p>
         <p><a href="${resetUrl}">Redefinir minha senha</a></p>
         <p>Este link é válido por 1 hora.</p>
         <p>Se você não solicitou a recuperação de senha, por favor ignore este email.</p>

@@ -47,7 +47,7 @@ export async function POST(
     await transporter.sendMail({
       from: process.env.SMTP_FROM,
       to: userData.email,
-      subject: `Ative sua conta na ${process.env.NEXT_PUBLIC_APP_NAME}`,
+      subject: `Ative sua conta na ${process.env.NEXT_PUBLIC_APP_PROJECTNAME}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -71,12 +71,12 @@ export async function POST(
           <body>
             <div class="container">
               <div class="header">
-                <h1>Bem-vindo à ${process.env.NEXT_PUBLIC_APP_NAME}!</h1>
+                <h1>Bem-vindo à ${process.env.NEXT_PUBLIC_APP_PROJECTNAME}!</h1>
               </div>
               
               <p>Olá ${userData.displayName},</p>
               
-              <p>Você foi convidado para acessar a ${process.env.NEXT_PUBLIC_APP_NAME} como <strong>${
+              <p>Você foi convidado para acessar a ${process.env.NEXT_PUBLIC_APP_PROJECTNAME} como <strong>${
                 userData.userType === "master" ? "Usuário Master" :
                 userData.userType === "partner" ? "Parceiro" :
                 userData.userType === "member" ? "Assinante" :
