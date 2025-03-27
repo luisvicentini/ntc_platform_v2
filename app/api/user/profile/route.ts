@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { doc, updateDoc, getDoc } from "firebase/firestore"
+import { doc, updateDoc, getDoc, collection, query, where, getDocs, limit } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 import { revalidateTag } from "next/cache"
 import { UpdateUserProfileData } from "@/types/user"
@@ -17,18 +17,43 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    console.log("Buscando perfil para o usuário ID:", userId)
+
+    // Primeiro, tenta buscar pelo ID do documento
     const userRef = doc(db, "users", userId)
     const userDoc = await getDoc(userRef)
 
-    if (!userDoc.exists()) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      )
+    // Se encontrou o documento
+    if (userDoc.exists()) {
+      const userData = userDoc.data()
+      console.log("Perfil encontrado pelo ID do documento:", userData.email)
+      return NextResponse.json({
+        id: userDoc.id,
+        ...userData
+      })
     }
 
-    const userData = userDoc.data()
-    return NextResponse.json(userData)
+    // Se não encontrou pelo ID do documento, pode ser um caso onde o UID do Firebase Auth é diferente
+    // Vamos tentar buscar documentos onde o campo uid corresponde ao userId fornecido
+    const usersCollection = collection(db, "users")
+    const q = query(usersCollection, where("uid", "==", userId), limit(1))
+    const querySnapshot = await getDocs(q)
+
+    if (!querySnapshot.empty) {
+      const userData = querySnapshot.docs[0].data()
+      console.log("Perfil encontrado pelo campo uid:", userData.email)
+      return NextResponse.json({
+        id: querySnapshot.docs[0].id,
+        ...userData
+      })
+    }
+
+    // Se chegou aqui, não encontrou o usuário em nenhum dos casos
+    console.log("Usuário não encontrado com ID ou UID:", userId)
+    return NextResponse.json(
+      { error: "User not found" },
+      { status: 404 }
+    )
   } catch (error) {
     console.error("Error fetching user profile:", error)
     return NextResponse.json(

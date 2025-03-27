@@ -16,6 +16,18 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 
+// Extended interface to support both Stripe and Lastlink subscriptions
+interface ExtendedSubscription extends StripeSubscription {
+  provider?: 'stripe' | 'lastlink'
+  orderId?: string
+  planName?: string
+  amount?: number
+  currency?: string
+  interval?: string
+  intervalCount?: number
+  created?: number
+}
+
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
 
 const statusMap = {
@@ -47,7 +59,7 @@ const cardBrandMap = {
 
 export function SubscriptionManagement({ userId }: { userId: string }) {
   const { user } = useAuth()
-  const [subscriptions, setSubscriptions] = useState<StripeSubscription[]>([])
+  const [subscriptions, setSubscriptions] = useState<ExtendedSubscription[]>([])
   const [transactions, setTransactions] = useState<StripeTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const [prices, setPrices] = useState<any[]>([])
@@ -68,18 +80,108 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
       setLoading(true)
       const email = user?.email || ''
       
-      // Incluir email como parâmetro adicional para aumentar chances de encontrar o cliente
-      const response = await fetch(`/api/user/subscription?userId=${userId}&email=${encodeURIComponent(email)}`)
+      // Array para armazenar todas as assinaturas (Stripe + Lastlink)
+      let allSubscriptions: any[] = []
+      let allTransactions: any[] = []
+
+      // 1. Buscar assinaturas do Stripe
+      const stripeResponse = await fetch(`/api/user/subscription?userId=${userId}&email=${encodeURIComponent(email)}`)
       
-      if (!response.ok) {
-        throw new Error(`Erro ${response.status}: ${response.statusText}`)
+      if (stripeResponse.ok) {
+        const stripeData = await stripeResponse.json()
+        console.log('Dados de assinatura Stripe recebidos:', stripeData)
+        
+        // Adicionar assinaturas do Stripe ao array
+        if (stripeData.subscriptions && stripeData.subscriptions.length > 0) {
+          allSubscriptions = [...stripeData.subscriptions]
+        }
+        
+        // Adicionar transações do Stripe ao array
+        if (stripeData.transactions && stripeData.transactions.length > 0) {
+          allTransactions = [...stripeData.transactions]
+        }
       }
       
-      const data = await response.json()
-      console.log('Dados de assinatura recebidos:', data)
+      // 2. Buscar assinaturas do Lastlink
+      const lastlinkResponse = await fetch(`/api/user/subscription/lastlink?userId=${userId}&email=${encodeURIComponent(email)}`)
       
-      setSubscriptions(data.subscriptions || [])
-      setTransactions(data.transactions || [])
+      if (lastlinkResponse.ok) {
+        const lastlinkData = await lastlinkResponse.json()
+        console.log('Dados de assinatura Lastlink recebidos:', lastlinkData)
+        
+        // Converter assinaturas do Lastlink para o formato compatível com o componente
+        if (lastlinkData.subscriptions && lastlinkData.subscriptions.length > 0) {
+          const formattedLastlinkSubscriptions = lastlinkData.subscriptions.map(sub => {
+            // Obter detalhes do pagamento se disponível
+            const paymentDetails = sub.paymentDetails || {}
+            const now = new Date()
+            const expiresAt = sub.expiresAt ? new Date(sub.expiresAt) : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000) // 30 dias no futuro como fallback
+            const createdAtDate = new Date(sub.createdAt || now)
+            
+            // Converter para o formato esperado pelo componente
+            return {
+              id: sub.id,
+              status: sub.status || 'active',
+              planName: paymentDetails.planName || 'Plano Premium',
+              amount: paymentDetails.amount || 9900, // Valor em centavos
+              currency: 'BRL',
+              interval: paymentDetails.planInterval || 'month',
+              intervalCount: paymentDetails.planIntervalCount || 1,
+              paymentProvider: 'lastlink',
+              currentPeriodStart: Math.floor(createdAtDate.getTime() / 1000),
+              currentPeriodEnd: Math.floor(expiresAt.getTime() / 1000),
+              created: Math.floor(createdAtDate.getTime() / 1000),
+              cancelAtPeriodEnd: false,
+              // Adicionar informações do provedor
+              provider: 'lastlink',
+              orderId: sub.orderId
+            }
+          })
+          
+          // Adicionar assinaturas do Lastlink ao array
+          allSubscriptions = [...allSubscriptions, ...formattedLastlinkSubscriptions]
+        }
+        
+        // Converter pagamentos do Lastlink para o formato compatível com o componente
+        if (lastlinkData.payments && lastlinkData.payments.length > 0) {
+          const formattedLastlinkTransactions = lastlinkData.payments.map(payment => {
+            const paidAt = payment.paidAt ? new Date(payment.paidAt) : new Date()
+            
+            return {
+              id: payment.id,
+              amount: payment.amount || 0,
+              currency: 'BRL',
+              status: payment.status || 'succeeded',
+              created: Math.floor(paidAt.getTime() / 1000),
+              description: `Pagamento ${payment.planName || 'Premium'} - Lastlink`,
+              provider: 'lastlink'
+            }
+          })
+          
+          // Adicionar transações do Lastlink ao array
+          allTransactions = [...allTransactions, ...formattedLastlinkTransactions]
+        }
+      }
+      
+      // Ordenar as assinaturas: ativas primeiro, depois por data de criação (mais recentes primeiro)
+      allSubscriptions.sort((a, b) => {
+        // Priorizar assinaturas ativas
+        if (a.status === 'active' && b.status !== 'active') return -1
+        if (a.status !== 'active' && b.status === 'active') return 1
+        
+        // Em seguida, ordenar por data (mais recente primeiro)
+        return b.created - a.created
+      })
+      
+      // Ordenar transações por data (mais recentes primeiro)
+      allTransactions.sort((a, b) => b.created - a.created)
+      
+      console.log('Assinaturas consolidadas:', allSubscriptions.length)
+      console.log('Transações consolidadas:', allTransactions.length)
+      
+      // Atualizar estado com dados combinados
+      setSubscriptions(allSubscriptions)
+      setTransactions(allTransactions)
     } catch (error) {
       console.error('Erro ao buscar dados da assinatura:', error)
       toast.error('Erro ao carregar dados da assinatura')
@@ -173,7 +275,7 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
   }
 
   // Pegar a assinatura ativa (se houver)
-  const activeSubscription = subscriptions.find(sub => sub.status === 'active')
+  const activeSubscription = subscriptions.find(sub => sub.status === 'active') as ExtendedSubscription | undefined
   const hasOnlyCanceledSubscriptions = subscriptions.length > 0 && !activeSubscription
 
   const handleCancelSubscription = async () => {
@@ -244,9 +346,16 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
                     <h3 className="text-xl font-semibold text-zinc-500">
                       Assinatura Ativa
                     </h3>
-                    <Badge className={`${statusMap[activeSubscription.status].color}`}>
-                      {statusMap[activeSubscription.status].label}
-                    </Badge>
+                    <div className="flex items-center gap-2">
+                      {activeSubscription.provider === 'lastlink' && (
+                        <Badge variant="outline" className="border-purple-200 bg-purple-500/10 text-purple-500">
+                          Lastlink
+                        </Badge>
+                      )}
+                      <Badge className={`${statusMap[activeSubscription.status].color}`}>
+                        {statusMap[activeSubscription.status].label}
+                      </Badge>
+                    </div>
                   </div>
                   <div className="space-y-4 text-[#b5b6c9]">
                     <div className="grid grid-cols-2 gap-4">
@@ -261,7 +370,7 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
                             style: 'currency',
                             currency: activeSubscription.currency,
                           }).format(activeSubscription.amount / 100)}
-                          /{intervalMap[activeSubscription.interval]}
+                          /{intervalMap[activeSubscription.interval] || 'mês'}
                         </p>
                       </div>
                     </div>
@@ -288,6 +397,18 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
                           </p>
                           <p className="text-sm text-zinc-400">
                           Exp date: {String(activeSubscription.paymentMethod.expiryMonth).padStart(2, '0')}/{activeSubscription.paymentMethod.expiryYear}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {activeSubscription.provider === 'lastlink' && (
+                      <div>
+                        <h4 className="text-sm font-sm text-zinc-400 mb-1">Provedor de Pagamento</h4>
+                        <div className="flex flex-col items-left gap-2 bg-purple-100 p-3 rounded-xl justify-between md:w-[55%] sm:max-w-[100%]">
+                          <p className="text-zinc-600">
+                            <span className="bg-white px-2 rounded-md font-medium text-purple-500">Lastlink</span>
+                            <span className="font-medium ml-2">ID do pedido: {activeSubscription.orderId?.substring(0, 8)}...</span>
                           </p>
                         </div>
                       </div>

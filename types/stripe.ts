@@ -7,6 +7,33 @@ export interface StripeSubscription {
   partnerId?: string
   priceId: string
   customerId: string
+  // Propriedades opcionais para compatibilidade com Lastlink
+  provider?: 'stripe' | 'lastlink'
+  orderId?: string
+  planName?: string
+  amount?: number
+  currency?: string
+  interval?: string
+  intervalCount?: number
+  created?: number
+  paymentMethod?: {
+    brand: string
+    last4: string
+    expiryMonth: number
+    expiryYear: number
+  }
+}
+
+// Interface expandida para suportar os dois tipos de assinaturas
+export interface ExtendedSubscription extends StripeSubscription {
+  provider: 'stripe' | 'lastlink'
+  orderId?: string
+  planName: string
+  amount: number
+  currency: string
+  interval: string
+  intervalCount: number
+  created: number
 }
 
 export interface StripePrice {
@@ -27,4 +54,5 @@ export interface StripeTransaction {
   status: string
   created: number
   description?: string
+  provider?: 'stripe' | 'lastlink'
 } 
