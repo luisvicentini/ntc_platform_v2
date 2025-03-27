@@ -92,13 +92,21 @@ interface SubscriptionEventData extends BaseEventData {
 export async function POST(request: Request) {
   try {
     // Verificar o token para autenticação
-    const token = request.headers.get("x-lastlink-token")
-    const expectedToken = process.env.LASTLINK_TOKEN
+    const token = request.headers.get("x-lastlink-token") || 
+                  request.headers.get("x-lastlink-webhook-token") || 
+                  request.headers.get("authorization")?.replace("Bearer ", "") ||
+                  request.headers.get("x-api-key")
     
+    // Token fornecido pela Lastlink
+    const expectedToken = "fdf8727af48b4962bb74226ff491ca37"
+    
+    console.log("Token recebido:", token ? "Presente" : "Ausente")
+    
+    // Verificação mais flexível do token
     if (!token || token !== expectedToken) {
-      console.error("Token inválido ou ausente")
+      console.error("Token inválido ou ausente:", token)
       return NextResponse.json(
-        { error: "Unauthorized" },
+        { error: "Unauthorized", receivedToken: token ? token.substring(0, 5) + "..." : "nenhum" },
         { status: 401 }
       )
     }
@@ -811,5 +819,48 @@ async function createOrUpdateSubscription(
   } catch (error) {
     console.error("Erro ao atualizar assinatura:", error)
     return null
+  }
+}
+
+// Endpoint para testar a autenticação do webhook
+export async function GET(request: Request) {
+  try {
+    // Verificar o token para autenticação
+    const headers = Object.fromEntries(request.headers.entries())
+    
+    // Log de todos os cabeçalhos para depuração
+    console.log("Todos os cabeçalhos recebidos:", headers)
+    
+    const token = request.headers.get("x-lastlink-token") || 
+                 request.headers.get("x-lastlink-webhook-token") || 
+                 request.headers.get("authorization")?.replace("Bearer ", "") ||
+                 request.headers.get("x-api-key")
+    
+    // Token fornecido pela Lastlink
+    const expectedToken = "fdf8727af48b4962bb74226ff491ca37"
+    
+    if (!token || token !== expectedToken) {
+      return NextResponse.json(
+        { 
+          status: "error", 
+          message: "Token inválido ou ausente", 
+          receivedToken: token ? token.substring(0, 5) + "..." : "nenhum",
+          headers: headers
+        },
+        { status: 401 }
+      )
+    }
+    
+    return NextResponse.json({
+      status: "success",
+      message: "Autenticação do webhook bem-sucedida",
+      timestamp: new Date().toISOString()
+    })
+  } catch (error) {
+    console.error("Erro ao testar webhook:", error)
+    return NextResponse.json(
+      { error: "Erro interno ao testar webhook" },
+      { status: 500 }
+    )
   }
 }

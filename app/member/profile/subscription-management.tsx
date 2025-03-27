@@ -448,7 +448,7 @@ export function SubscriptionManagement({ userId }: { userId: string }) {
                                   <p>Período atual: {format(activeSubscription.currentPeriodStart * 1000, "dd/MM/yyyy")} - {format(activeSubscription.currentPeriodEnd * 1000, "dd/MM/yyyy")}</p>
                                 </div>
 
-                                <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 p-4 rounded-lg">
+                                <div className="bg-yellow-500/10 border border-yellow-500/20 text-yellow-700 p-4 rounded-lg">
                                   <strong>Atenção:</strong> Ao cancelar sua assinatura, você perderá todos os benefícios 
                                   dos cupons de desconto e acesso aos conteúdos exclusivos.
                                 </div>

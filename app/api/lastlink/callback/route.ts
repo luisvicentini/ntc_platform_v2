@@ -15,10 +15,29 @@ export async function GET(request: Request) {
     // Logs detalhados para diagnóstico
     console.log("Parâmetros da URL completos:", Object.fromEntries(searchParams.entries()))
     
+    // Verificar token se estiver presente (opcional para callback)
+    if (token && token !== "fdf8727af48b4962bb74226ff491ca37" && 
+        token !== searchParams.get("auth_token")) {
+      console.warn(`Token de callback recebido mas não corresponde ao esperado: ${token}`)
+    }
+    
     // Verificar se temos informações de metadata no URL
-    const userId = searchParams.get("metadata[userId]") || searchParams.get("metadata_userId")
-    const partnerId = searchParams.get("metadata[partnerId]") || searchParams.get("metadata_partnerId")
-    const partnerLinkId = searchParams.get("metadata[partnerLinkId]") || searchParams.get("metadata_partnerLinkId")
+    // A Lastlink pode enviar metadados em diferentes formatos
+    const userId = searchParams.get("metadata[userId]") || 
+                  searchParams.get("metadata_userId") || 
+                  searchParams.get("metadata.userId") ||
+                  searchParams.get("userId")
+                  
+    const partnerId = searchParams.get("metadata[partnerId]") || 
+                      searchParams.get("metadata_partnerId") || 
+                      searchParams.get("metadata.partnerId") ||
+                      searchParams.get("partnerId")
+                      
+    const partnerLinkId = searchParams.get("metadata[partnerLinkId]") || 
+                          searchParams.get("metadata_partnerLinkId") || 
+                          searchParams.get("metadata.partnerLinkId") ||
+                          searchParams.get("partnerLinkId") || 
+                          searchParams.get("linkId")
     
     console.log("Metadados extraídos:", { userId, partnerId, partnerLinkId })
     

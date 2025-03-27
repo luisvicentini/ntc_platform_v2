@@ -74,7 +74,7 @@ function SuccessContent() {
 
         <div className="flex flex-col gap-4">
           <Button
-            onClick={() => router.push('/login') || router.push('/member/feed')}
+            onClick={() => router.push('/login')}
             size="lg"
             className="w-full bg-red-700 hover:bg-red-700"
           >
