@@ -17,7 +17,7 @@ const poppins = Poppins({
 
 
 export const metadata: Metadata = {
-  title: "Clube Não Tem Chef",
+  title: `${process.env.NEXT_PUBLIC_APP_NAME}`,
   description: "Vouchers de descontos exclusivos em restaurantes",
     generator: 'naotemchef.com.br'
 }

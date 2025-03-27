@@ -47,7 +47,7 @@ export async function POST(
     await transporter.sendMail({
       from: process.env.SMTP_FROM,
       to: userData.email,
-      subject: "Ative sua conta na Clube Não Tem Chef",
+      subject: `Ative sua conta na ${process.env.NEXT_PUBLIC_APP_NAME}`,
       html: `
         <!DOCTYPE html>
         <html>
@@ -71,12 +71,12 @@ export async function POST(
           <body>
             <div class="container">
               <div class="header">
-                <h1>Bem-vindo à Clube Não Tem Chef!</h1>
+                <h1>Bem-vindo à ${process.env.NEXT_PUBLIC_APP_NAME}!</h1>
               </div>
               
               <p>Olá ${userData.displayName},</p>
               
-              <p>Você foi convidado para acessar a Clube Não Tem Chef como <strong>${
+              <p>Você foi convidado para acessar a ${process.env.NEXT_PUBLIC_APP_NAME} como <strong>${
                 userData.userType === "master" ? "Usuário Master" :
                 userData.userType === "partner" ? "Parceiro" :
                 userData.userType === "member" ? "Assinante" :

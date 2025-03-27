@@ -26,7 +26,7 @@ export async function sendActivationEmail({ to, name, activationUrl, userType }:
   }[userType]
 
   const html = `
-    <h1>Bem-vindo(a) ao Clube Não Tem Chef</h1>
+    <h1>Bem-vindo(a) ao ${process.env.NEXT_PUBLIC_APP_NAME}</h1>
     <p>Olá ${name},</p>
     <p>Você foi cadastrado(a) como ${userTypeText} em nossa plataforma.</p>
     <p>Para ativar sua conta e definir sua senha, clique no link abaixo:</p>
@@ -36,9 +36,9 @@ export async function sendActivationEmail({ to, name, activationUrl, userType }:
   `
 
   await transporter.sendMail({
-    from: `"Clube Não Tem Chef" <${process.env.SMTP_FROM}>`,
+    from: `"${process.env.NEXT_PUBLIC_APP_NAME}" <${process.env.SMTP_FROM}>`,
     to,
-    subject: "Ative sua conta na Clube Não Tem Chef",
+    subject: `Ative sua conta na ${process.env.NEXT_PUBLIC_APP_NAME}`,
     html
   })
 }

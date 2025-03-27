@@ -67,8 +67,11 @@ function ResetPasswordForm() {
     }
 
     setIsLoading(true)
+    console.log("Iniciando processo de redefinição de senha")
 
     try {
+      console.log("Enviando requisição para resetar senha com token:", token.substring(0, 10) + "...")
+      
       const response = await fetch("/api/auth/reset-password", {
         method: "POST",
         headers: {
@@ -80,17 +83,46 @@ function ResetPasswordForm() {
         }),
       })
 
+      console.log("Resposta recebida, status:", response.status)
       const data = await response.json()
+      console.log("Corpo da resposta:", data)
 
       if (!response.ok) {
+        console.error("Erro na resposta:", data)
+        
+        // Mensagens mais amigáveis para erros comuns
+        if (data.error?.includes("UID inválido")) {
+          throw new Error("Link de redefinição inválido. Por favor, solicite um novo link.")
+        }
+        
+        if (data.error?.includes("Token expirado") || data.error?.includes("Token inválido")) {
+          throw new Error("Este link de redefinição expirou ou é inválido. Por favor, solicite um novo link.")
+        }
+        
+        if (data.error?.includes("não conseguimos localizar o usuário") || 
+            data.error?.includes("Usuário não encontrado")) {
+          throw new Error("Não conseguimos localizar sua conta. Por favor, verifique se o email informado está correto ou entre em contato com o suporte.")
+        }
+        
+        if (data.error?.includes("email já existe") || 
+            data.error?.includes("Email já existe")) {
+          throw new Error("Ocorreu um problema técnico com sua conta. Por favor, entre em contato com o suporte informando o seu email.")
+        }
+        
+        if (data.error?.includes("Erro interno")) {
+          throw new Error("Ocorreu um erro interno. Nossa equipe técnica já foi notificada. Por favor, tente novamente mais tarde ou entre em contato com o suporte.")
+        }
+        
         throw new Error(data.error || "Erro ao redefinir senha")
       }
 
+      console.log("Senha redefinida com sucesso")
       toast.success("Senha redefinida com sucesso!")
       router.push("/login") // Redireciona para a página de login
 
     } catch (error: any) {
-      toast.error(error.message)
+      console.error("Erro durante a redefinição de senha:", error)
+      toast.error(error.message || "Erro ao redefinir senha")
     } finally {
       setIsLoading(false)
     }
@@ -169,7 +201,7 @@ function ResetPasswordForm() {
                     type={showPassword ? "text" : "password"}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className={`bg-zinc-100 border-zinc-200 ${!password || isPasswordValid ? "" : "border-red-500"}`}
+                    className={`bg-white border-zinc-200 ${!password || isPasswordValid ? "" : "border-red-500"}`}
                     disabled={isLoading}
                   />
                   <Button
@@ -191,7 +223,7 @@ function ResetPasswordForm() {
                     type={showConfirmPassword ? "text" : "password"}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className={`bg-zinc-100 border-zinc-200 ${!confirmPassword || passwordsMatch ? "" : "border-red-500"}`}
+                    className={`bg-white border-zinc-200 ${!confirmPassword || passwordsMatch ? "" : "border-red-500"}`}
                     disabled={isLoading}
                   />
                   <Button
