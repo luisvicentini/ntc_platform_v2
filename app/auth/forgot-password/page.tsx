@@ -72,7 +72,7 @@ function ForgotPasswordForm() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-zinc-100 border-zinc-200"
+                className="bg-white border-zinc-200"
                 disabled={isLoading}
                 placeholder="Digite seu email"
               />

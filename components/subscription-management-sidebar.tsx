@@ -321,7 +321,7 @@ export function SubscriptionManagementSidebar({
             {/* Informações do Parceiro */}
             <AccordionItem value="info" className="border-zinc-200">
               <AccordionTrigger className="text-zinc-500 hover:text-zinc-500">
-                Informações do Parceiro
+                Informações do usuário
               </AccordionTrigger>
               <AccordionContent>
                 <Card className="bg-zinc-100 border-zinc-200">
@@ -332,7 +332,7 @@ export function SubscriptionManagementSidebar({
                         id="displayName"
                         value={userData.displayName}
                         onChange={(e) => setUserData({ ...userData, displayName: e.target.value })}
-                        className="bg-zinc-100 border-zinc-200"
+                        className="bg-white border-zinc-200"
                       />
                     </div>
 
@@ -342,7 +342,7 @@ export function SubscriptionManagementSidebar({
                         id="email"
                         value={userData.email}
                         disabled
-                        className="bg-zinc-100 border-zinc-200 opacity-50"
+                        className="bg-white border-zinc-200"
                       />
                     </div>
 
@@ -352,7 +352,7 @@ export function SubscriptionManagementSidebar({
                         value={userData.phone}
                         onChange={(value) => setUserData({ ...userData, phone: value || "" })}
                         defaultCountry="BR"
-                        className="bg-zinc-100"
+                        className="bg-white rounded-md"
                       />
                     </div>
 
@@ -362,10 +362,10 @@ export function SubscriptionManagementSidebar({
                         value={userData.userType}
                         onValueChange={(value) => setUserData({ ...userData, userType: value })}
                       >
-                        <SelectTrigger className="bg-zinc-100 border-zinc-200">
+                        <SelectTrigger className="bg-white border-zinc-200">
                           <SelectValue placeholder="Selecione o tipo" />
                         </SelectTrigger>
-                        <SelectContent className="bg-zinc-100 border-zinc-200">
+                        <SelectContent className="bg-white border-zinc-200">
                           <SelectItem value="business">Estabelecimento</SelectItem>
                           <SelectItem value="member">Assinante</SelectItem>
                           <SelectItem value="partner">Parceiro</SelectItem>
@@ -727,7 +727,7 @@ export function SubscriptionManagementSidebar({
                           value={userData.pixelId}
                           onChange={(e) => setUserData({ ...userData, pixelId: e.target.value })}
                           placeholder="Ex: 123456789012345"
-                          className="bg-zinc-100 border-zinc-200"
+                          className="bg-white border-zinc-200"
                         />
                         <p className="text-sm text-zinc-400 mt-1">
                           Eventos: PageView, InitiateCheckout, Purchase
@@ -741,7 +741,7 @@ export function SubscriptionManagementSidebar({
                           value={userData.analyticsId}
                           onChange={(e) => setUserData({ ...userData, analyticsId: e.target.value })}
                           placeholder="Ex: G-XXXXXXXXXX"
-                          className="bg-zinc-100 border-zinc-200"
+                          className="bg-white border-zinc-200"
                         />
                         <p className="text-sm text-zinc-400 mt-1">
                           Eventos: page_view, begin_checkout, purchase
