@@ -90,195 +90,307 @@ interface SubscriptionEventData extends BaseEventData {
 }
 
 export async function POST(request: Request) {
+  console.log("========= INÍCIO DO PROCESSAMENTO DO WEBHOOK =========")
+  console.log("Cabeçalho da requisição:", request.headers)
+  console.log("URL do webhook:", request.url)
+  console.log("Método:", request.method)
+  
   try {
-    // Verificar o token para autenticação - versão mais tolerante
-    const token = request.headers.get("x-lastlink-token") || 
-                  request.headers.get("x-lastlink-webhook-token") || 
-                  request.headers.get("authorization")?.replace("Bearer ", "") ||
-                  request.headers.get("x-api-key") ||
-                  "fdf8727af48b4962bb74226ff491ca37" // Fallback para o token correto
+    // Log dos headers recebidos
+    const headers = Object.fromEntries(request.headers.entries())
+    console.log("Headers completos recebidos:", headers)
     
-    // Token fornecido pela Lastlink
-    const expectedToken = "fdf8727af48b4962bb74226ff491ca37"
-    
-    console.log("Headers completos:", Object.fromEntries(request.headers.entries()))
-    console.log("Token recebido:", token ? "Presente" : "Ausente")
-    
-    // Temporariamente desabilitado para depuração - aceitar qualquer token
-    // Se você precisar reabilitar a verificação de token, remova este comentário
-    /*
-    if (!token || token !== expectedToken) {
-      console.error("Token inválido ou ausente:", token)
-      return NextResponse.json(
-        { error: "Unauthorized", receivedToken: token ? token.substring(0, 5) + "..." : "nenhum" },
-        { status: 401 }
-      )
-    }
-    */
+    // Aceitar sem verificação de token
+    console.log("Webhook aceito sem verificação de token")
 
-    // Processar dados do webhook
-    const data: LastlinkEventData = await request.json()
-    console.log("Webhook Lastlink recebido:", JSON.stringify(data))
+    let dataText = ""
+    try {
+      // Clonar a requisição para poder ler o corpo
+      const clonedRequest = request.clone()
+      dataText = await clonedRequest.text()
+      console.log("Corpo da requisição (texto):", dataText)
+    } catch (error) {
+      console.error("Erro ao ler corpo como texto:", error)
+    }
+
+    let data
+    try {
+      // Processar dados do webhook
+      data = await request.json()
+      console.log("Webhook Lastlink recebido (decodificado):", JSON.stringify(data))
+    } catch (error) {
+      console.error("Erro ao processar JSON:", error)
+      try {
+        // Tentar parsear manualmente se o request.json() falhar
+        data = JSON.parse(dataText)
+        console.log("JSON parseado manualmente:", data)
+      } catch (e) {
+        console.error("Falha ao parsear JSON manualmente:", e)
+        return corsResponse({ 
+          error: "Erro ao processar JSON", 
+          message: "O corpo da requisição não é um JSON válido",
+          received: dataText.substring(0, 500) // Mostrar apenas os primeiros 500 caracteres
+        }, 200) // Retornar 200 mesmo com erro para evitar reenvios
+      }
+    }
     
-    // Verificar o tipo de evento - pode ser payment.confirmed (formato antigo) ou novos formatos
-    const eventType = data.event || ""
+    // Extrair o tipo de evento
+    const eventType = data.Event || data.event || ""
     console.log("Tipo de evento:", eventType)
     
-    // Se for um novo formato de evento (Purchase_Order_Confirmed, etc)
-    if (eventType.includes("_")) {
-      return handleNewFormatEvent(eventType, data)
-    }
-
-    // Processar no formato antigo (payment.confirmed)
-    // Verificar se é um evento de pagamento confirmado
-    if (eventType !== "payment.confirmed") {
-      return NextResponse.json(
-        { message: `Evento ignorado (${eventType}), processamos apenas payment.confirmed` },
-        { status: 200 } // Responder com 200 mesmo que ignoremos o evento
-      )
-    }
-
-    // Dados do pagamento
-    const payment = data.payment || {}
-    const customer = payment.customer || {}
-    const subscription = payment.subscription || {}
-    const plan = subscription.plan || {}
+    // No formato novo da Lastlink, os dados estão em um objeto Data
+    // Extrair o objeto Data se existir
+    const eventData = data.Data || data.data || data
     
-    // Verificar se temos as informações necessárias
-    if (!customer.email || !payment.order_id) {
-      console.warn("Dados insuficientes para processar:", { email: customer.email, orderId: payment.order_id })
-      return NextResponse.json(
-        { warning: "Dados insuficientes para processar", received: { email: customer.email, orderId: payment.order_id } },
-        { status: 200 } // Responder com 200 mesmo com dados insuficientes
-      )
-    }
-
-    // Buscar o usuário pelo e-mail
-    const usersRef = collection(db, "users")
-    const userQuery = query(usersRef, where("email", "==", customer.email.toLowerCase()))
-    const userSnapshot = await getDocs(userQuery)
+    // Extrair dados comuns do evento
+    const products = eventData.Products || eventData.products || []
+    const buyer = eventData.Buyer || eventData.buyer || {}
+    const purchase = eventData.Purchase || eventData.purchase || {}
+    const subscriptions = eventData.Subscriptions || eventData.subscriptions || []
     
-    let userId, memberId;
+    console.log("Dados extraídos:")
+    console.log("- Produtos:", products)
+    console.log("- Comprador:", buyer)
+    console.log("- Compra:", purchase)
+    console.log("- Assinaturas:", subscriptions)
     
-    if (userSnapshot.empty) {
-      console.warn(`Usuário não encontrado pelo email: ${customer.email}. Tentando pelos metadados.`)
-      
-      // Tentar buscar pelos metadados
-      if (payment.metadata?.userId) {
-        try {
-          const userRef = doc(db, "users", payment.metadata.userId)
-          const userDoc = await getDoc(userRef)
-          
-          if (userDoc.exists()) {
-            userId = payment.metadata.userId
-            const userData = userDoc.data()
-            memberId = userData.uid || userId
-            console.log(`Usuário encontrado pelo ID nos metadados: ${userId}`)
-          } else {
-            console.warn(`Usuário não encontrado pelo ID: ${payment.metadata.userId}`)
-          }
-        } catch (err) {
-          console.error("Erro ao buscar usuário pelo ID:", err)
-        }
-      }
-      
-      // Se ainda não encontrou, criar um registro de pagamento sem usuário
-      if (!userId) {
-        console.warn("Criando registro de pagamento sem usuário associado")
-        memberId = `email:${customer.email}`
-      }
-    } else {
-      const userData = userSnapshot.docs[0].data()
-      userId = userSnapshot.docs[0].id
-      memberId = userData.uid || userId
-      console.log(`Usuário encontrado pelo email: ${userId}`)
-    }
-
-    // Salvar o pagamento no Firestore mesmo se não encontrou o usuário
-    const lastlinkPaymentsRef = collection(db, "lastlink_payments")
-    const paymentData = {
-      memberId,
-      orderId: payment.order_id,
-      amount: payment.amount,
-      status: payment.status,
-      customerEmail: customer.email,
-      customerName: customer.name || "",
-      planName: plan.name || "",
-      planInterval: plan.interval || "month",
-      planIntervalCount: plan.interval_count || 1,
-      createdAt: new Date().toISOString(),
-      paidAt: payment.paid_at || new Date().toISOString(),
-      expiresAt: subscription.expires_at || "",
-      partnerId: payment.metadata?.partnerId || null,
-      partnerLinkId: payment.metadata?.partnerLinkId || null,
-      metadata: payment.metadata || {}
-    }
-
-    const paymentRef = await addDoc(lastlinkPaymentsRef, paymentData)
+    // Extrair metadados
+    const metadata = purchase.Metadata || {}
+    console.log("Metadados:", metadata)
     
-    // Se houver informações do parceiro, criar uma assinatura
-    if (paymentData.partnerId) {
-      // Verificar se já existe uma assinatura ativa
-      const subscriptionsRef = collection(db, "subscriptions")
-      const subscriptionQuery = query(
-        subscriptionsRef,
-        where("memberId", "==", memberId),
-        where("partnerId", "==", paymentData.partnerId),
-        where("status", "==", "active")
-      )
+    // Extrair campos importantes
+    const planName = products[0]?.Name || "Plano Premium"
+    const paymentId = purchase.PaymentId || ""
+    const paymentAmount = purchase.Price?.Value || 0
+    const paymentDate = purchase.PaymentDate || new Date().toISOString()
+    const paymentMethod = purchase.Payment?.PaymentMethod || ""
+    const installments = purchase.Payment?.NumberOfInstallments || 1
+    
+    // Tentativa de identificar o usuário
+    let userId = metadata.userId
+    let partnerId = metadata.partnerId
+    let partnerLinkId = metadata.partnerLinkId
+    let userEmail = buyer.Email || ""
+    
+    console.log("Dados para identificação:")
+    console.log("- userId:", userId)
+    console.log("- partnerId:", partnerId)
+    console.log("- partnerLinkId:", partnerLinkId)
+    console.log("- userEmail:", userEmail)
+    
+    // Se não temos o userId nos metadados, tentar encontrar pelo email
+    if (!userId && userEmail) {
+      console.log("Buscando usuário pelo email:", userEmail)
+      const usersRef = collection(db, "users")
+      const userQuery = query(usersRef, where("email", "==", userEmail.toLowerCase()))
+      const userSnapshot = await getDocs(userQuery)
       
-      const subscriptionSnapshot = await getDocs(subscriptionQuery)
-      
-      if (subscriptionSnapshot.empty) {
-        // Criar nova assinatura
-        await addDoc(subscriptionsRef, {
-          memberId,
-          partnerId: paymentData.partnerId,
-          status: "active",
-          paymentProvider: "lastlink",
-          orderId: payment.order_id,
-          expiresAt: subscription.expires_at || "",
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        })
+      if (!userSnapshot.empty) {
+        const userData = userSnapshot.docs[0].data()
+        userId = userData.uid || userSnapshot.docs[0].id
+        console.log("Usuário encontrado pelo email. ID:", userId)
       } else {
-        // Atualizar assinatura existente
-        const subscriptionDoc = subscriptionSnapshot.docs[0].ref
-        await updateDoc(subscriptionDoc, {
-          status: "active",
-          paymentProvider: "lastlink",
-          orderId: payment.order_id,
-          expiresAt: subscription.expires_at || "",
-          updatedAt: new Date().toISOString()
-        })
-      }
-      
-      // Se houver partnerLinkId, incrementar as conversões
-      if (paymentData.partnerLinkId) {
-        try {
-          const partnerLinkRef = doc(db, "partnerLinks", paymentData.partnerLinkId)
-          await updateDoc(partnerLinkRef, {
-            conversions: increment(1),
-            updatedAt: new Date().toISOString()
-          })
-        } catch (error) {
-          console.error("Erro ao incrementar conversões:", error)
-        }
+        console.log("Usuário não encontrado pelo email:", userEmail)
       }
     }
-
-    return NextResponse.json(
-      { 
-        success: true, 
-        message: "Pagamento processado com sucesso",
-        paymentId: paymentRef.id
+    
+    // Se ainda não temos o partnerId mas temos o partnerLinkId, buscar pelo link
+    if (!partnerId && partnerLinkId) {
+      console.log("Buscando parceiro através do link:", partnerLinkId)
+      try {
+        const linkRef = doc(db, "partnerLinks", partnerLinkId)
+        const linkDoc = await getDoc(linkRef)
+        
+        if (linkDoc.exists()) {
+          partnerId = linkDoc.data().partnerId
+          console.log("Parceiro encontrado através do link:", partnerId)
+        } else {
+          console.log("Link não encontrado:", partnerLinkId)
+        }
+      } catch (err) {
+        console.error("Erro ao buscar parceiro pelo link:", err)
       }
-    )
+    }
+    
+    // Se não temos o partnerLinkId, mas temos userId e partnerId, verificar se existe um link
+    if (!partnerLinkId && userId && partnerId) {
+      console.log("Buscando link do parceiro para o usuário")
+      try {
+        const linksRef = collection(db, "partnerLinks")
+        const linksQuery = query(linksRef, where("partnerId", "==", partnerId))
+        const linksSnapshot = await getDocs(linksQuery)
+        
+        if (!linksSnapshot.empty) {
+          // Usar o primeiro link encontrado
+          partnerLinkId = linksSnapshot.docs[0].id
+          console.log("Link encontrado pelo parceiro:", partnerLinkId)
+        }
+      } catch (err) {
+        console.error("Erro ao buscar links do parceiro:", err)
+      }
+    }
+    
+    // Salvar a transação independentemente se encontramos userId ou partnerId
+    try {
+      // Definir intervalo e duração do plano com base no nome
+      let planInterval = "month"
+      let planIntervalCount = 1
+      
+      if (planName.toLowerCase().includes("anual")) {
+        planInterval = "year"
+        planIntervalCount = 1
+      } else if (planName.toLowerCase().includes("semestral")) {
+        planInterval = "month"
+        planIntervalCount = 6
+      } else if (planName.toLowerCase().includes("trimestral")) {
+        planInterval = "month"
+        planIntervalCount = 3
+      }
+      
+      // Calcular data de expiração
+      const paidDate = new Date(paymentDate)
+      const expiresDate = new Date(paidDate)
+      
+      if (planInterval === "month") {
+        expiresDate.setMonth(expiresDate.getMonth() + planIntervalCount)
+      } else if (planInterval === "year") {
+        expiresDate.setFullYear(expiresDate.getFullYear() + planIntervalCount)
+      }
+      
+      // Criar objeto da transação
+      const transactionData = {
+        // Dados do pagamento
+        orderId: paymentId,
+        amount: paymentAmount,
+        paymentMethod: paymentMethod,
+        installments: installments,
+        paidAt: paymentDate,
+        createdAt: new Date().toISOString(),
+        expiresAt: expiresDate.toISOString(),
+        
+        // Dados do plano
+        planName: planName,
+        planInterval: planInterval,
+        planIntervalCount: planIntervalCount,
+        
+        // Dados de relacionamento
+        userId: userId || null,
+        userEmail: userEmail,
+        userName: buyer.Name || "",
+        partnerId: partnerId || null,
+        partnerLinkId: partnerLinkId || null,
+        
+        // Status e tipo
+        status: "active",
+        type: "lastlink",
+        provider: "lastlink",
+        
+        // Dados brutos
+        rawData: dataText
+      }
+      
+      console.log("Salvando transação no banco de dados:", transactionData)
+      
+      // Salvar na coleção de transações
+      const transactionRef = await addDoc(collection(db, "lastlink_transactions"), transactionData)
+      console.log("Transação salva com ID:", transactionRef.id)
+      
+      // Se temos o userId e partnerId, criar ou atualizar assinatura
+      if (userId && partnerId) {
+        console.log("Criando/atualizando assinatura")
+        
+        // Verificar se já existe uma assinatura
+        const subscriptionsRef = collection(db, "subscriptions")
+        const subscriptionQuery = query(
+          subscriptionsRef,
+          where("memberId", "==", userId),
+          where("partnerId", "==", partnerId),
+          where("paymentProvider", "==", "lastlink")
+        )
+        
+        const subscriptionSnapshot = await getDocs(subscriptionQuery)
+        
+        const subscriptionData = {
+          memberId: userId,
+          partnerId: partnerId,
+          status: "active",
+          paymentProvider: "lastlink",
+          type: "lastlink",
+          orderId: paymentId,
+          expiresAt: expiresDate.toISOString(),
+          updatedAt: new Date().toISOString(),
+          planName: planName,
+          planInterval: planInterval,
+          planIntervalCount: planIntervalCount,
+          paymentAmount: paymentAmount,
+          currentPeriodStart: paymentDate,
+          currentPeriodEnd: expiresDate.toISOString(),
+          priceId: `lastlink_${planName.toLowerCase().replace(/\s/g, '_')}`,
+          partnerLinkId: partnerLinkId || null
+        }
+        
+        if (subscriptionSnapshot.empty) {
+          // Criar nova assinatura
+          const subscriptionRef = await addDoc(
+            subscriptionsRef, 
+            {
+              ...subscriptionData,
+              createdAt: new Date().toISOString()
+            }
+          )
+          console.log("Nova assinatura criada:", subscriptionRef.id)
+          
+          // Incrementar conversões do link se temos o partnerLinkId
+          if (partnerLinkId) {
+            try {
+              await updateDoc(doc(db, "partnerLinks", partnerLinkId), {
+                conversions: increment(1),
+                updatedAt: new Date().toISOString()
+              })
+              console.log("Conversões do link incrementadas")
+            } catch (err) {
+              console.error("Erro ao incrementar conversões do link:", err)
+            }
+          }
+        } else {
+          // Atualizar assinatura existente
+          const subscriptionRef = subscriptionSnapshot.docs[0].ref
+          await updateDoc(subscriptionRef, subscriptionData)
+          console.log("Assinatura existente atualizada:", subscriptionSnapshot.docs[0].id)
+        }
+      } else {
+        console.log("Não foi possível criar assinatura: faltam userId ou partnerId")
+      }
+      
+      // Retornar sucesso
+      console.log("========= FIM DO PROCESSAMENTO DO WEBHOOK =========")
+      return corsResponse({
+        success: true,
+        message: `Evento ${eventType} processado com sucesso`,
+        transactionId: transactionRef.id
+      })
+    } catch (error) {
+      console.error("Erro ao processar evento:", error)
+      console.log("========= FIM DO PROCESSAMENTO DO WEBHOOK COM ERRO =========")
+      return corsResponse(
+        { 
+          success: false, 
+          error: "Erro ao processar evento", 
+          message: error instanceof Error ? error.message : String(error) 
+        },
+        200
+      )
+    }
   } catch (error) {
     console.error("Erro ao processar webhook:", error)
-    return NextResponse.json(
-      { error: "Erro interno ao processar webhook" },
-      { status: 500 }
+    console.log("========= FIM DO PROCESSAMENTO DO WEBHOOK COM ERRO =========")
+    return corsResponse(
+      { 
+        success: false, 
+        error: "Erro interno ao processar webhook", 
+        message: error instanceof Error ? error.message : String(error)
+      },
+      200 // Responder com 200 mesmo em caso de erro para não acionar reenvios
     )
   }
 }
@@ -885,4 +997,21 @@ export async function GET(request: Request) {
       { status: 500 }
     )
   }
+}
+
+// Função para construir resposta com cabeçalhos CORS
+function corsResponse(data: any, status = 200) {
+  return NextResponse.json(data, {
+    status,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-lastlink-token',
+    },
+  })
+}
+
+// Handler para Options (preflight CORS)
+export async function OPTIONS() {
+  return corsResponse({})
 }

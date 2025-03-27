@@ -38,6 +38,8 @@ export function middleware(request: NextRequest) {
       '/api/payment/direct-session',
       '/api/stripe/webhook',
       '/api/stripe/sync-subscription',
+      '/api/lastlink/webhook',
+      '/api/lastlink/callback',
       '/api/auth/session'
     ]
 
