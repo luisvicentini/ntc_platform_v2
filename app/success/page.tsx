@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { CheckCircle, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -8,7 +8,8 @@ import Image from 'next/image'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
 
-export default function SuccessPage() {
+// Componente interno que usa useSearchParams
+function SuccessContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const { user } = useAuth()
@@ -27,6 +28,7 @@ export default function SuccessPage() {
         if (!token) {
           console.log('Nenhum token encontrado na URL')
           setProcessingPayment(false)
+          setLoading(false)
           return
         }
         
@@ -73,7 +75,18 @@ export default function SuccessPage() {
         }
         
         // Chamar API para associar o pagamento ao usuário
-        const response = await fetch('/api/lastlink/callback', {
+        const callbackUrl = new URL('/api/lastlink/callback', window.location.origin)
+        
+        // Adicionar parâmetros relevantes na URL
+        if (userId) callbackUrl.searchParams.append('userId', userId)
+        if (partnerId) callbackUrl.searchParams.append('partnerId', partnerId)
+        if (partnerLinkId) callbackUrl.searchParams.append('partnerLinkId', partnerLinkId)
+        if (token) callbackUrl.searchParams.append('token', token)
+        if (paymentMethod) callbackUrl.searchParams.append('paymentMethod', paymentMethod)
+        
+        console.log('Chamando callback com parâmetros:', callbackUrl.toString())
+        
+        const response = await fetch(callbackUrl.toString(), {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json'
@@ -177,5 +190,21 @@ export default function SuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Componente principal que envolve o conteúdo em Suspense
+export default function SuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-zinc-100">
+        <div className="text-center">
+          <div className="animate-spin w-16 h-16 border-t-4 border-orange-500 border-solid rounded-full mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-zinc-800">Carregando...</h2>
+        </div>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
   )
 } 
