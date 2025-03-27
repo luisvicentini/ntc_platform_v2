@@ -337,45 +337,132 @@ async function handleNewFormatEvent(eventType: string, data: LastlinkEventData) 
     switch (eventType) {
       case "Purchase_Order_Confirmed":
         collectionName = "lastlink_payments"
-        const productName = products[0]?.Name || "Plano Premium"
-        const amount = purchase.Price?.Value || 0
         
-        console.log(`Processando confirmação de pagamento: ${purchase.PaymentId}`)
-        console.log(`Produto: ${productName}, Valor: ${amount}`)
+        // Verificar se temos informações válidas
+        if (!purchase || !purchase.PaymentId) {
+          console.log("Dados de pagamento incompletos")
+          return NextResponse.json({ 
+            error: "Dados de pagamento incompletos" 
+          }, { status: 400 })
+        }
+        
+        console.log("Processando pagamento confirmado:", purchase)
+        
+        // Determinar o ID e email do membro
+        const customerEmail = buyer?.Email || ""
+        const userId = purchase.Metadata?.userId || buyer?.Id || ""
+        console.log("ID do usuário:", userId)
+        console.log("Email do cliente:", customerEmail)
+        
+        // Buscar o usuário pelo email se não temos o ID
+        if (!memberId && customerEmail) {
+          console.log(`Tentando encontrar usuário pelo email: ${customerEmail}`)
+          try {
+            const usersRef = collection(db, "users")
+            const userQuery = query(usersRef, where("email", "==", customerEmail.toLowerCase()))
+            const userSnapshot = await getDocs(userQuery)
+            
+            if (!userSnapshot.empty) {
+              const userData = userSnapshot.docs[0].data()
+              memberId = userData.uid || userSnapshot.docs[0].id
+              console.log(`Usuário encontrado pelo email. ID: ${memberId}`)
+            } else {
+              console.log(`Usuário não encontrado pelo email: ${customerEmail}`)
+            }
+          } catch (error) {
+            console.error("Erro ao buscar usuário pelo email:", error)
+          }
+        }
+        
+        // Se ainda não encontramos o membro, tentar pelo ID
+        if (!memberId && userId) {
+          console.log(`Tentando encontrar usuário pelo ID: ${userId}`)
+          try {
+            // Verificar se o ID corresponde a um documento na coleção users
+            const userRef = doc(db, "users", userId)
+            const userDoc = await getDoc(userRef)
+            
+            if (userDoc.exists()) {
+              const userData = userDoc.data()
+              memberId = userData.uid || userId
+              console.log(`Usuário encontrado pelo ID no documento. ID: ${memberId}`)
+            } else {
+              // Se não, considerar o ID fornecido como UID
+              memberId = userId
+              console.log(`Usando ID fornecido como ID do membro: ${memberId}`)
+            }
+          } catch (error) {
+            console.error("Erro ao buscar usuário pelo ID:", error)
+            // Em caso de erro, usar o ID fornecido
+            memberId = userId
+          }
+        }
+        
+        console.log(`ID do membro determinado: ${memberId || "Não encontrado"}`)
         
         eventData = {
           ...eventData,
-          orderId: purchase.PaymentId || "",
-          amount: amount,
-          status: "confirmed",
+          orderId: purchase.PaymentId,
+          amount: purchase.Price?.Value || 0,
+          status: "active",
           paidAt: purchase.PaymentDate || new Date().toISOString(),
-          productName: productName,
           paymentMethod: purchase.Payment?.PaymentMethod || "",
           installments: purchase.Payment?.NumberOfInstallments || 1,
-          planName: productName,
-          planInterval: "month", // Valor padrão, pode ser ajustado
-          planIntervalCount: 1    // Valor padrão, pode ser ajustado
+          productName: products[0]?.Name || "",
+          partnerId: purchase.Metadata?.partnerId || null,
+          partnerLinkId: purchase.Metadata?.partnerLinkId || null
         } as PaymentEventData
         
-        // Salvar no Firestore primeiro para termos os detalhes do pagamento
-        const collectionRef = collection(db, collectionName)
-        const paymentDocRef = await addDoc(collectionRef, eventData)
-        console.log(`Evento de pagamento salvo com ID: ${paymentDocRef.id}`)
+        // Salvar o pagamento
+        const paymentCollectionRef = collection(db, collectionName)
+        const paymentDocRef = await addDoc(paymentCollectionRef, eventData)
         
-        // Se temos um membro identificado, criar assinatura
+        // Criar ou atualizar assinatura se temos um ID de membro
         if (memberId) {
-          console.log(`Criando assinatura para membro: ${memberId}`)
-          const subscriptionId = await createOrUpdateSubscription(
-            memberId, 
-            "active", 
-            purchase.PaymentId || null,
-            null,
-            partnerId,
-            partnerLinkId
-          )
-          console.log(`Resultado da criação da assinatura: ${subscriptionId || 'falha'}`)
+          try {
+            console.log("Criando/atualizando assinatura para o membro:", memberId)
+            
+            // Extrair nome do plano do produto
+            const planName = products[0]?.Name || "Plano Premium"
+            
+            // Determinar o intervalo e contagem com base no nome ou usar valores padrão
+            let planInterval = "month"
+            let planIntervalCount = 1
+            
+            if (planName.toLowerCase().includes("anual")) {
+              planInterval = "year"
+              planIntervalCount = 1
+            } else if (planName.toLowerCase().includes("semestral")) {
+              planInterval = "month"
+              planIntervalCount = 6
+            } else if (planName.toLowerCase().includes("trimestral")) {
+              planInterval = "month"
+              planIntervalCount = 3
+            }
+            
+            // Adicionar detalhes do plano ao pagamento
+            await updateDoc(paymentDocRef, {
+              planName,
+              planInterval,
+              planIntervalCount
+            })
+            
+            // Criar ou atualizar a assinatura com todos os detalhes necessários
+            await createOrUpdateSubscription(
+              memberId, 
+              "active", 
+              purchase.PaymentId,
+              null,
+              purchase.Metadata?.partnerId || null,
+              purchase.Metadata?.partnerLinkId || null
+            )
+            
+            console.log("Assinatura criada/atualizada com sucesso")
+          } catch (error) {
+            console.error("Erro ao criar/atualizar assinatura:", error)
+          }
         } else {
-          console.error("Não foi possível criar assinatura: membro não identificado")
+          console.log("Não foi possível criar assinatura: ID do membro não encontrado")
         }
         
         return NextResponse.json({
@@ -507,28 +594,28 @@ async function handleNewFormatEvent(eventType: string, data: LastlinkEventData) 
 
 // Função auxiliar para criar ou atualizar assinatura
 async function createOrUpdateSubscription(
-  memberId: string, 
-  status: string, 
-  orderId: string | null = null, 
+  memberId: string,
+  status: string,
+  orderId: string | null = null,
   reason: string | null = null,
   partnerId: string | null = null,
   partnerLinkId: string | null = null
 ) {
   try {
-    console.log(`Tentando criar/atualizar assinatura - Dados:`, { 
-      memberId, 
-      status, 
-      orderId, 
-      partnerId, 
-      partnerLinkId 
+    console.log(`Tentando criar/atualizar assinatura - Dados:`, {
+      memberId,
+      status,
+      orderId,
+      partnerId,
+      partnerLinkId
     })
-    
+
     // Se não temos o partnerId, tente buscar do link
     if (partnerLinkId && !partnerId) {
       try {
         const linkRef = doc(db, "partnerLinks", partnerLinkId)
         const linkDoc = await getDoc(linkRef)
-        
+
         if (linkDoc.exists()) {
           partnerId = linkDoc.data().partnerId
           console.log(`Parceiro encontrado através do link: ${partnerId}`)
@@ -537,15 +624,15 @@ async function createOrUpdateSubscription(
         console.error("Erro ao buscar parceiro através do link:", err)
       }
     }
-    
+
     // Se ainda não temos o partnerId, vamos usar um valor padrão para assinaturas Lastlink
     if (!partnerId && status === "active") {
       console.log("Parceiro não encontrado, usando o parceiro lastlink padrão")
       partnerId = process.env.DEFAULT_LASTLINK_PARTNER_ID || "MChsM1JopUMB2ye2Tdvp" // ID do parceiro padrão
     }
-    
+
     console.log(`Parceiro final: ${partnerId}`)
-    
+
     // Buscar detalhes do pagamento se tivermos um orderId
     let paymentDetails = null
     if (orderId) {
@@ -556,7 +643,7 @@ async function createOrUpdateSubscription(
           where("orderId", "==", orderId)
         )
         const paymentSnapshot = await getDocs(paymentQuery)
-        
+
         if (!paymentSnapshot.empty) {
           paymentDetails = paymentSnapshot.docs[0].data()
           console.log(`Detalhes do pagamento encontrados para orderId: ${orderId}`)
@@ -565,11 +652,11 @@ async function createOrUpdateSubscription(
         console.error("Erro ao buscar detalhes do pagamento:", err)
       }
     }
-    
+
     // Query base para buscar assinaturas
     let subscriptionQuery
     const subscriptionsRef = collection(db, "subscriptions")
-    
+
     if (partnerId) {
       // Se temos um partnerId, buscamos assinaturas específicas desse parceiro
       subscriptionQuery = query(
@@ -586,99 +673,93 @@ async function createOrUpdateSubscription(
         where("paymentProvider", "==", "lastlink")
       )
     }
-    
+
     const subscriptionSnapshot = await getDocs(subscriptionQuery)
     console.log(`Assinaturas existentes encontradas: ${subscriptionSnapshot.size}`)
-    
+
     const updateData: Record<string, any> = {
       status,
       updatedAt: new Date().toISOString()
     }
-    
+
     // Adicionar campos opcionais se fornecidos
     if (orderId) updateData.orderId = orderId
     if (status === "canceled" && reason) updateData.cancelReason = reason
     if (status === "expired") updateData.expiredAt = new Date().toISOString()
-    
+
     // Adicionar detalhes do pagamento se disponíveis
     if (paymentDetails) {
       updateData.paymentAmount = paymentDetails.amount
       updateData.planName = paymentDetails.planName
-      updateData.planInterval = paymentDetails.planInterval
-      updateData.planIntervalCount = paymentDetails.planIntervalCount
+      updateData.planInterval = paymentDetails.planInterval || "month"
+      updateData.planIntervalCount = paymentDetails.planIntervalCount || 1
       updateData.paidAt = paymentDetails.paidAt
-      updateData.expiresAt = paymentDetails.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 dias no futuro
-    }
-    
-    // Criar nova assinatura se não existir ou todas estão inativas
-    let shouldCreateNew = subscriptionSnapshot.empty
-    
-    // Verificar se todas as assinaturas existentes estão inativas
-    if (!subscriptionSnapshot.empty) {
-      const hasActiveSubscription = subscriptionSnapshot.docs.some(doc => 
-        doc.data().status === "active" || doc.data().status === status
-      )
-      shouldCreateNew = !hasActiveSubscription && status === "active"
-    }
-    
-    if (shouldCreateNew && status === "active" && partnerId) {
-      console.log(`Criando nova assinatura para membro ${memberId} com parceiro ${partnerId}`)
       
-      // Obter nome do parceiro
-      let partnerName = "Parceiro"
-      try {
-        const partnerRef = doc(db, "users", partnerId)
-        const partnerDoc = await getDoc(partnerRef)
-        
-        if (partnerDoc.exists()) {
-          partnerName = partnerDoc.data().displayName || partnerDoc.data().name || "Parceiro"
-        }
-      } catch (err) {
-        console.error("Erro ao buscar nome do parceiro:", err)
+      // Calcular o período atual com base no intervalo do plano
+      const paidAt = new Date(paymentDetails.paidAt)
+      const interval = paymentDetails.planInterval || "month"
+      const intervalCount = paymentDetails.planIntervalCount || 1
+      let expiresAt = new Date(paidAt)
+      
+      if (interval === "month") {
+        expiresAt.setMonth(expiresAt.getMonth() + intervalCount)
+      } else if (interval === "year") {
+        expiresAt.setFullYear(expiresAt.getFullYear() + intervalCount)
+      } else if (interval === "week") {
+        expiresAt.setDate(expiresAt.getDate() + (7 * intervalCount))
+      } else if (interval === "day") {
+        expiresAt.setDate(expiresAt.getDate() + intervalCount)
       }
       
-      // Definir data de expiração se não fornecida
-      const expiresAt = (paymentDetails && paymentDetails.expiresAt) 
-        ? paymentDetails.expiresAt 
-        : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 dias por padrão
+      updateData.currentPeriodStart = paidAt.toISOString()
+      updateData.currentPeriodEnd = expiresAt.toISOString()
+      updateData.expiresAt = expiresAt.toISOString()
       
-      // Criar a assinatura
-      const subscriptionData = {
+      // Gerar um priceId baseado no nome do plano
+      if (paymentDetails.planName) {
+        updateData.priceId = `lastlink_${paymentDetails.planName.toLowerCase().replace(/\s/g, '_')}`
+      } else {
+        updateData.priceId = "lastlink_premium"
+      }
+    }
+
+    // Se não existem assinaturas ou se a assinatura existente está cancelada, criar uma nova
+    if (subscriptionSnapshot.empty || (status === "active" && subscriptionSnapshot.docs.some(doc => doc.data().status === "canceled"))) {
+      // Criar nova assinatura
+      console.log("Criando nova assinatura Lastlink")
+      
+      // Se não temos detalhes de pagamento, usar valores padrão
+      const now = new Date()
+      const oneMonthLater = new Date(now)
+      oneMonthLater.setMonth(now.getMonth() + 1)
+      
+      const expiresAt = updateData.expiresAt || oneMonthLater.toISOString()
+      
+      const subscriptionData: Record<string, any> = {
         memberId,
         partnerId,
-        partnerName,
-        status: "active",
+        status,
         paymentProvider: "lastlink",
-        type: "lastlink", // Adicionar tipo para compatibilidade com assinaturas Stripe
-        orderId: orderId || "",
-        partnerLinkId: partnerLinkId || null,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        expiresAt,
-        // Adicionar informações do plano e pagamento se disponíveis
-        ...(paymentDetails ? {
-          planName: paymentDetails.planName || "Plano Premium",
-          planInterval: paymentDetails.planInterval || "month",
-          planIntervalCount: paymentDetails.planIntervalCount || 1,
-          paymentAmount: paymentDetails.amount || 0,
-          paidAt: paymentDetails.paidAt || new Date().toISOString(),
-          priceId: `lastlink_${(paymentDetails.planName || "premium").toLowerCase().replace(/\s/g, "_")}`,
-          currentPeriodStart: new Date().toISOString(),
-          currentPeriodEnd: expiresAt,
-        } : {
-          planName: "Plano Premium",
-          planInterval: "month",
-          planIntervalCount: 1,
-          priceId: "lastlink_premium",
-          currentPeriodStart: new Date().toISOString(),
-          currentPeriodEnd: expiresAt,
-        })
+        type: "lastlink", // Adicionar tipo explícito
+        ...updateData
       }
       
+      // Fornecer valores padrão se não temos detalhes do pagamento
+      if (!paymentDetails) {
+        subscriptionData.planName = "Plano Premium"
+        subscriptionData.planInterval = "month"
+        subscriptionData.planIntervalCount = 1
+        subscriptionData.priceId = "lastlink_premium"
+        subscriptionData.currentPeriodStart = new Date().toISOString()
+        subscriptionData.currentPeriodEnd = expiresAt
+      }
+
       try {
         const docRef = await addDoc(subscriptionsRef, subscriptionData)
         console.log(`Assinatura criada com sucesso: ${docRef.id} com dados:`, subscriptionData)
-        
+
         // Incrementar contagem de conversões se houver linkId
         if (partnerLinkId) {
           try {
@@ -692,7 +773,7 @@ async function createOrUpdateSubscription(
             console.error("Erro ao incrementar conversões:", err)
           }
         }
-        
+
         return docRef.id // Retorna o ID da assinatura criada
       } catch (error) {
         console.error("Erro ao criar assinatura no Firestore:", error)
@@ -700,19 +781,19 @@ async function createOrUpdateSubscription(
       }
     } else if (!subscriptionSnapshot.empty) {
       // Atualizar assinatura existente
-      console.log(`Atualizando ${subscriptionSnapshot.size} assinaturas existentes para status: ${status}`)
-      
+      console.log(`Atualizando ${subscriptionSnapshot.size} assinaturas existentes para status: ${status}`) 
+
       const batch = subscriptionSnapshot.docs.map(async (doc) => {
         try {
           const docData = doc.data()
           console.log(`Atualizando assinatura ${doc.id} (status atual: ${docData.status}) para ${status}`)
-          
+
           // Se a assinatura já está cancelada, não alterar para ativa
           if (docData.status === "canceled" && status === "active") {
             console.log(`Assinatura ${doc.id} já está cancelada, criando nova em vez de atualizar`)
             return null
           }
-          
+
           await updateDoc(doc.ref, updateData)
           console.log(`Assinatura ${doc.id} atualizada com sucesso`)
           return doc.id
@@ -721,11 +802,11 @@ async function createOrUpdateSubscription(
           return null
         }
       })
-      
+
       const updated = await Promise.all(batch)
       return updated.filter(Boolean)[0] // Retorna o primeiro ID atualizado com sucesso
     }
-    
+
     return null
   } catch (error) {
     console.error("Erro ao atualizar assinatura:", error)
