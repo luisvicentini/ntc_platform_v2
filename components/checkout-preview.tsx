@@ -37,6 +37,37 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
           const response = await fetch(`/api/users/${partnerLink.partnerId}`)
           if (response.ok) {
             const data = await response.json()
+            
+            // Se for link Lastlink, verificar se tem preço e outras informações úteis
+            if (partnerLink.priceId?.startsWith('lastlink_') || partnerLink.checkoutType === 'lastlink') {
+              console.log('Link Lastlink detectado, verificando preço:', partnerLink)
+              
+              // Se o link não tem preço, mas o plano sim, usar o preço do plano
+              if (!partnerLink.price || partnerLink.price === 0) {
+                console.log('Link sem preço definido, buscando preço no plano...')
+                
+                // Buscar plano correspondente
+                if (data.checkoutOptions?.lastlinkPlans) {
+                  const planNameFromId = partnerLink.priceId?.replace('lastlink_', '').replace(/_/g, ' ')
+                  const planMatch = data.checkoutOptions.lastlinkPlans.find(
+                    (plan: any) => {
+                      const planNameLower = plan.name.toLowerCase()
+                      const searchNameLower = planNameFromId?.toLowerCase() || ''
+                      return planNameLower === searchNameLower || 
+                             planNameLower.includes(searchNameLower) || 
+                             searchNameLower.includes(planNameLower)
+                    }
+                  )
+                  
+                  if (planMatch && planMatch.price) {
+                    console.log('Plano encontrado com preço:', planMatch.price)
+                    data.linkPrice = planMatch.price
+                    data.linkInterval = planMatch.interval || partnerLink.interval
+                  }
+                }
+              }
+            }
+            
             setPartnerData(data)
           }
         }
@@ -46,20 +77,40 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
     }
     
     fetchPartnerData()
-  }, [partnerLink.partnerId])
+  }, [partnerLink.partnerId, partnerLink.priceId, partnerLink.checkoutType, partnerLink.price])
 
   // Função para calcular o valor da parcela
   const calculateInstallment = () => {
+    // Usar o preço do plano Lastlink se disponível
+    const price = partnerData?.linkPrice || partnerLink.price
+    console.log('Calculando valor da parcela:', { 
+      linkPrice: partnerData?.linkPrice, 
+      partnerLinkPrice: partnerLink.price, 
+      finalPrice: price 
+    })
+
     switch (partnerLink.interval) {
       case 'year':
-        return partnerLink.price / 12
+        return price / 12
       case 'semester':
-        return partnerLink.price / 6
+        return price / 6
       case 'quarter':
-        return partnerLink.price / 3
+        return price / 3
       default:
-        return partnerLink.price
+        return price
     }
+  }
+
+  // Função para obter o preço total do plano
+  const getTotalPrice = () => {
+    // Usar o preço do plano Lastlink se disponível
+    const price = partnerData?.linkPrice || partnerLink.price
+    console.log('Calculando preço total:', { 
+      linkPrice: partnerData?.linkPrice, 
+      partnerLinkPrice: partnerLink.price,
+      finalPrice: price
+    })
+    return price
   }
 
   // Função para obter o texto do período
@@ -117,22 +168,116 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
   
   // Função para obter a URL do Lastlink para o plano específico
   const getLastlinkUrl = () => {
-    // Se a URL estiver diretamente no partnerLink
-    if (partnerLink.lastlinkUrl) return partnerLink.lastlinkUrl
+    console.log('Buscando URL da Lastlink para o plano:', partnerLink)
+
+    // Se a URL estiver diretamente no partnerLink, usá-la preferencialmente
+    if (partnerLink.lastlinkUrl && partnerLink.lastlinkUrl.includes('lastlink.com')) {
+      console.log('Usando URL direta do partnerLink:', partnerLink.lastlinkUrl)
+      return partnerLink.lastlinkUrl
+    }
     
-    // Buscar a URL nas configurações do parceiro
-    if (partnerData?.checkoutOptions?.lastlinkPlans) {
+    // Tentar buscar com base no ID de referência do link
+    if (partnerData?.checkoutOptions?.lastlinkPlans && partnerLink.id) {
+      // Verificar se temos um plano vinculado diretamente a este ID de link
+      const linkedPlan = partnerData.checkoutOptions.lastlinkPlans.find(
+        (plan: any) => plan.linkedLinkIds && plan.linkedLinkIds.includes(partnerLink.id)
+      )
+      
+      if (linkedPlan) {
+        console.log('Encontrado plano vinculado ao ID do link:', linkedPlan.link)
+        
+        // Se o plano tem preço definido e o link não, atualizamos o preço do link
+        if (linkedPlan.price && !partnerLink.price) {
+          console.log('Atualizando preço do link com valor do plano:', linkedPlan.price)
+          // Não podemos modificar partnerLink diretamente, mas podemos notificar para fins de exibição
+          setPartnerData((prev: any) => {
+            if (prev) {
+              return {
+                ...prev,
+                linkPrice: linkedPlan.price,
+                linkInterval: linkedPlan.interval || partnerLink.interval
+              }
+            }
+            return prev
+          })
+        }
+        
+        return linkedPlan.link
+      }
+    }
+    
+    // Buscar a URL nas configurações do parceiro baseado no priceId
+    if (partnerData?.checkoutOptions?.lastlinkPlans && partnerLink.priceId) {
       // Extrair o nome do plano do priceId (lastlink_nome_do_plano)
       const planNameFromId = partnerLink.priceId?.replace('lastlink_', '').replace(/_/g, ' ')
       
-      // Encontrar o plano correspondente
+      console.log('Buscando plano pelo nome:', planNameFromId)
+      
+      // Encontrar o plano correspondente (comparação mais flexível)
       const plan = partnerData.checkoutOptions.lastlinkPlans.find(
-        (plan: any) => plan.name.toLowerCase() === planNameFromId
+        (plan: any) => {
+          // Verificar por nome exato, nome em lowercase, ou parte do nome
+          const planNameLower = plan.name.toLowerCase()
+          const searchNameLower = planNameFromId.toLowerCase()
+          return planNameLower === searchNameLower || 
+                 planNameLower.includes(searchNameLower) || 
+                 searchNameLower.includes(planNameLower)
+        }
       )
       
-      if (plan) return plan.link
+      if (plan && plan.link) {
+        console.log('Plano encontrado por correspondência de nome:', plan.name, plan.link)
+        
+        // Se o plano tem preço definido e o link não, atualizamos o preço do link
+        if (plan.price && !partnerLink.price) {
+          console.log('Atualizando preço do link com valor do plano:', plan.price)
+          // Armazenar informações do plano encontrado para uso nos cálculos
+          setPartnerData((prev: any) => {
+            if (prev) {
+              return {
+                ...prev,
+                linkPrice: plan.price,
+                linkInterval: plan.interval || partnerLink.interval
+              }
+            }
+            return prev
+          })
+        }
+        
+        return plan.link
+      }
     }
     
+    // Último recurso: usar o primeiro plano disponível
+    if (partnerData?.checkoutOptions?.lastlinkPlans && partnerData.checkoutOptions.lastlinkPlans.length > 0) {
+      const firstPlan = partnerData.checkoutOptions.lastlinkPlans[0]
+      console.log('Nenhum plano específico encontrado, usando o primeiro disponível:', firstPlan.name, firstPlan.link)
+      
+      // Se o plano tem preço definido, usá-lo
+      if (firstPlan.price && !partnerLink.price) {
+        console.log('Atualizando preço do link com valor do primeiro plano:', firstPlan.price)
+        setPartnerData((prev: any) => {
+          if (prev) {
+            return {
+              ...prev,
+              linkPrice: firstPlan.price,
+              linkInterval: firstPlan.interval || partnerLink.interval
+            }
+          }
+          return prev
+        })
+      }
+      
+      return firstPlan.link
+    }
+    
+    // Se tudo falhar, usar um link de backup (se existir na configuração)
+    if (partnerData?.checkoutOptions?.defaultLastlinkUrl) {
+      console.log('Usando URL de fallback:', partnerData.checkoutOptions.defaultLastlinkUrl)
+      return partnerData.checkoutOptions.defaultLastlinkUrl
+    }
+    
+    console.log('Nenhuma URL de Lastlink encontrada')
     return null
   }
 
@@ -207,6 +352,17 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
   }
 
   const handleLastlinkCheckout = () => {
+    // Extrair parâmetros UTM da URL atual para preservá-los
+    const currentUtmParams: Record<string, string> = {};
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      ['utm_source', 'utm_medium', 'utm_content', 'utm_term', 'utm_campaign'].forEach(param => {
+        const value = urlParams.get(param);
+        if (value) currentUtmParams[param] = value;
+      });
+    }
+    console.log('Parâmetros UTM detectados na URL atual:', currentUtmParams);
+
     // Salvar dados para uso após o registro, se necessário
     const checkoutData = {
       priceId: partnerLink.priceId,
@@ -216,7 +372,8 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
       price: partnerLink.price,
       interval: partnerLink.interval,
       checkoutType: 'lastlink',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      utmParams: currentUtmParams // Salvar UTMs atuais
     }
     localStorage.setItem('checkoutData', JSON.stringify(checkoutData))
     
@@ -237,6 +394,11 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
         callbackUrlParams.append('userId', user.uid)
         callbackUrlParams.append('partnerId', partnerLink.partnerId)
         callbackUrlParams.append('partnerLinkId', partnerLink.id)
+        
+        // Adicionar parâmetros UTM ao callback se existirem
+        Object.entries(currentUtmParams).forEach(([key, value]) => {
+          callbackUrlParams.append(key, value as string)
+        })
         
         // URL de callback final
         const callbackUrl = `${baseCallbackUrl}?${callbackUrlParams.toString()}`
@@ -259,17 +421,18 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
         url.searchParams.append('callback_url', `${window.location.origin}/api/lastlink/callback`)
         url.searchParams.append('success_url', callbackUrl)
         
-        // Adicionar UTM parameters
+        // Priorizar UTMs da URL atual, caso existam
         const appName = process.env.NEXT_PUBLIC_APP_PROJECTNAME || 'naotemchef'
         const partnerName = partnerLink.partnerName?.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/,/g, '.') || 'parceiro'
         const linkName = partnerLink.planName?.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/,/g, '.') || 'link'
         const linkPrice = partnerLink.price.toString().replace(',', '.')
         
-        url.searchParams.append('utm_source', appName)
-        url.searchParams.append('utm_medium', partnerName)
-        url.searchParams.append('utm_content', linkName)
-        url.searchParams.append('utm_term', linkPrice)
-        url.searchParams.append('utm_campaign', `${appName}_${partnerName}_${linkName}_${linkPrice}`)
+        // Usar UTMs da URL atual ou gerar novos
+        url.searchParams.append('utm_source', (currentUtmParams['utm_source'] as string) || appName)
+        url.searchParams.append('utm_medium', (currentUtmParams['utm_medium'] as string) || partnerName)
+        url.searchParams.append('utm_content', (currentUtmParams['utm_content'] as string) || linkName)
+        url.searchParams.append('utm_term', (currentUtmParams['utm_term'] as string) || linkPrice)
+        url.searchParams.append('utm_campaign', (currentUtmParams['utm_campaign'] as string) || `${appName}_${partnerName}_${linkName}_${linkPrice}`)
         
         // Salvar informações na localStorage para uso quando o usuário retornar
         const lastlinkCheckoutData = {
@@ -280,18 +443,20 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
           planName: partnerLink.planName,
           price: partnerLink.price,
           interval: partnerLink.interval,
+          lastlinkUrl: lastlinkUrl, // Salvar a URL usada
           timestamp: new Date().toISOString(),
           
-          // Salvar também os UTMs
-          utm_source: appName,
-          utm_medium: partnerName,
-          utm_content: linkName,
-          utm_term: linkPrice,
-          utm_campaign: `${appName}_${partnerName}_${linkName}_${linkPrice}`
+          // Salvar também os UTMs (priorizar os da URL atual)
+          utm_source: (currentUtmParams['utm_source'] as string) || appName,
+          utm_medium: (currentUtmParams['utm_medium'] as string) || partnerName,
+          utm_content: (currentUtmParams['utm_content'] as string) || linkName,
+          utm_term: (currentUtmParams['utm_term'] as string) || linkPrice,
+          utm_campaign: (currentUtmParams['utm_campaign'] as string) || `${appName}_${partnerName}_${linkName}_${linkPrice}`
         }
         localStorage.setItem('lastlink_checkout_data', JSON.stringify(lastlinkCheckoutData))
         
-        console.log('Redirecionando para Lastlink com metadados:', url.toString())
+        console.log('Redirecionando para Lastlink com URL:', lastlinkUrl)
+        console.log('URL completa com parâmetros:', url.toString())
         console.log('Dados salvos na localStorage para uso após o pagamento:', lastlinkCheckoutData)
         
         window.location.href = url.toString()
@@ -302,25 +467,27 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
     }
     
     // Se não estiver logado, redirecionar para registro
-    // Adicionar parâmetros UTM na URL de registro
+    // Extrair parâmetros UTM da URL atual, se existirem
+    const registrationParams = new URLSearchParams()
+    registrationParams.append('redirect', 'onboarding')
+    registrationParams.append('partnerId', partnerLink.partnerId)
+    registrationParams.append('ref', partnerLink.id)
+    registrationParams.append('checkout', 'lastlink')
+    
+    // Priorizar UTMs da URL atual, caso existam
     const appName = process.env.NEXT_PUBLIC_APP_PROJECTNAME || 'naotemchef'
     const partnerName = partnerLink.partnerName?.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/,/g, '.') || 'parceiro'
     const linkName = partnerLink.planName?.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/,/g, '.') || 'link'
     const linkPrice = partnerLink.price.toString().replace(',', '.')
     
-    const registerParams = new URLSearchParams({
-      redirect: 'onboarding',
-      partnerId: partnerLink.partnerId,
-      ref: partnerLink.id,
-      checkout: 'lastlink',
-      utm_source: appName,
-      utm_medium: partnerName,
-      utm_content: linkName,
-      utm_term: linkPrice,
-      utm_campaign: `${appName}_${partnerName}_${linkName}_${linkPrice}`
-    })
+    // Adicionar UTMs (da URL atual ou gerados)
+    registrationParams.append('utm_source', (currentUtmParams['utm_source'] as string) || appName)
+    registrationParams.append('utm_medium', (currentUtmParams['utm_medium'] as string) || partnerName)
+    registrationParams.append('utm_content', (currentUtmParams['utm_content'] as string) || linkName)
+    registrationParams.append('utm_term', (currentUtmParams['utm_term'] as string) || linkPrice)
+    registrationParams.append('utm_campaign', (currentUtmParams['utm_campaign'] as string) || `${appName}_${partnerName}_${linkName}_${linkPrice}`)
     
-    router.push(`/auth/register?${registerParams.toString()}`)
+    router.push(`/auth/register?${registrationParams.toString()}`)
   }
 
   const handleStartOnboarding = () => {
@@ -398,7 +565,7 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
                   <span className="text-base font-normal text-zinc-600">{getInstallments()}x de </span>R$ {calculateInstallment().toFixed(2)} <span className="text-base font-normal text-zinc-600">/mês</span>
                 </p>
                 <p>
-                  Valor total: R$ {partnerLink.price.toFixed(2)}
+                  Valor total: R$ {getTotalPrice().toFixed(2)}
                 </p>
                 <p>Cobrança {getIntervalText()}</p>
               </div>

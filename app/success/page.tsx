@@ -45,6 +45,54 @@ function SuccessContent() {
     }
   }
   
+  // Função para salvar informações de parceiro para webhook
+  const savePendingSubscription = async (data: {
+    userId?: string;
+    userEmail?: string;
+    partnerId?: string;
+    partnerLinkId?: string;
+    token?: string;
+  }) => {
+    try {
+      if (!data.userId && !data.userEmail) {
+        console.error('Dados insuficientes para salvar assinatura pendente')
+        return null
+      }
+      
+      // Garantir que temos pelo menos um ID de parceiro
+      if (!data.partnerId) {
+        console.error('ID do parceiro é obrigatório para salvar assinatura pendente')
+        return null
+      }
+      
+      const response = await fetch('/api/pending-subscriptions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          ...data,
+          // Adicionar data de expiração (1 hora a partir de agora)
+          expiresAt: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+          createdAt: new Date().toISOString()
+        }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('Erro ao salvar dados pendentes:', errorData)
+        return null
+      }
+      
+      const responseData = await response.json()
+      console.log('Dados pendentes salvos com sucesso:', responseData)
+      return responseData.id
+    } catch (error) {
+      console.error('Erro ao salvar dados pendentes:', error)
+      return null
+    }
+  }
+  
   // Função para processar o pagamento
   const processPayment = async () => {
     try {
@@ -58,6 +106,17 @@ function SuccessContent() {
       
       console.log('Parâmetros da URL:', urlParams)
       console.log('Dados armazenados:', storedData)
+      
+      // Capturar parâmetros UTM da URL atual
+      const utmParams: Record<string, string> = {}
+      if (typeof window !== 'undefined') {
+        const searchParams = new URLSearchParams(window.location.search)
+        ;['utm_source', 'utm_medium', 'utm_content', 'utm_term', 'utm_campaign'].forEach((param: string) => {
+          const value = searchParams.get(param)
+          if (value) utmParams[param] = value
+        })
+      }
+      console.log('Parâmetros UTM detectados na URL atual:', utmParams)
       
       // Usar os dados do usuário autenticado ou dos parâmetros
       const userId = user?.uid || urlParams.userId || storedData?.userId
@@ -80,6 +139,7 @@ function SuccessContent() {
             paymentMethod,
             partnerId,
             partnerLinkId,
+            utmParams,
             redirectedAt: new Date().toISOString()
           }))
           router.push('/auth/login?redirect=success')
@@ -87,6 +147,24 @@ function SuccessContent() {
         }
         throw new Error('ID do usuário não encontrado')
       }
+
+      // Salvar informações de parceiro para o webhook recuperar posteriormente
+      if (partnerId) {
+        const pendingId = await savePendingSubscription({
+          userId,
+          userEmail: user?.email || storedData?.userEmail,
+          partnerId,
+          partnerLinkId,
+          token
+        })
+        
+        console.log('ID da assinatura pendente:', pendingId)
+      }
+      
+      // Buscar qualquer outra informação útil dos dados armazenados
+      const planName = storedData?.planName
+      const price = storedData?.price
+      const interval = storedData?.interval
       
       // Chamar API para associar o pagamento ao usuário
       const callbackUrl = new URL('/api/lastlink/callback', window.location.origin)
@@ -97,6 +175,25 @@ function SuccessContent() {
       if (partnerId) callbackUrl.searchParams.append('partnerId', partnerId)
       if (partnerLinkId) callbackUrl.searchParams.append('partnerLinkId', partnerLinkId)
       if (paymentMethod) callbackUrl.searchParams.append('paymentMethod', paymentMethod)
+      
+      // Adicionar informações de plano se disponíveis
+      if (planName) callbackUrl.searchParams.append('planName', planName)
+      if (price) callbackUrl.searchParams.append('price', price.toString())
+      if (interval) callbackUrl.searchParams.append('interval', interval)
+      
+      // Adicionar parâmetros UTM
+      Object.entries(utmParams).forEach(([key, value]) => {
+        callbackUrl.searchParams.append(key, value)
+      })
+      
+      // Adicionar UTMs dos dados armazenados se não estiverem na URL
+      if (storedData) {
+        ['utm_source', 'utm_medium', 'utm_content', 'utm_term', 'utm_campaign'].forEach((param: string) => {
+          if (storedData[param] && !utmParams[param]) {
+            callbackUrl.searchParams.append(param, storedData[param] as string)
+          }
+        })
+      }
       
       console.log('Chamando callback com URL:', callbackUrl.toString())
       
@@ -116,6 +213,11 @@ function SuccessContent() {
       
       // Limpar dados armazenados após processamento bem-sucedido
       localStorage.removeItem('lastlink_checkout_data')
+      localStorage.removeItem('checkoutData')
+      localStorage.removeItem('payment_pending')
+      
+      // Mostrar mensagem de sucesso ao usuário
+      toast.success('Pagamento processado com sucesso! Sua assinatura está ativa.')
       
       // Aguardar 3 segundos e redirecionar para o perfil
       setTimeout(() => {
@@ -130,6 +232,9 @@ function SuccessContent() {
       console.error('Erro ao processar pagamento:', error)
       setError(error.message || 'Erro ao processar pagamento')
       setProcessingPayment(false)
+      
+      // Exibir mensagem de erro
+      toast.error(error.message || 'Erro ao processar pagamento. Por favor, tente novamente.')
     } finally {
       setLoading(false)
     }

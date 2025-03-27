@@ -23,10 +23,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 interface LastlinkPlan {
+  id?: string // ID único do plano
   name: string
   link: string
   interval: string
   description: string
+  price: number
+  linkedLinkIds?: string[] // Lista de IDs de links associados a este plano
 }
 
 interface CheckoutOptions {
@@ -101,7 +104,8 @@ export function SubscriptionManagementSidebar({
     name: "",
     link: "",
     interval: "month",
-    description: ""
+    description: "",
+    price: 0
   })
 
   useEffect(() => {
@@ -227,14 +231,52 @@ export function SubscriptionManagementSidebar({
     try {
       setLoading(true)
       let priceId = selectedPriceId
+      let planId = undefined
+      let planData = null
       
       // Se for lastlink, usar ID do plano selecionado ou o primeiro plano
       if (activeCheckoutTab === "lastlink" && userData.checkoutOptions.lastlinkPlans.length > 0) {
-        // Aqui podemos passar uma referência ao plano Lastlink
-        priceId = "lastlink_" + userData.checkoutOptions.lastlinkPlans[0].name.replace(/\s/g, '_').toLowerCase()
+        // Se um plano específico foi selecionado
+        if (selectedPriceId) {
+          // Encontrar o plano correspondente ao priceId selecionado
+          const selectedPlanName = selectedPriceId.replace('lastlink_', '').replace(/_/g, ' ')
+          const selectedPlan = userData.checkoutOptions.lastlinkPlans.find(
+            plan => plan.name.toLowerCase() === selectedPlanName.toLowerCase()
+          )
+          
+          if (selectedPlan) {
+            planId = selectedPlan.id
+            planData = selectedPlan
+            console.log('Usando plano selecionado com ID:', planId)
+          }
+        } 
+        
+        // Se não encontrou um plano específico ou nenhum foi selecionado, usar o primeiro plano
+        if (!planId) {
+          planId = userData.checkoutOptions.lastlinkPlans[0].id
+          planData = userData.checkoutOptions.lastlinkPlans[0]
+          priceId = "lastlink_" + planData.name.replace(/\s/g, '_').toLowerCase()
+          console.log('Usando primeiro plano disponível com ID:', planId)
+        }
+        
+        // Adicionar dados adicionais do plano
+        console.log('Dados completos do plano sendo incluídos no link:', planData)
       }
       
-      const link = await createPartnerLink(memberId, newLinkName, priceId)
+      // Criar o link, passando o planId específico para links Lastlink e dados adicionais
+      const link = await createPartnerLink(
+        memberId, 
+        newLinkName, 
+        priceId, 
+        planId, 
+        planData ? {
+          price: planData.price,
+          interval: planData.interval,
+          description: planData.description,
+          planName: planData.name
+        } : undefined
+      )
+      
       setSalesLinks([...salesLinks, link])
       setNewLinkName("")
       setSelectedPriceId("")
@@ -264,9 +306,16 @@ export function SubscriptionManagementSidebar({
       return
     }
 
+    // Gerar um ID único para o plano
+    const planId = `plan_${Date.now().toString(36)}_${Math.random().toString(36).substring(2, 9)}`
+    
     const updatedPlans = [
       ...userData.checkoutOptions.lastlinkPlans,
-      newLastlinkPlan
+      {
+        ...newLastlinkPlan,
+        id: planId, // Adicionar o ID único gerado
+        linkedLinkIds: [] // Inicializar o array de links associados
+      }
     ]
 
     setUserData({
@@ -282,7 +331,8 @@ export function SubscriptionManagementSidebar({
       name: "",
       link: "",
       interval: "month",
-      description: ""
+      description: "",
+      price: 0
     })
 
     toast.success("Plano adicionado com sucesso")
@@ -446,6 +496,23 @@ export function SubscriptionManagementSidebar({
                             </div>
                             
                             <div>
+                              <Label htmlFor="plan-price">Valor do Plano (R$)</Label>
+                              <Input
+                                id="plan-price"
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={newLastlinkPlan.price.toString()}
+                                onChange={(e) => setNewLastlinkPlan({
+                                  ...newLastlinkPlan,
+                                  price: parseFloat(e.target.value) || 0
+                                })}
+                                className="bg-white border-zinc-200"
+                                placeholder="Ex: 29.90"
+                              />
+                            </div>
+                            
+                            <div>
                               <Label htmlFor="plan-interval">Período</Label>
                               <Select
                                 value={newLastlinkPlan.interval}
@@ -501,15 +568,20 @@ export function SubscriptionManagementSidebar({
                                   >
                                     <div>
                                       <p className="font-medium">{plan.name}</p>
-                                      <p className="text-sm text-zinc-400">
-                                        {plan.interval === "month" 
-                                          ? "Mensal" 
-                                          : plan.interval === "quarter" 
-                                          ? "Trimestral" 
-                                          : plan.interval === "semester"
-                                          ? "Semestral"
-                                          : "Anual"}
-                                      </p>
+                                      <div className="flex flex-col text-sm text-zinc-400">
+                                        <span>
+                                          {plan.interval === "month" 
+                                            ? "Mensal" 
+                                            : plan.interval === "quarter" 
+                                            ? "Trimestral" 
+                                            : plan.interval === "semester"
+                                            ? "Semestral"
+                                            : "Anual"}
+                                        </span>
+                                        <span className="text-emerald-600 font-medium">
+                                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(plan.price)}
+                                        </span>
+                                      </div>
                                     </div>
                                     <Button
                                       type="button"

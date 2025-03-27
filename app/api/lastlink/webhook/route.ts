@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, addDoc, query, where, getDocs, doc, updateDoc, increment, serverTimestamp, getDoc, orderBy, limit } from "firebase/firestore"
+import { collection, addDoc, query, where, getDocs, doc, updateDoc, increment, serverTimestamp, getDoc, orderBy, limit, deleteDoc } from "firebase/firestore"
 
 // Interface para os eventos do Lastlink
 interface LastlinkEventData {
@@ -171,8 +171,58 @@ export async function POST(request: Request) {
     if (!partnerId) {
       console.log("Tentando encontrar partnerId por métodos alternativos")
       
+      // NOVA ESTRATÉGIA: Buscar em pending_subscriptions
+      if (userId || userEmail) {
+        try {
+          const pendingSubscriptionsRef = collection(db, 'pending_subscriptions')
+          let pendingQuery;
+          
+          if (userId) {
+            pendingQuery = query(
+              pendingSubscriptionsRef,
+              where('userId', '==', userId),
+              where('expiresAt', '>', new Date().toISOString())
+            )
+          } else {
+            pendingQuery = query(
+              pendingSubscriptionsRef,
+              where('userEmail', '==', userEmail),
+              where('expiresAt', '>', new Date().toISOString())
+            )
+          }
+          
+          const pendingSnapshot = await getDocs(pendingQuery)
+          if (!pendingSnapshot.empty) {
+            // Ordenar por data de criação (mais recente primeiro)
+            const sortedDocs = pendingSnapshot.docs.sort((a, b) => {
+              const dateA = new Date(a.data().createdAt || 0);
+              const dateB = new Date(b.data().createdAt || 0);
+              return dateB.getTime() - dateA.getTime();
+            });
+            
+            const pendingData = sortedDocs[0].data();
+            
+            if (pendingData.partnerId) {
+              partnerId = pendingData.partnerId;
+              console.log(`Parceiro encontrado em assinatura pendente: ${partnerId}`);
+            }
+            
+            if (pendingData.partnerLinkId) {
+              partnerLinkId = pendingData.partnerLinkId;
+              console.log(`Link do parceiro encontrado em assinatura pendente: ${partnerLinkId}`);
+            }
+            
+            // Se encontramos os dados, podemos excluir o registro pendente
+            await deleteDoc(doc(db, 'pending_subscriptions', sortedDocs[0].id));
+            console.log(`Registro pendente ${sortedDocs[0].id} removido após uso`);
+          }
+        } catch (error) {
+          console.error("Erro ao buscar assinaturas pendentes:", error);
+        }
+      }
+      
       // Estratégia 1: Buscar nas transações recentes do mesmo usuário
-      if (userId) {
+      if (!partnerId && userId) {
         const transactionsRef = collection(db, 'transactions')
         const q = query(
           transactionsRef,
@@ -217,8 +267,6 @@ export async function POST(request: Request) {
           console.error("Erro ao buscar acessos de links:", error)
         }
       }
-      
-      // Estratégia 3: Buscar no localStorage salvo do usuário (para isso precisaríamos de outro método)
       
       // Estratégia 4: Usar um parceiro padrão
       if (!partnerId) {
