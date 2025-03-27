@@ -215,7 +215,8 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
       planName: partnerLink.planName,
       price: partnerLink.price,
       interval: partnerLink.interval,
-      checkoutType: 'lastlink'
+      checkoutType: 'lastlink',
+      timestamp: new Date().toISOString()
     }
     localStorage.setItem('checkoutData', JSON.stringify(checkoutData))
     
@@ -229,7 +230,7 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
         const baseUrl = lastlinkUrl
         
         // Construir a URL de callback com os parâmetros necessários
-        const baseCallbackUrl = `${window.location.origin}/api/lastlink/callback`
+        const baseCallbackUrl = `${window.location.origin}/success`
         const callbackUrlParams = new URLSearchParams()
         
         // Adicionar parâmetros importantes na URL de callback
@@ -244,29 +245,54 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
         // Construir a URL com parâmetros
         const url = new URL(baseUrl)
         
-        // Adicionar metadados
+        // Adicionar metadados - Lastlink não processa corretamente, mas tentamos mesmo assim
         url.searchParams.append('metadata[userId]', user.uid)
         url.searchParams.append('metadata[partnerId]', partnerLink.partnerId)
         url.searchParams.append('metadata[partnerLinkId]', partnerLink.id)
+        url.searchParams.append('metadata[source]', 'ntc_platform')
         
         // Adicionar informações do usuário se disponíveis
         if (user.email) url.searchParams.append('email', user.email)
         if (user.displayName) url.searchParams.append('name', user.displayName)
         
-        // Adicionar callback URL
-        url.searchParams.append('callback_url', callbackUrl)
+        // Adicionar URL de callback e sucesso
+        url.searchParams.append('callback_url', `${window.location.origin}/api/lastlink/callback`)
+        url.searchParams.append('success_url', callbackUrl)
+        
+        // Adicionar UTM parameters
+        const appName = process.env.NEXT_PUBLIC_APP_PROJECTNAME || 'naotemchef'
+        const partnerName = partnerLink.partnerName?.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/,/g, '.') || 'parceiro'
+        const linkName = partnerLink.planName?.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/,/g, '.') || 'link'
+        const linkPrice = partnerLink.price.toString().replace(',', '.')
+        
+        url.searchParams.append('utm_source', appName)
+        url.searchParams.append('utm_medium', partnerName)
+        url.searchParams.append('utm_content', linkName)
+        url.searchParams.append('utm_term', linkPrice)
+        url.searchParams.append('utm_campaign', `${appName}_${partnerName}_${linkName}_${linkPrice}`)
         
         // Salvar informações na localStorage para uso quando o usuário retornar
         const lastlinkCheckoutData = {
           userId: user.uid,
           partnerId: partnerLink.partnerId,
           partnerLinkId: partnerLink.id,
-          timestamp: new Date().toISOString()
+          partnerName: partnerLink.partnerName,
+          planName: partnerLink.planName,
+          price: partnerLink.price,
+          interval: partnerLink.interval,
+          timestamp: new Date().toISOString(),
+          
+          // Salvar também os UTMs
+          utm_source: appName,
+          utm_medium: partnerName,
+          utm_content: linkName,
+          utm_term: linkPrice,
+          utm_campaign: `${appName}_${partnerName}_${linkName}_${linkPrice}`
         }
         localStorage.setItem('lastlink_checkout_data', JSON.stringify(lastlinkCheckoutData))
         
         console.log('Redirecionando para Lastlink com metadados:', url.toString())
-        console.log('Dados salvos na localStorage para uso após o pagamento')
+        console.log('Dados salvos na localStorage para uso após o pagamento:', lastlinkCheckoutData)
         
         window.location.href = url.toString()
       } else {
@@ -276,7 +302,25 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
     }
     
     // Se não estiver logado, redirecionar para registro
-    router.push(`/auth/register?redirect=onboarding&partnerId=${partnerLink.partnerId}&ref=${partnerLink.id}&checkout=lastlink`)
+    // Adicionar parâmetros UTM na URL de registro
+    const appName = process.env.NEXT_PUBLIC_APP_PROJECTNAME || 'naotemchef'
+    const partnerName = partnerLink.partnerName?.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/,/g, '.') || 'parceiro'
+    const linkName = partnerLink.planName?.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/,/g, '.') || 'link'
+    const linkPrice = partnerLink.price.toString().replace(',', '.')
+    
+    const registerParams = new URLSearchParams({
+      redirect: 'onboarding',
+      partnerId: partnerLink.partnerId,
+      ref: partnerLink.id,
+      checkout: 'lastlink',
+      utm_source: appName,
+      utm_medium: partnerName,
+      utm_content: linkName,
+      utm_term: linkPrice,
+      utm_campaign: `${appName}_${partnerName}_${linkName}_${linkPrice}`
+    })
+    
+    router.push(`/auth/register?${registerParams.toString()}`)
   }
 
   const handleStartOnboarding = () => {

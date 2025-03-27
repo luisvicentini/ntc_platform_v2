@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, addDoc, query, where, getDocs, doc, updateDoc, increment, serverTimestamp, getDoc } from "firebase/firestore"
+import { collection, addDoc, query, where, getDocs, doc, updateDoc, increment, serverTimestamp, getDoc, orderBy, limit } from "firebase/firestore"
 
 // Interface para os eventos do Lastlink
 interface LastlinkEventData {
@@ -90,63 +90,47 @@ interface SubscriptionEventData extends BaseEventData {
 }
 
 export async function POST(request: Request) {
-  console.log("========= INÍCIO DO PROCESSAMENTO DO WEBHOOK =========")
-  console.log("Cabeçalho da requisição:", request.headers)
-  console.log("URL do webhook:", request.url)
-  console.log("Método:", request.method)
-  
   try {
-    // Log dos headers recebidos
+    console.log("========= INÍCIO DO PROCESSAMENTO DO WEBHOOK =========")
+    
+    // Log dos headers para diagnóstico
     const headers = Object.fromEntries(request.headers.entries())
+    console.log("Cabeçalho da requisição:", request.headers)
+    console.log("URL do webhook:", request.url)
+    console.log("Método:", request.method)
+    
     console.log("Headers completos recebidos:", headers)
     
-    // Aceitar sem verificação de token
-    console.log("Webhook aceito sem verificação de token")
-
-    let dataText = ""
-    try {
-      // Clonar a requisição para poder ler o corpo
-      const clonedRequest = request.clone()
-      dataText = await clonedRequest.text()
-      console.log("Corpo da requisição (texto):", dataText)
-    } catch (error) {
-      console.error("Erro ao ler corpo como texto:", error)
-    }
-
-    let data
-    try {
-      // Processar dados do webhook
-      data = await request.json()
-      console.log("Webhook Lastlink recebido (decodificado):", JSON.stringify(data))
-    } catch (error) {
-      console.error("Erro ao processar JSON:", error)
-      try {
-        // Tentar parsear manualmente se o request.json() falhar
-        data = JSON.parse(dataText)
-        console.log("JSON parseado manualmente:", data)
-      } catch (e) {
-        console.error("Falha ao parsear JSON manualmente:", e)
-        return corsResponse({ 
-          error: "Erro ao processar JSON", 
-          message: "O corpo da requisição não é um JSON válido",
-          received: dataText.substring(0, 500) // Mostrar apenas os primeiros 500 caracteres
-        }, 200) // Retornar 200 mesmo com erro para evitar reenvios
-      }
-    }
+    // Verificar token da Lastlink (pode ser implementado mais tarde)
+    const lastlinkToken = headers['x-lastlink-token']
     
-    // Extrair o tipo de evento
-    const eventType = data.Event || data.event || ""
+    // Por enquanto, aceitar todos os webhooks sem verificação
+    console.log("Webhook aceito sem verificação de token")
+    
+    // Extrair conteúdo do webhook
+    const text = await request.text()
+    console.log("Corpo da requisição (texto):", text)
+    
+    // Decodificar JSON
+    const webhookData = JSON.parse(text)
+    console.log("Webhook Lastlink recebido (decodificado):", JSON.stringify(webhookData))
+    
+    // Extrair tipo de evento
+    const eventType = webhookData.Event
     console.log("Tipo de evento:", eventType)
     
-    // No formato novo da Lastlink, os dados estão em um objeto Data
-    // Extrair o objeto Data se existir
-    const eventData = data.Data || data.data || data
+    // Ignorar eventos de teste
+    if (webhookData.IsTest) {
+      console.log("Webhook de teste ignorado")
+      return NextResponse.json({ status: 'success', message: 'Webhook de teste recebido' })
+    }
     
-    // Extrair dados comuns do evento
-    const products = eventData.Products || eventData.products || []
-    const buyer = eventData.Buyer || eventData.buyer || {}
-    const purchase = eventData.Purchase || eventData.purchase || {}
-    const subscriptions = eventData.Subscriptions || eventData.subscriptions || []
+    // Extrair dados úteis
+    const data = webhookData.Data || {}
+    const products = data.Products || []
+    const buyer = data.Buyer || {}
+    const purchase = data.Purchase || {}
+    const subscriptions = data.Subscriptions || []
     
     console.log("Dados extraídos:")
     console.log("- Produtos:", products)
@@ -154,23 +138,15 @@ export async function POST(request: Request) {
     console.log("- Compra:", purchase)
     console.log("- Assinaturas:", subscriptions)
     
-    // Extrair metadados
-    const metadata = purchase.Metadata || {}
+    // Obter metadados
+    const metadata = purchase.Metadata || data.Metadata || {}
     console.log("Metadados:", metadata)
     
-    // Extrair campos importantes
-    const planName = products[0]?.Name || "Plano Premium"
-    const paymentId = purchase.PaymentId || ""
-    const paymentAmount = purchase.Price?.Value || 0
-    const paymentDate = purchase.PaymentDate || new Date().toISOString()
-    const paymentMethod = purchase.Payment?.PaymentMethod || ""
-    const installments = purchase.Payment?.NumberOfInstallments || 1
-    
-    // Tentativa de identificar o usuário
-    let userId = metadata.userId
-    let partnerId = metadata.partnerId
-    let partnerLinkId = metadata.partnerLinkId
-    let userEmail = buyer.Email || ""
+    // Obter dados para identificação do usuário e parceiro
+    let userId = metadata.userId || null
+    let partnerId = metadata.partnerId || null
+    let partnerLinkId = metadata.partnerLinkId || null
+    const userEmail = buyer.Email
     
     console.log("Dados para identificação:")
     console.log("- userId:", userId)
@@ -178,220 +154,264 @@ export async function POST(request: Request) {
     console.log("- partnerLinkId:", partnerLinkId)
     console.log("- userEmail:", userEmail)
     
-    // Se não temos o userId nos metadados, tentar encontrar pelo email
+    // Se não temos userId mas temos email, buscar usuário pelo email
     if (!userId && userEmail) {
-      console.log("Buscando usuário pelo email:", userEmail)
-      const usersRef = collection(db, "users")
-      const userQuery = query(usersRef, where("email", "==", userEmail.toLowerCase()))
-      const userSnapshot = await getDocs(userQuery)
+      console.log(`Buscando usuário pelo email: ${userEmail}`)
+      const usersRef = collection(db, 'users')
+      const q = query(usersRef, where('email', '==', userEmail))
+      const snapshot = await getDocs(q)
       
-      if (!userSnapshot.empty) {
-        const userData = userSnapshot.docs[0].data()
-        userId = userData.uid || userSnapshot.docs[0].id
-        console.log("Usuário encontrado pelo email. ID:", userId)
-      } else {
-        console.log("Usuário não encontrado pelo email:", userEmail)
+      if (!snapshot.empty) {
+        userId = snapshot.docs[0].id
+        console.log(`Usuário encontrado pelo email. ID: ${userId}`)
       }
     }
     
-    // Se ainda não temos o partnerId mas temos o partnerLinkId, buscar pelo link
-    if (!partnerId && partnerLinkId) {
-      console.log("Buscando parceiro através do link:", partnerLinkId)
-      try {
-        const linkRef = doc(db, "partnerLinks", partnerLinkId)
-        const linkDoc = await getDoc(linkRef)
-        
-        if (linkDoc.exists()) {
-          partnerId = linkDoc.data().partnerId
-          console.log("Parceiro encontrado através do link:", partnerId)
-        } else {
-          console.log("Link não encontrado:", partnerLinkId)
-        }
-      } catch (err) {
-        console.error("Erro ao buscar parceiro pelo link:", err)
-      }
-    }
-    
-    // Se não temos o partnerLinkId, mas temos userId e partnerId, verificar se existe um link
-    if (!partnerLinkId && userId && partnerId) {
-      console.log("Buscando link do parceiro para o usuário")
-      try {
-        const linksRef = collection(db, "partnerLinks")
-        const linksQuery = query(linksRef, where("partnerId", "==", partnerId))
-        const linksSnapshot = await getDocs(linksQuery)
-        
-        if (!linksSnapshot.empty) {
-          // Usar o primeiro link encontrado
-          partnerLinkId = linksSnapshot.docs[0].id
-          console.log("Link encontrado pelo parceiro:", partnerLinkId)
-        }
-      } catch (err) {
-        console.error("Erro ao buscar links do parceiro:", err)
-      }
-    }
-    
-    // Salvar a transação independentemente se encontramos userId ou partnerId
-    try {
-      // Definir intervalo e duração do plano com base no nome
-      let planInterval = "month"
-      let planIntervalCount = 1
+    // Se ainda não temos partnerId, tentar diferentes estratégias para encontrá-lo
+    if (!partnerId) {
+      console.log("Tentando encontrar partnerId por métodos alternativos")
       
-      if (planName.toLowerCase().includes("anual")) {
-        planInterval = "year"
-        planIntervalCount = 1
-      } else if (planName.toLowerCase().includes("semestral")) {
-        planInterval = "month"
-        planIntervalCount = 6
-      } else if (planName.toLowerCase().includes("trimestral")) {
-        planInterval = "month"
-        planIntervalCount = 3
-      }
-      
-      // Calcular data de expiração
-      const paidDate = new Date(paymentDate)
-      const expiresDate = new Date(paidDate)
-      
-      if (planInterval === "month") {
-        expiresDate.setMonth(expiresDate.getMonth() + planIntervalCount)
-      } else if (planInterval === "year") {
-        expiresDate.setFullYear(expiresDate.getFullYear() + planIntervalCount)
-      }
-      
-      // Criar objeto da transação
-      const transactionData = {
-        // Dados do pagamento
-        orderId: paymentId,
-        amount: paymentAmount,
-        paymentMethod: paymentMethod,
-        installments: installments,
-        paidAt: paymentDate,
-        createdAt: new Date().toISOString(),
-        expiresAt: expiresDate.toISOString(),
-        
-        // Dados do plano
-        planName: planName,
-        planInterval: planInterval,
-        planIntervalCount: planIntervalCount,
-        
-        // Dados de relacionamento
-        userId: userId || null,
-        userEmail: userEmail,
-        userName: buyer.Name || "",
-        partnerId: partnerId || null,
-        partnerLinkId: partnerLinkId || null,
-        
-        // Status e tipo
-        status: "active",
-        type: "lastlink",
-        provider: "lastlink",
-        
-        // Dados brutos
-        rawData: dataText
-      }
-      
-      console.log("Salvando transação no banco de dados:", transactionData)
-      
-      // Salvar na coleção de transações
-      const transactionRef = await addDoc(collection(db, "lastlink_transactions"), transactionData)
-      console.log("Transação salva com ID:", transactionRef.id)
-      
-      // Se temos o userId e partnerId, criar ou atualizar assinatura
-      if (userId && partnerId) {
-        console.log("Criando/atualizando assinatura")
-        
-        // Verificar se já existe uma assinatura
-        const subscriptionsRef = collection(db, "subscriptions")
-        const subscriptionQuery = query(
-          subscriptionsRef,
-          where("memberId", "==", userId),
-          where("partnerId", "==", partnerId),
-          where("paymentProvider", "==", "lastlink")
+      // Estratégia 1: Buscar nas transações recentes do mesmo usuário
+      if (userId) {
+        const transactionsRef = collection(db, 'transactions')
+        const q = query(
+          transactionsRef,
+          where('userId', '==', userId),
+          where('partnerId', '!=', null),
+          orderBy('partnerId'),
+          orderBy('createdAt', 'desc'),
+          limit(1)
         )
         
-        const subscriptionSnapshot = await getDocs(subscriptionQuery)
-        
-        const subscriptionData = {
-          memberId: userId,
-          partnerId: partnerId,
-          status: "active",
-          paymentProvider: "lastlink",
-          type: "lastlink",
-          orderId: paymentId,
-          expiresAt: expiresDate.toISOString(),
-          updatedAt: new Date().toISOString(),
-          planName: planName,
-          planInterval: planInterval,
-          planIntervalCount: planIntervalCount,
-          paymentAmount: paymentAmount,
-          currentPeriodStart: paymentDate,
-          currentPeriodEnd: expiresDate.toISOString(),
-          priceId: `lastlink_${planName.toLowerCase().replace(/\s/g, '_')}`,
-          partnerLinkId: partnerLinkId || null
-        }
-        
-        if (subscriptionSnapshot.empty) {
-          // Criar nova assinatura
-          const subscriptionRef = await addDoc(
-            subscriptionsRef, 
-            {
-              ...subscriptionData,
-              createdAt: new Date().toISOString()
-            }
-          )
-          console.log("Nova assinatura criada:", subscriptionRef.id)
-          
-          // Incrementar conversões do link se temos o partnerLinkId
-          if (partnerLinkId) {
-            try {
-              await updateDoc(doc(db, "partnerLinks", partnerLinkId), {
-                conversions: increment(1),
-                updatedAt: new Date().toISOString()
-              })
-              console.log("Conversões do link incrementadas")
-            } catch (err) {
-              console.error("Erro ao incrementar conversões do link:", err)
-            }
+        try {
+          const snapshot = await getDocs(q)
+          if (!snapshot.empty) {
+            partnerId = snapshot.docs[0].data().partnerId
+            partnerLinkId = snapshot.docs[0].data().partnerLinkId
+            console.log(`Encontrado parceiro em transação anterior: partnerId=${partnerId}, partnerLinkId=${partnerLinkId}`)
           }
-        } else {
-          // Atualizar assinatura existente
-          const subscriptionRef = subscriptionSnapshot.docs[0].ref
-          await updateDoc(subscriptionRef, subscriptionData)
-          console.log("Assinatura existente atualizada:", subscriptionSnapshot.docs[0].id)
+        } catch (error) {
+          console.error("Erro ao buscar transações:", error)
         }
-      } else {
-        console.log("Não foi possível criar assinatura: faltam userId ou partnerId")
       }
       
-      // Retornar sucesso
-      console.log("========= FIM DO PROCESSAMENTO DO WEBHOOK =========")
-      return corsResponse({
-        success: true,
-        message: `Evento ${eventType} processado com sucesso`,
-        transactionId: transactionRef.id
-      })
-    } catch (error) {
-      console.error("Erro ao processar evento:", error)
-      console.log("========= FIM DO PROCESSAMENTO DO WEBHOOK COM ERRO =========")
-      return corsResponse(
-        { 
-          success: false, 
-          error: "Erro ao processar evento", 
-          message: error instanceof Error ? error.message : String(error) 
-        },
-        200
-      )
+      // Estratégia 2: Buscar em links_access se existe algum acesso recente
+      if (!partnerId && userEmail) {
+        const linksAccessRef = collection(db, 'links_access')
+        const q = query(
+          linksAccessRef,
+          where('userEmail', '==', userEmail),
+          orderBy('createdAt', 'desc'),
+          limit(1)
+        )
+        
+        try {
+          const snapshot = await getDocs(q)
+          if (!snapshot.empty) {
+            const mostRecentAccess = snapshot.docs[0].data()
+            partnerId = mostRecentAccess.partnerId
+            partnerLinkId = mostRecentAccess.linkId
+            console.log(`Encontrado parceiro em acesso recente: partnerId=${partnerId}, partnerLinkId=${partnerLinkId}`)
+          }
+        } catch (error) {
+          console.error("Erro ao buscar acessos de links:", error)
+        }
+      }
+      
+      // Estratégia 3: Buscar no localStorage salvo do usuário (para isso precisaríamos de outro método)
+      
+      // Estratégia 4: Usar um parceiro padrão
+      if (!partnerId) {
+        try {
+          // Buscar configuração de parceiro padrão
+          const configRef = doc(db, 'config', 'lastlink')
+          const configSnap = await getDoc(configRef)
+          
+          if (configSnap.exists() && configSnap.data().defaultPartnerId) {
+            partnerId = configSnap.data().defaultPartnerId
+            console.log(`Usando parceiro padrão: ${partnerId}`)
+          } else {
+            // Se ainda não temos, usar o primeiro parceiro ativo
+            const partnersRef = collection(db, 'users')
+            const partnersQuery = query(
+              partnersRef,
+              where('userType', '==', 'partner'),
+              where('isActive', '==', true),
+              limit(1)
+            )
+            
+            const partnersSnapshot = await getDocs(partnersQuery)
+            
+            if (!partnersSnapshot.empty) {
+              partnerId = partnersSnapshot.docs[0].id
+              console.log(`Usando primeiro parceiro encontrado: ${partnerId}`)
+            }
+          }
+        } catch (error) {
+          console.error("Erro ao buscar parceiro padrão:", error)
+        }
+      }
     }
+    
+    // Determinar dados do plano
+    let planName = "Plano Premium"
+    if (products.length > 0 && products[0].Name) {
+      planName = products[0].Name
+    }
+    
+    let planInterval = "month"
+    let planIntervalCount = 1
+    
+    if (purchase.Recurrency) {
+      if (purchase.Recurrency == 12) {
+        planInterval = "year"
+        planIntervalCount = 1
+      } else if (purchase.Recurrency == 6) {
+        planInterval = "semester"
+        planIntervalCount = 1
+      } else if (purchase.Recurrency == 3) {
+        planInterval = "quarter"
+        planIntervalCount = 1
+      } else {
+        planInterval = "month"
+        planIntervalCount = purchase.Recurrency || 1
+      }
+    }
+    
+    // Verificar se já existe uma transação com o mesmo orderId
+    let existingTransaction = null
+    if (purchase.PaymentId) {
+      const transactionsRef = collection(db, 'transactions')
+      const q = query(transactionsRef, where('orderId', '==', purchase.PaymentId))
+      const snapshot = await getDocs(q)
+      
+      if (!snapshot.empty) {
+        existingTransaction = {
+          id: snapshot.docs[0].id,
+          ...snapshot.docs[0].data()
+        }
+        console.log(`Transação existente encontrada: ${existingTransaction.id}`)
+        
+        // Atualizar a transação existente com partnerId e partnerLinkId se estiverem faltando
+        if (partnerId && !existingTransaction.partnerId) {
+          const transactionRef = doc(db, 'transactions', existingTransaction.id)
+          await updateDoc(transactionRef, {
+            partnerId: partnerId,
+            partnerLinkId: partnerLinkId
+          })
+          console.log(`Transação ${existingTransaction.id} atualizada com partnerId=${partnerId}, partnerLinkId=${partnerLinkId}`)
+          
+          // Atualizar o objeto local também
+          existingTransaction.partnerId = partnerId
+          existingTransaction.partnerLinkId = partnerLinkId
+        }
+      }
+    }
+    
+    // Se já existe uma transação e não é um evento de confirmação, simplesmente retornar
+    if (existingTransaction && eventType !== 'Purchase_Order_Confirmed' && eventType !== 'Purchase_Request_Confirmed') {
+      console.log("Transação já existe e evento não é de confirmação, ignorando")
+      return NextResponse.json({ status: 'success', message: 'Webhook processado, transação já existe' })
+    }
+    
+    // Criar objeto da transação
+    const transactionData = {
+      orderId: purchase.PaymentId || '',
+      amount: purchase.Price?.Value || 0,
+      paymentMethod: purchase.Payment?.PaymentMethod || '',
+      installments: purchase.Payment?.NumberOfInstallments || 1,
+      paidAt: purchase.PaymentDate || new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 dias
+      planName,
+      planInterval,
+      planIntervalCount,
+      userId,
+      userEmail,
+      userName: buyer.Name || '',
+      partnerId,
+      partnerLinkId,
+      status: 'active',
+      type: 'lastlink',
+      provider: 'lastlink',
+      rawData: text
+    }
+    
+    console.log("Salvando transação no banco de dados:", transactionData)
+    
+    // Salvar transação
+    let transactionId
+    if (existingTransaction) {
+      transactionId = existingTransaction.id
+    } else {
+      const docRef = await addDoc(collection(db, 'transactions'), transactionData)
+      transactionId = docRef.id
+    }
+    
+    console.log(`Transação salva com ID: ${transactionId}`)
+    
+    // Criar assinatura se for um evento de confirmação
+    if ((eventType === 'Purchase_Order_Confirmed' || eventType === 'Purchase_Request_Confirmed' || eventType === 'Subscription_Product_Access') && userId && partnerId) {
+      try {
+        // Verificar se já existe uma assinatura ativa para este usuário/parceiro
+        const subscriptionsRef = collection(db, 'subscriptions')
+        const q = query(
+          subscriptionsRef,
+          where('userId', '==', userId),
+          where('partnerId', '==', partnerId),
+          where('status', '==', 'active')
+        )
+        const snapshot = await getDocs(q)
+        
+        if (snapshot.empty) {
+          // Criar nova assinatura
+          const subscriptionData = {
+            userId,
+            partnerId,
+            partnerLinkId,
+            transactionId,
+            planName,
+            planInterval,
+            planIntervalCount,
+            price: purchase.Price?.Value || 0,
+            startDate: new Date().toISOString(),
+            endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 ano
+            status: 'active',
+            paymentMethod: purchase.Payment?.PaymentMethod || 'pix',
+            provider: 'lastlink',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+          
+          const docRef = await addDoc(collection(db, 'subscriptions'), subscriptionData)
+          console.log(`Assinatura criada com ID: ${docRef.id}`)
+          
+          // Incrementar contagem de conversões do link se tiver partnerLinkId
+          if (partnerLinkId) {
+            const linkRef = doc(db, 'partnerLinks', partnerLinkId)
+            await updateDoc(linkRef, {
+              conversions: increment(1),
+              updatedAt: new Date().toISOString()
+            })
+            console.log(`Incrementada conversão do link ${partnerLinkId}`)
+          }
+        } else {
+          console.log("Assinatura ativa já existe para este usuário e parceiro")
+        }
+      } catch (error) {
+        console.error("Erro ao criar assinatura:", error)
+        console.log("Não foi possível criar assinatura: erro ao processar")
+      }
+    } else {
+      console.log("Não foi possível criar assinatura: faltam userId ou partnerId")
+    }
+    
+    console.log("========= FIM DO PROCESSAMENTO DO WEBHOOK =========")
+    
+    return NextResponse.json({ status: 'success', message: 'Webhook processado com sucesso' })
   } catch (error) {
     console.error("Erro ao processar webhook:", error)
-    console.log("========= FIM DO PROCESSAMENTO DO WEBHOOK COM ERRO =========")
-    return corsResponse(
-      { 
-        success: false, 
-        error: "Erro interno ao processar webhook", 
-        message: error instanceof Error ? error.message : String(error)
-      },
-      200 // Responder com 200 mesmo em caso de erro para não acionar reenvios
-    )
+    return NextResponse.json({ status: 'error', message: 'Erro ao processar webhook' }, { status: 500 })
   }
 }
 

@@ -1,210 +1,238 @@
 "use client"
 
 import { useEffect, useState, Suspense } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import { CheckCircle, ArrowRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import { useAuth } from '@/contexts/auth-context'
 import { toast } from 'sonner'
 
-// Componente interno que usa useSearchParams
+// Componente interno que processa o sucesso do pagamento
 function SuccessContent() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   
   const [loading, setLoading] = useState(true)
   const [processingPayment, setProcessingPayment] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [paymentDetails, setPaymentDetails] = useState<any>(null)
   
-  const token = searchParams.get('token')
-  const paymentMethod = searchParams.get('paymentMethod')
+  // Função para extrair parâmetros da URL
+  const getQueryParams = () => {
+    if (typeof window === 'undefined') return {}
+    
+    const params = new URLSearchParams(window.location.search)
+    return {
+      token: params.get('token'),
+      paymentMethod: params.get('paymentMethod'),
+      userId: params.get('userId'),
+      partnerId: params.get('partnerId'),
+      partnerLinkId: params.get('partnerLinkId')
+    }
+  }
   
-  useEffect(() => {
-    const processLastlinkPayment = async () => {
-      try {
-        // Verificar se temos token na URL (redirecionamento da Lastlink)
-        if (!token) {
-          console.log('Nenhum token encontrado na URL')
-          setProcessingPayment(false)
-          setLoading(false)
-          return
-        }
-        
-        console.log('Token encontrado na URL:', token)
-        console.log('Método de pagamento:', paymentMethod)
-        
-        // Recuperar dados salvos na localStorage
-        const lastlinkData = localStorage.getItem('lastlink_checkout_data')
-        const checkoutData = localStorage.getItem('checkoutData')
-        
-        let userId = user?.uid
-        let partnerId = null
-        let partnerLinkId = null
-        
-        if (lastlinkData) {
-          try {
-            const parsedData = JSON.parse(lastlinkData)
-            userId = userId || parsedData.userId
-            partnerId = parsedData.partnerId
-            partnerLinkId = parsedData.partnerLinkId
-            
-            console.log('Dados recuperados do localStorage:', parsedData)
-          } catch (e) {
-            console.error('Erro ao parsear dados do localStorage:', e)
-          }
-        } else if (checkoutData) {
-          try {
-            const parsedData = JSON.parse(checkoutData)
-            partnerId = parsedData.partnerId
-            partnerLinkId = parsedData.partnerLinkId
-            
-            console.log('Dados de checkout recuperados:', parsedData)
-          } catch (e) {
-            console.error('Erro ao parsear dados de checkout:', e)
-          }
-        }
-        
-        // Se o usuário não estiver logado, não podemos processar
-        if (!userId) {
-          console.log('Usuário não está logado, redirecionando para login')
-          // Manter os dados para processamento após login
+  // Função para obter dados do localStorage
+  const getStoredData = () => {
+    if (typeof window === 'undefined') return null
+    
+    try {
+      const lastlinkData = localStorage.getItem('lastlink_checkout_data')
+      return lastlinkData ? JSON.parse(lastlinkData) : null
+    } catch (e) {
+      console.error('Erro ao recuperar dados do localStorage:', e)
+      return null
+    }
+  }
+  
+  // Função para processar o pagamento
+  const processPayment = async () => {
+    try {
+      setProcessingPayment(true)
+      
+      // Obter parâmetros da URL
+      const urlParams = getQueryParams()
+      
+      // Obter dados do localStorage
+      const storedData = getStoredData()
+      
+      console.log('Parâmetros da URL:', urlParams)
+      console.log('Dados armazenados:', storedData)
+      
+      // Usar os dados do usuário autenticado ou dos parâmetros
+      const userId = user?.uid || urlParams.userId || storedData?.userId
+      const partnerId = urlParams.partnerId || storedData?.partnerId
+      const partnerLinkId = urlParams.partnerLinkId || storedData?.partnerLinkId
+      const token = urlParams.token
+      const paymentMethod = urlParams.paymentMethod
+      
+      // Validar dados mínimos
+      if (!token) {
+        throw new Error('Token de pagamento não encontrado')
+      }
+      
+      if (!userId) {
+        // Se não temos userId mas o usuário não está autenticado, redirecionar para login
+        if (!authLoading && !user) {
+          console.log('Usuário não autenticado, redirecionando para login')
+          localStorage.setItem('payment_pending', JSON.stringify({
+            token,
+            paymentMethod,
+            partnerId,
+            partnerLinkId,
+            redirectedAt: new Date().toISOString()
+          }))
           router.push('/auth/login?redirect=success')
           return
         }
-        
-        // Chamar API para associar o pagamento ao usuário
-        const callbackUrl = new URL('/api/lastlink/callback', window.location.origin)
-        
-        // Adicionar parâmetros relevantes na URL
-        if (userId) callbackUrl.searchParams.append('userId', userId)
-        if (partnerId) callbackUrl.searchParams.append('partnerId', partnerId)
-        if (partnerLinkId) callbackUrl.searchParams.append('partnerLinkId', partnerLinkId)
-        if (token) callbackUrl.searchParams.append('token', token)
-        if (paymentMethod) callbackUrl.searchParams.append('paymentMethod', paymentMethod)
-        
-        console.log('Chamando callback com parâmetros:', callbackUrl.toString())
-        
-        const response = await fetch(callbackUrl.toString(), {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        })
-        
-        if (!response.ok) {
-          throw new Error('Falha ao processar pagamento')
-        }
-        
-        console.log('Pagamento processado com sucesso')
-        
-        // Limpar dados do localStorage
-        localStorage.removeItem('lastlink_checkout_data')
-        localStorage.removeItem('checkoutData')
-        
-        setProcessingPayment(false)
-      } catch (err) {
-        console.error('Erro ao processar pagamento:', err)
-        setError('Ocorreu um erro ao processar seu pagamento. Por favor, entre em contato com o suporte.')
-        setProcessingPayment(false)
-      } finally {
-        setLoading(false)
+        throw new Error('ID do usuário não encontrado')
       }
+      
+      // Chamar API para associar o pagamento ao usuário
+      const callbackUrl = new URL('/api/lastlink/callback', window.location.origin)
+      
+      // Adicionar parâmetros relevantes na URL
+      callbackUrl.searchParams.append('token', token)
+      if (userId) callbackUrl.searchParams.append('userId', userId)
+      if (partnerId) callbackUrl.searchParams.append('partnerId', partnerId)
+      if (partnerLinkId) callbackUrl.searchParams.append('partnerLinkId', partnerLinkId)
+      if (paymentMethod) callbackUrl.searchParams.append('paymentMethod', paymentMethod)
+      
+      console.log('Chamando callback com URL:', callbackUrl.toString())
+      
+      const response = await fetch(callbackUrl.toString())
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.message || 'Erro ao processar pagamento')
+      }
+      
+      const data = await response.json()
+      console.log('Resposta do callback:', data)
+      
+      // Atualizar estado com detalhes do pagamento
+      setPaymentDetails(data)
+      setProcessingPayment(false)
+      
+      // Limpar dados armazenados após processamento bem-sucedido
+      localStorage.removeItem('lastlink_checkout_data')
+      
+      // Aguardar 3 segundos e redirecionar para o perfil
+      setTimeout(() => {
+        if (user?.userType === 'member') {
+          router.push('/member/profile')
+        } else if (user) {
+          router.push('/')
+        }
+      }, 3000)
+      
+    } catch (error: any) {
+      console.error('Erro ao processar pagamento:', error)
+      setError(error.message || 'Erro ao processar pagamento')
+      setProcessingPayment(false)
+    } finally {
+      setLoading(false)
     }
-    
-    // Processar o pagamento quando o componente montar
-    processLastlinkPayment()
-  }, [token, paymentMethod, router, user])
-  
-  const goToProfile = () => {
-    router.push('/member/profile')
   }
   
-  if (loading) {
+  // Processar pagamento quando componente for montado
+  useEffect(() => {
+    // Aguardar carregamento da autenticação
+    if (authLoading) return
+    
+    processPayment()
+  }, [authLoading])
+  
+  // Mostrar estados de carregamento e erro
+  if (loading || processingPayment) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-zinc-100">
-        <div className="text-center">
-          <div className="animate-spin w-16 h-16 border-t-4 border-orange-500 border-solid rounded-full mx-auto mb-4"></div>
-          <h2 className="text-2xl font-bold text-zinc-800">Processando seu pagamento...</h2>
-          <p className="text-zinc-500 mt-2">Por favor, aguarde enquanto finalizamos seu pedido.</p>
+      <div className="flex flex-col items-center justify-center space-y-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+        <p className="text-lg text-zinc-600">
+          {loading ? 'Aguarde um momento...' : 'Processando seu pagamento...'}
+        </p>
+      </div>
+    )
+  }
+  
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center space-y-4">
+        <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
+          <span className="text-red-600 text-xl">✖</span>
+        </div>
+        <h2 className="text-xl font-bold text-red-600">Ops! Algo deu errado</h2>
+        <p className="text-center text-zinc-600 max-w-md">{error}</p>
+        
+        <div className="flex space-x-4 mt-6">
+          <Button 
+            onClick={() => router.push('/')} 
+            variant="outline"
+          >
+            Voltar para o início
+          </Button>
+          <Button 
+            onClick={() => processPayment()}
+          >
+            Tentar novamente
+          </Button>
         </div>
       </div>
     )
   }
   
+  // Tela de sucesso
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-zinc-100 p-4">
-      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-8">
-        <div className="text-center">
-          {/* Logo */}
-          <div className="w-24 h-24 mx-auto mb-6 relative">
-            <Image
-              src="/logo.svg"
-              alt="Logo"
-              fill
-              className="object-contain"
-            />
-          </div>
-          
-          {error ? (
-            <>
-              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
-                <span className="text-red-500 text-2xl">!</span>
-              </div>
-              <h1 className="text-2xl font-bold text-zinc-800 mb-4">Algo deu errado</h1>
-              <p className="text-zinc-600 mb-6">{error}</p>
-            </>
-          ) : (
-            <>
-              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
-                <CheckCircle className="w-8 h-8 text-emerald-500" />
-              </div>
-              <h1 className="text-2xl font-bold text-zinc-800 mb-4">Pagamento Confirmado!</h1>
-              <p className="text-zinc-600 mb-6">
-                {processingPayment 
-                  ? "Estamos processando seu pagamento..." 
-                  : "Seu pagamento foi processado com sucesso e sua assinatura está ativa."}
-              </p>
-              
-              {/* Detalhes do pagamento */}
-              <div className="bg-zinc-50 p-4 rounded-lg mb-6 text-left">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-zinc-500">Método de pagamento:</span>
-                  <span className="font-medium text-zinc-700">{paymentMethod}</span>
-                </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-zinc-500">Status:</span>
-                  <span className="text-emerald-600 font-medium">Confirmado</span>
-                </div>
-              </div>
-            </>
-          )}
-          
-          <Button 
-            onClick={goToProfile} 
-            className="w-full bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            Ir para minha conta <ArrowRight className="ml-2 w-4 h-4" />
-          </Button>
-        </div>
+    <div className="flex flex-col items-center justify-center space-y-4">
+      <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center">
+        <CheckCircle className="w-8 h-8 text-emerald-600" />
       </div>
+      
+      <h2 className="text-2xl font-bold text-emerald-600">Pagamento confirmado!</h2>
+      
+      <p className="text-center text-zinc-600 max-w-md">
+        Seu pagamento foi processado com sucesso. Você já tem acesso a todos os benefícios da plataforma.
+      </p>
+      
+      <Button 
+        onClick={() => router.push('/member/feed')} 
+        className="mt-8 bg-emerald-600 hover:bg-emerald-700 flex items-center space-x-2"
+      >
+        <span>Ir para meu perfil</span>
+        <ArrowRight className="w-4 h-4" />
+      </Button>
     </div>
   )
 }
 
-// Componente principal que envolve o conteúdo em Suspense
+// Componente principal com Suspense para evitar erro de hidratação
 export default function SuccessPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-zinc-100">
-        <div className="text-center">
-          <div className="animate-spin w-16 h-16 border-t-4 border-orange-500 border-solid rounded-full mx-auto mb-4"></div>
-          <h2 className="text-2xl font-bold text-zinc-800">Carregando...</h2>
+    <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-xl shadow-lg p-8 w-full max-w-md">
+        
+        {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <div className="relative w-24 h-24">
+            <Image 
+              src="/logo.svg" 
+              alt="Logo" 
+              fill 
+              className="object-contain"
+            />
+          </div>
         </div>
+        
+        {/* Conteúdo principal */}
+        <Suspense fallback={
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
+            <p className="text-lg text-zinc-600">Carregando...</p>
+          </div>
+        }>
+          <SuccessContent />
+        </Suspense>
       </div>
-    }>
-      <SuccessContent />
-    </Suspense>
+    </div>
   )
 } 
