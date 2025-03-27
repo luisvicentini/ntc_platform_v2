@@ -154,7 +154,76 @@ export async function POST(request: Request) {
     console.log("- partnerLinkId:", partnerLinkId)
     console.log("- userEmail:", userEmail)
     
-    // Se não temos userId mas temos email, buscar usuário pelo email
+    // Estratégia prioritária: buscar assinatura iniciada pelo email
+    if (userEmail) {
+      console.log(`Buscando assinatura iniciada pelo email: ${userEmail}`)
+      const subscriptionsRef = collection(db, 'subscriptions')
+      const q = query(
+        subscriptionsRef,
+        where('userEmail', '==', userEmail),
+        where('status', '==', 'iniciada')
+      )
+      
+      try {
+        const snapshot = await getDocs(q)
+        
+        if (!snapshot.empty) {
+          // Ordenar por data de criação (mais recente primeiro)
+          const sortedDocs = snapshot.docs.sort((a, b) => {
+            const dateA = new Date(a.data().createdAt || 0);
+            const dateB = new Date(b.data().createdAt || 0);
+            return dateB.getTime() - dateA.getTime();
+          });
+          
+          const subscriptionData = sortedDocs[0].data();
+          const subscriptionId = sortedDocs[0].id;
+          
+          // Atualizar as variáveis com os dados da assinatura
+          if (subscriptionData.userId) {
+            userId = subscriptionData.userId;
+            console.log(`UserId encontrado em assinatura iniciada: ${userId}`);
+          }
+          
+          if (subscriptionData.partnerId) {
+            partnerId = subscriptionData.partnerId;
+            console.log(`PartnerId encontrado em assinatura iniciada: ${partnerId}`);
+          }
+          
+          if (subscriptionData.partnerLinkId) {
+            partnerLinkId = subscriptionData.partnerLinkId;
+            console.log(`PartnerLinkId encontrado em assinatura iniciada: ${partnerLinkId}`);
+          }
+          
+          // Atualizar o status da assinatura com base no tipo de evento
+          let newStatus = 'active';
+          if (eventType === 'Payment_Chargeback' || eventType === 'Payment_Refund' || eventType === 'Subscription_Canceled') {
+            newStatus = 'canceled';
+          } else if (eventType === 'Subscription_Expired') {
+            newStatus = 'expired';
+          }
+          
+          // Atualizar a assinatura
+          await updateDoc(doc(db, 'subscriptions', subscriptionId), {
+            status: newStatus,
+            updatedAt: new Date().toISOString(),
+            provider: 'lastlink',
+            orderId: purchase.PaymentId || '',
+            amount: purchase.Price?.Value || 0,
+            webhookEvent: eventType,
+            rawData: text,
+            paymentMethod: purchase.Payment?.PaymentMethod || ''
+          });
+          
+          console.log(`Assinatura ${subscriptionId} atualizada com status ${newStatus}`);
+        } else {
+          console.log('Nenhuma assinatura iniciada encontrada para este email');
+        }
+      } catch (error) {
+        console.error("Erro ao buscar assinatura iniciada:", error);
+      }
+    }
+    
+    // Se ainda não temos userId mas temos email, buscar usuário pelo email
     if (!userId && userEmail) {
       console.log(`Buscando usuário pelo email: ${userEmail}`)
       const usersRef = collection(db, 'users')
@@ -327,7 +396,7 @@ export async function POST(request: Request) {
     }
     
     // Verificar se já existe uma transação com o mesmo orderId
-    let existingTransaction = null
+    let existingTransaction: { id: string; partnerId?: string; partnerLinkId?: string; [key: string]: any } | null = null;
     if (purchase.PaymentId) {
       const transactionsRef = collection(db, 'transactions')
       const q = query(transactionsRef, where('orderId', '==', purchase.PaymentId))
@@ -336,7 +405,11 @@ export async function POST(request: Request) {
       if (!snapshot.empty) {
         existingTransaction = {
           id: snapshot.docs[0].id,
-          ...snapshot.docs[0].data()
+          ...snapshot.docs[0].data() as {
+            partnerId?: string;
+            partnerLinkId?: string;
+            [key: string]: any;
+          }
         }
         console.log(`Transação existente encontrada: ${existingTransaction.id}`)
         
@@ -401,7 +474,67 @@ export async function POST(request: Request) {
     // Criar assinatura se for um evento de confirmação
     if ((eventType === 'Purchase_Order_Confirmed' || eventType === 'Purchase_Request_Confirmed' || eventType === 'Subscription_Product_Access') && userId && partnerId) {
       try {
-        // Verificar se já existe uma assinatura ativa para este usuário/parceiro
+        // Primeiro, verificar se existe uma assinatura iniciada para este email
+        const initiatedSubscriptionsRef = collection(db, 'subscriptions')
+        let initiatedQuery
+        
+        if (userEmail) {
+          initiatedQuery = query(
+            initiatedSubscriptionsRef,
+            where('userEmail', '==', userEmail),
+            where('status', '==', 'iniciada')
+          )
+        } else if (userId) {
+          initiatedQuery = query(
+            initiatedSubscriptionsRef,
+            where('userId', '==', userId),
+            where('status', '==', 'iniciada')
+          )
+        }
+        
+        if (initiatedQuery) {
+          const initiatedSnapshot = await getDocs(initiatedQuery)
+          
+          if (!initiatedSnapshot.empty) {
+            // Ordenar por data de criação (mais recente primeiro)
+            const sortedDocs = initiatedSnapshot.docs.sort((a, b) => {
+              const dateA = new Date(a.data().createdAt || 0);
+              const dateB = new Date(b.data().createdAt || 0);
+              return dateB.getTime() - dateA.getTime();
+            });
+            
+            const initiatedData = sortedDocs[0].data();
+            const initiatedId = sortedDocs[0].id;
+            
+            // Atualizar a assinatura para status 'active'
+            await updateDoc(doc(db, 'subscriptions', initiatedId), {
+              status: 'active',
+              updatedAt: new Date().toISOString(),
+              orderId: purchase.PaymentId || '',
+              paymentProvider: 'lastlink',
+              paymentMethod: purchase.Payment?.PaymentMethod || 'pix',
+              price: purchase.Price?.Value || initiatedData.price || 0,
+              paidAt: purchase.PaymentDate || new Date().toISOString()
+            });
+            
+            console.log(`Assinatura ${initiatedId} atualizada de 'iniciada' para 'active'`);
+            
+            // Incrementar contagem de conversões do link se tiver partnerLinkId
+            if (initiatedData.partnerLinkId) {
+              const linkRef = doc(db, 'partnerLinks', initiatedData.partnerLinkId)
+              await updateDoc(linkRef, {
+                conversions: increment(1),
+                updatedAt: new Date().toISOString()
+              })
+              console.log(`Incrementada conversão do link ${initiatedData.partnerLinkId}`)
+            }
+            
+            // Já atualizamos a assinatura, não precisamos criar uma nova
+            return;
+          }
+        }
+        
+        // Se não existe assinatura iniciada, verificar assinatura ativa
         const subscriptionsRef = collection(db, 'subscriptions')
         const q = query(
           subscriptionsRef,
@@ -429,6 +562,8 @@ export async function POST(request: Request) {
             provider: 'lastlink',
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
+            type: 'lastlink',
+            userEmail: userEmail || ''
           }
           
           const docRef = await addDoc(collection(db, 'subscriptions'), subscriptionData)

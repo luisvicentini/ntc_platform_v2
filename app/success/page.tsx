@@ -142,7 +142,7 @@ function SuccessContent() {
             utmParams,
             redirectedAt: new Date().toISOString()
           }))
-          router.push('/auth/login?redirect=success')
+          router.push('/login')
           return
         }
         throw new Error('ID do usuário não encontrado')

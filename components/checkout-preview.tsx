@@ -373,7 +373,8 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
       interval: partnerLink.interval,
       checkoutType: 'lastlink',
       timestamp: new Date().toISOString(),
-      utmParams: currentUtmParams // Salvar UTMs atuais
+      utmParams: currentUtmParams, // Salvar UTMs atuais
+      userEmail: user?.email  // Adicionar email do usuário se disponível
     }
     localStorage.setItem('checkoutData', JSON.stringify(checkoutData))
     
@@ -421,7 +422,7 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
         url.searchParams.append('callback_url', `${window.location.origin}/api/lastlink/callback`)
         url.searchParams.append('success_url', callbackUrl)
         
-        // Priorizar UTMs da URL atual, caso existam
+        // Repassar todos os parâmetros UTM diretamente para a URL da Lastlink
         const appName = process.env.NEXT_PUBLIC_APP_PROJECTNAME || 'naotemchef'
         const partnerName = partnerLink.partnerName?.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/,/g, '.') || 'parceiro'
         const linkName = partnerLink.planName?.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/,/g, '.') || 'link'
@@ -445,6 +446,7 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
           interval: partnerLink.interval,
           lastlinkUrl: lastlinkUrl, // Salvar a URL usada
           timestamp: new Date().toISOString(),
+          userEmail: user.email, // Adicionar email para recuperação posterior
           
           // Salvar também os UTMs (priorizar os da URL atual)
           utm_source: (currentUtmParams['utm_source'] as string) || appName,

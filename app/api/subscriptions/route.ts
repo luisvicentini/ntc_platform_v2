@@ -1,13 +1,79 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, addDoc, getDocs, query, where } from "firebase/firestore"
+import { collection, addDoc, getDocs, query, where, doc, updateDoc } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
 
 export async function POST(request: Request) {
   try {
-    const { memberId, partnerId } = await request.json()
+    const data = await request.json()
     const sessionToken = request.headers.get("x-session-token")
+    
+    // Verificar se é uma requisição para criar assinatura 'iniciada'
+    if (data.status === 'iniciada') {
+      // Para criação de assinatura inicial, apenas validamos os dados básicos
+      const { userId, partnerId, userEmail } = data
+      
+      if (!userId || !partnerId) {
+        return NextResponse.json(
+          { error: "UserId e partnerId são obrigatórios" },
+          { status: 400 }
+        )
+      }
+      
+      // Verificar se já existe uma assinatura iniciada para este usuário e parceiro
+      const subscriptionsRef = collection(db, "subscriptions")
+      const existingQuery = query(
+        subscriptionsRef,
+        where("userId", "==", userId),
+        where("partnerId", "==", partnerId),
+        where("status", "==", "iniciada")
+      )
+      const existingSnapshot = await getDocs(existingQuery)
+      
+      // Se existir, atualizar com os novos dados
+      if (!existingSnapshot.empty) {
+        const existingId = existingSnapshot.docs[0].id
+        
+        // Criar objeto com dados atualizados
+        const subscriptionData = {
+          ...data,
+          updatedAt: new Date().toISOString()
+        }
+        
+        // Atualizar documento existente
+        const existingDocRef = doc(db, "subscriptions", existingId)
+        await updateDoc(existingDocRef, subscriptionData)
+        
+        return NextResponse.json({
+          id: existingId,
+          ...subscriptionData,
+          message: "Assinatura inicial atualizada"
+        })
+      }
+      
+      // Garantir que temos os dados mínimos necessários
+      const subscriptionData = {
+        ...data,
+        createdAt: data.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: 'iniciada'
+      }
+      
+      // Criar nova assinatura inicial
+      const docRef = await addDoc(collection(db, "subscriptions"), subscriptionData)
+      
+      console.log(`Assinatura inicial criada com ID: ${docRef.id}`)
+      
+      return NextResponse.json({
+        id: docRef.id,
+        ...subscriptionData,
+        message: "Assinatura inicial criada"
+      })
+    }
+    
+    // Para outros tipos de assinatura, seguir o fluxo normal com autenticação
+    const { memberId, partnerId } = data
     
     if (!sessionToken) {
       return NextResponse.json(

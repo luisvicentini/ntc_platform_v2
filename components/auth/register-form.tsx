@@ -81,6 +81,49 @@ export function RegisterForm() {
       
       console.log('Tipo de checkout identificado:', checkoutType)
       
+      // 2.5 Criar assinatura com status "iniciada" no banco de dados
+      try {
+        console.log('Criando assinatura com status "iniciada"')
+        
+        const subscriptionData = {
+          userId: registerData.user.id,
+          userEmail: userData.email,
+          partnerId: parsedCheckoutData.partnerId,
+          partnerLinkId: parsedCheckoutData.partnerLinkId,
+          planName: parsedCheckoutData.planName,
+          price: parsedCheckoutData.price,
+          interval: parsedCheckoutData.interval,
+          status: 'iniciada',
+          provider: checkoutType,
+          utmParams: parsedCheckoutData.utmParams || {},
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          priceId: parsedCheckoutData.priceId,
+          type: checkoutType
+        }
+        
+        console.log('Dados da assinatura inicial:', subscriptionData)
+        
+        const subscriptionResponse = await fetch('/api/subscriptions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(subscriptionData),
+          credentials: 'include'
+        })
+        
+        if (!subscriptionResponse.ok) {
+          console.error('Erro ao criar assinatura inicial:', await subscriptionResponse.text())
+        } else {
+          const subscriptionResult = await subscriptionResponse.json()
+          console.log('Assinatura inicial criada:', subscriptionResult)
+        }
+      } catch (err) {
+        console.error('Erro ao criar assinatura inicial:', err)
+        // Não interromper o fluxo em caso de erro ao criar assinatura
+      }
+      
       if (checkoutType === 'lastlink') {
         // 3A. Redirecionar para o Lastlink
         console.log('Redirecionando para o Lastlink')

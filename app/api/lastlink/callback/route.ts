@@ -8,6 +8,7 @@ interface TransactionData {
   token?: string;
   paymentMethod?: string;
   userId?: string;
+  userEmail?: string;
   partnerId?: string;
   partnerLinkId?: string;
   planName?: string;
@@ -16,6 +17,7 @@ interface TransactionData {
   createdAt?: string;
   updatedAt?: string;
   rawData?: string;
+  utmParams?: Record<string, string>;
   [key: string]: any; // Para permitir propriedades adicionais
 }
 
@@ -74,20 +76,28 @@ const getDefaultPartner = async () => {
 }
 
 // Função para criar ou atualizar assinatura
-const createOrUpdateSubscription = async (userId: string, partnerId: string, partnerLinkId: string | null, transactionId: string, planName: string, paymentMethod: string) => {
+const createOrUpdateSubscription = async (
+  userId: string, 
+  partnerId: string, 
+  partnerLinkId: string | null, 
+  transactionId: string, 
+  planName: string, 
+  paymentMethod: string,
+  utmParams?: Record<string, string>
+) => {
   try {
     // Validar parâmetros obrigatórios
     if (!userId || !partnerId) {
       throw new Error('Faltam userId ou partnerId')
     }
     
-    // Verificar se já existe uma assinatura ativa
+    // Verificar se já existe uma assinatura ativa ou iniciada
     const subscriptionsRef = collection(db, 'subscriptions')
     const q = query(
       subscriptionsRef,
       where('userId', '==', userId),
       where('partnerId', '==', partnerId),
-      where('status', '==', 'active')
+      where('status', 'in', ['active', 'iniciada'])
     )
     
     const snapshot = await getDocs(q)
@@ -107,6 +117,7 @@ const createOrUpdateSubscription = async (userId: string, partnerId: string, par
         provider: 'lastlink',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
+        utmParams: utmParams || null
       }
       
       const docRef = await addDoc(collection(db, 'subscriptions'), subscriptionData)
@@ -124,8 +135,22 @@ const createOrUpdateSubscription = async (userId: string, partnerId: string, par
       
       return { id: docRef.id, ...subscriptionData }
     } else {
-      // Retornar assinatura existente
+      // Atualizar assinatura existente
       const subscriptionDoc = snapshot.docs[0]
+      const subscriptionData = subscriptionDoc.data()
+      
+      // Se a assinatura estiver com status "iniciada", atualizá-la para "active"
+      if (subscriptionData.status === 'iniciada') {
+        await updateDoc(doc(db, 'subscriptions', subscriptionDoc.id), {
+          status: 'active',
+          transactionId,
+          updatedAt: new Date().toISOString(),
+          paymentMethod: paymentMethod || subscriptionData.paymentMethod || 'pix',
+          utmParams: utmParams || subscriptionData.utmParams || null
+        })
+        console.log(`Assinatura ${subscriptionDoc.id} atualizada de 'iniciada' para 'active'`)
+      }
+      
       console.log(`Assinatura existente encontrada: ${subscriptionDoc.id}`)
       
       return { id: subscriptionDoc.id, ...subscriptionDoc.data() }
@@ -143,11 +168,21 @@ export async function GET(request: Request) {
     const token = searchParams.get('token')
     const paymentMethod = searchParams.get('paymentMethod')
     let userId = searchParams.get('userId')
+    let userEmail = searchParams.get('userEmail')
     let partnerId = searchParams.get('partnerId')
     let partnerLinkId = searchParams.get('partnerLinkId')
     
-    console.log('Callback Lastlink recebido:', { token, paymentMethod, userId, partnerId, partnerLinkId })
+    console.log('Callback Lastlink recebido:', { token, paymentMethod, userId, userEmail, partnerId, partnerLinkId })
     console.log('URL completa:', request.url)
+    
+    // Extrair parâmetros UTM
+    const utmParams: Record<string, string> = {}
+    const utmKeys = ['utm_source', 'utm_medium', 'utm_content', 'utm_term', 'utm_campaign']
+    utmKeys.forEach(key => {
+      const value = searchParams.get(key)
+      if (value) utmParams[key] = value
+    })
+    console.log('Parâmetros UTM recebidos:', utmParams)
     
     // Validar token
     if (!token) {
@@ -159,6 +194,83 @@ export async function GET(request: Request) {
     
     // Buscar transação existente
     let transaction: TransactionData | null = await findTransactionByToken(token)
+    
+    // Se temos userId ou userEmail, tentar encontrar assinatura iniciada
+    if (userId || userEmail) {
+      console.log(`Buscando assinatura iniciada para: ${userId || userEmail}`)
+      const subscriptionsRef = collection(db, 'subscriptions')
+      let q
+      
+      if (userId) {
+        q = query(
+          subscriptionsRef,
+          where('userId', '==', userId),
+          where('status', '==', 'iniciada')
+        )
+      } else if (userEmail) {
+        q = query(
+          subscriptionsRef,
+          where('userEmail', '==', userEmail),
+          where('status', '==', 'iniciada')
+        )
+      }
+      
+      if (q) {
+        try {
+          const snapshot = await getDocs(q)
+          
+          if (!snapshot.empty) {
+            // Ordenar por data de criação (mais recente primeiro)
+            const sortedDocs = snapshot.docs.sort((a, b) => {
+              const dateA = new Date(a.data().createdAt || 0);
+              const dateB = new Date(b.data().createdAt || 0);
+              return dateB.getTime() - dateA.getTime();
+            });
+            
+            const subscriptionData = sortedDocs[0].data();
+            const subscriptionId = sortedDocs[0].id;
+            
+            console.log(`Assinatura iniciada encontrada: ${subscriptionId}`)
+            
+            // Obter informações que podem estar ausentes do callback
+            if (!userId && subscriptionData.userId) {
+              userId = subscriptionData.userId
+              console.log(`UserId obtido da assinatura: ${userId}`)
+            }
+            
+            if (!partnerId && subscriptionData.partnerId) {
+              partnerId = subscriptionData.partnerId
+              console.log(`PartnerId obtido da assinatura: ${partnerId}`)
+            }
+            
+            if (!partnerLinkId && subscriptionData.partnerLinkId) {
+              partnerLinkId = subscriptionData.partnerLinkId
+              console.log(`PartnerLinkId obtido da assinatura: ${partnerLinkId}`)
+            }
+            
+            if (!userEmail && subscriptionData.userEmail) {
+              userEmail = subscriptionData.userEmail
+              console.log(`UserEmail obtido da assinatura: ${userEmail}`)
+            }
+            
+            // Atualizar a assinatura com os dados do pagamento
+            await updateDoc(doc(db, 'subscriptions', subscriptionId), {
+              status: 'active',
+              updatedAt: new Date().toISOString(),
+              token: token,
+              paymentMethod: paymentMethod || 'pix',
+              utmParams: Object.keys(utmParams).length > 0 ? utmParams : subscriptionData.utmParams || null
+            })
+            
+            console.log(`Assinatura ${subscriptionId} atualizada para status active`)
+          } else {
+            console.log('Nenhuma assinatura iniciada encontrada')
+          }
+        } catch (error) {
+          console.error("Erro ao buscar assinatura iniciada:", error)
+        }
+      }
+    }
     
     // Se não encontramos uma transação, vamos criar com os dados disponíveis
     if (!transaction) {
@@ -174,13 +286,15 @@ export async function GET(request: Request) {
         token,
         paymentMethod: paymentMethod || 'pix',
         userId,
+        userEmail,
         partnerId,
         partnerLinkId,
         status: 'active',
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         provider: 'lastlink',
-        planName: 'Plano Premium'
+        planName: 'Plano Premium',
+        utmParams: Object.keys(utmParams).length > 0 ? utmParams : undefined
       }
       
       const docRef = await addDoc(collection(db, 'transactions'), transactionData)
@@ -201,6 +315,11 @@ export async function GET(request: Request) {
         userId = transaction.userId
       }
       
+      if (userEmail && !transaction.userEmail) {
+        updates.userEmail = userEmail
+        needsUpdate = true
+      }
+      
       if (partnerId && !transaction.partnerId) {
         updates.partnerId = partnerId
         needsUpdate = true
@@ -213,6 +332,12 @@ export async function GET(request: Request) {
         needsUpdate = true
       } else if (transaction.partnerLinkId) {
         partnerLinkId = transaction.partnerLinkId
+      }
+      
+      // Adicionar parâmetros UTM se não existirem
+      if (Object.keys(utmParams).length > 0 && !transaction.utmParams) {
+        updates.utmParams = utmParams
+        needsUpdate = true
       }
       
       if (needsUpdate) {
@@ -240,7 +365,8 @@ export async function GET(request: Request) {
           partnerLinkId || null,
           transaction.id,
           (transaction as any).planName || 'Plano Premium',
-          (transaction as any).paymentMethod || paymentMethod || 'pix'
+          (transaction as any).paymentMethod || paymentMethod || 'pix',
+          utmParams
         )
       } catch (error) {
         console.error('Erro ao criar assinatura:', error)
