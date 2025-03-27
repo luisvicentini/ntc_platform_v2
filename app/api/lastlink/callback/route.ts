@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, addDoc, query, where, getDocs, doc, updateDoc, getDoc } from "firebase/firestore"
+import { collection, addDoc, query, where, getDocs, doc, updateDoc, getDoc, increment } from "firebase/firestore"
 
 // Função para redirecionar após pagamento
 export async function GET(request: Request) {
@@ -11,164 +11,342 @@ export async function GET(request: Request) {
     const orderId = searchParams.get("order_id") || searchParams.get("orderId")
     
     console.log("Callback Lastlink recebido:", { token, paymentMethod, orderId })
-    
-    // Logs detalhados para diagnóstico
+    console.log("URL completa:", request.url)
     console.log("Parâmetros da URL completos:", Object.fromEntries(searchParams.entries()))
     
-    // Verificar token se estiver presente (opcional para callback)
-    if (token && token !== "fdf8727af48b4962bb74226ff491ca37" && 
-        token !== searchParams.get("auth_token")) {
-      console.warn(`Token de callback recebido mas não corresponde ao esperado: ${token}`)
-    }
+    // Verificar localStorage armazenado pelo cliente para obter dados de checkout
+    const userId = searchParams.get("userId") || searchParams.get("user_id")
+    const partnerId = searchParams.get("partnerId") || searchParams.get("partner_id") || "MChsM1JopUMB2ye2Tdvp" // ID do parceiro Lastlink padrão
+    const partnerLinkId = searchParams.get("partnerLinkId") || searchParams.get("ref") || searchParams.get("link_id")
     
-    // Verificar se temos informações de metadata no URL
-    // A Lastlink pode enviar metadados em diferentes formatos
-    const userId = searchParams.get("metadata[userId]") || 
-                  searchParams.get("metadata_userId") || 
-                  searchParams.get("metadata.userId") ||
-                  searchParams.get("userId")
-                  
-    const partnerId = searchParams.get("metadata[partnerId]") || 
-                      searchParams.get("metadata_partnerId") || 
-                      searchParams.get("metadata.partnerId") ||
-                      searchParams.get("partnerId")
-                      
-    const partnerLinkId = searchParams.get("metadata[partnerLinkId]") || 
-                          searchParams.get("metadata_partnerLinkId") || 
-                          searchParams.get("metadata.partnerLinkId") ||
-                          searchParams.get("partnerLinkId") || 
-                          searchParams.get("linkId")
+    console.log("Dados extraídos da URL:", { userId, partnerId, partnerLinkId })
     
-    console.log("Metadados extraídos:", { userId, partnerId, partnerLinkId })
-    
-    // Se temos um orderId, podemos tentar registrar a operação localmente
-    if (orderId && userId) {
-      try {
-        console.log(`Registrando pagamento para orderId: ${orderId}, userId: ${userId}`)
+    // Buscar transação associada a este token/orderId se houver
+    if (token || orderId) {
+      // Tentar encontrar transação existente
+      const transactionsRef = collection(db, "lastlink_transactions")
+      const transactionQuery = query(
+        transactionsRef,
+        where("status", "==", "active")
+      )
+      
+      if (token) {
+        // Adicionar condição de token quando disponível
+        // Nota: Como o token provavelmente está no campo rawData como string, precisamos verificar depois
+      }
+      
+      if (orderId) {
+        // Adicionar condição de orderId quando disponível
+        // Similar ao token, se não encontramos diretamente, verificamos depois
+      }
+      
+      const transactionSnapshot = await getDocs(transactionQuery)
+      console.log(`Encontradas ${transactionSnapshot.size} transações ativas`)
+      
+      // Verificar manualmente por token no corpo da transação
+      const matchedTransactions = []
+      
+      for (const doc of transactionSnapshot.docs) {
+        const transactionData = doc.data()
         
-        // Verificar se o pagamento já foi registrado
-        const paymentsRef = collection(db, "lastlink_payments")
-        const paymentQuery = query(paymentsRef, where("orderId", "==", orderId))
-        const paymentSnapshot = await getDocs(paymentQuery)
+        // Verificar se o orderId corresponde
+        if (orderId && transactionData.orderId === orderId) {
+          matchedTransactions.push({ id: doc.id, data: transactionData })
+          console.log(`Transação encontrada pelo orderId: ${doc.id}`)
+          continue
+        }
         
-        if (paymentSnapshot.empty) {
-          console.log("Pagamento ainda não registrado. Registrando localmente...")
-          
-          // Buscar detalhes do usuário
-          let userName = ""
-          let userEmail = ""
-          
+        // Verificar se o token está presente no rawData
+        if (token && transactionData.rawData && transactionData.rawData.includes(token)) {
+          matchedTransactions.push({ id: doc.id, data: transactionData })
+          console.log(`Transação encontrada pelo token no rawData: ${doc.id}`)
+          continue
+        }
+      }
+      
+      if (matchedTransactions.length > 0) {
+        console.log(`Encontradas ${matchedTransactions.length} transações para atualizar`)
+        
+        // Atualizar todas as transações encontradas com o partnerId e partnerLinkId
+        for (const transaction of matchedTransactions) {
           try {
+            // Verificar se já tem partnerId
+            if (!transaction.data.partnerId && partnerId) {
+              console.log(`Atualizando transação ${transaction.id} com partnerId: ${partnerId}`)
+              
+              await updateDoc(doc(db, "lastlink_transactions", transaction.id), {
+                partnerId: partnerId,
+                partnerLinkId: partnerLinkId || null,
+                updatedAt: new Date().toISOString()
+              })
+              
+              // Criar assinatura para esta transação
+              await createSubscriptionFromTransaction(
+                transaction.data.userId || userId,
+                partnerId,
+                partnerLinkId,
+                transaction.data
+              )
+            }
+          } catch (error) {
+            console.error(`Erro ao atualizar transação ${transaction.id}:`, error)
+          }
+        }
+      } else {
+        console.log("Nenhuma transação encontrada para este token/orderId")
+        
+        // Se não encontrou nenhuma transação mas temos userId, podemos tentar criar ou atualizar 
+        // assinatura diretamente usando as informações disponíveis
+        if (userId && partnerId) {
+          try {
+            console.log("Criando assinatura diretamente da URL de callback")
+            
+            // Buscar informações do usuário
             const userRef = doc(db, "users", userId)
             const userDoc = await getDoc(userRef)
             
             if (userDoc.exists()) {
               const userData = userDoc.data()
-              userName = userData.displayName || userData.name || ""
-              userEmail = userData.email || ""
-            }
-          } catch (err) {
-            console.error("Erro ao buscar detalhes do usuário:", err)
-          }
-          
-          // Registrar o pagamento
-          const paymentData = {
-            memberId: userId,
-            orderId: orderId,
-            status: "active",
-            customerName: userName,
-            customerEmail: userEmail,
-            paymentMethod: paymentMethod || "unknown",
-            createdAt: new Date().toISOString(),
-            paidAt: new Date().toISOString(),
-            partnerId: partnerId || null,
-            partnerLinkId: partnerLinkId || null,
-            planName: "Plano Premium", // Valor padrão
-            planInterval: "month", // Valor padrão
-            planIntervalCount: 1, // Valor padrão
-            metadata: {
-              token: token,
-              userId: userId,
-              partnerId: partnerId,
-              partnerLinkId: partnerLinkId
-            }
-          }
-          
-          await addDoc(paymentsRef, paymentData)
-          console.log("Pagamento registrado com sucesso localmente")
-          
-          // Criar uma assinatura se temos partner ID
-          if (partnerId) {
-            try {
-              console.log("Tentando criar assinatura local...")
               
-              // Verificar se já existe assinatura
-              const subscriptionsRef = collection(db, "subscriptions")
-              const subscriptionQuery = query(
-                subscriptionsRef,
-                where("memberId", "==", userId),
-                where("partnerId", "==", partnerId),
-                where("paymentProvider", "==", "lastlink")
+              // Criar assinatura provisória para o usuário
+              await createSubscriptionFromCallback(
+                userId,
+                partnerId,
+                partnerLinkId,
+                token,
+                orderId,
+                userData.email || "",
+                userData.displayName || userData.name || ""
               )
-              
-              const subscriptionSnapshot = await getDocs(subscriptionQuery)
-              
-              // Calcular data de expiração (1 mês a partir de agora)
-              const expiresAt = new Date()
-              expiresAt.setMonth(expiresAt.getMonth() + 1)
-              
-              if (subscriptionSnapshot.empty) {
-                // Criar nova assinatura
-                const subscriptionData = {
-                  memberId: userId,
-                  partnerId: partnerId,
-                  status: "active",
-                  paymentProvider: "lastlink",
-                  type: "lastlink",
-                  orderId: orderId,
-                  createdAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString(),
-                  expiresAt: expiresAt.toISOString(),
-                  currentPeriodStart: new Date().toISOString(),
-                  currentPeriodEnd: expiresAt.toISOString(),
-                  planName: "Plano Premium",
-                  planInterval: "month",
-                  planIntervalCount: 1,
-                  priceId: "lastlink_plano_premium"
-                }
-                
-                await addDoc(subscriptionsRef, subscriptionData)
-                console.log("Assinatura criada com sucesso localmente")
-              } else {
-                // Atualizar assinatura existente
-                const subscriptionDoc = subscriptionSnapshot.docs[0].ref
-                
-                await updateDoc(subscriptionDoc, {
-                  status: "active",
-                  orderId: orderId,
-                  updatedAt: new Date().toISOString(),
-                  expiresAt: expiresAt.toISOString(),
-                  currentPeriodEnd: expiresAt.toISOString()
-                })
-                
-                console.log("Assinatura atualizada com sucesso localmente")
-              }
-            } catch (err) {
-              console.error("Erro ao criar/atualizar assinatura:", err)
             }
+          } catch (error) {
+            console.error("Erro ao criar assinatura da URL:", error)
           }
-        } else {
-          console.log("Pagamento já registrado anteriormente")
         }
-      } catch (error) {
-        console.error("Erro ao registrar pagamento:", error)
       }
     }
     
-    // Redirecionar para página de perfil do membro
+    // Redirecionar para página de perfil do membro com informação de sucesso
     return NextResponse.redirect(new URL("/member/profile?payment=success", request.url))
   } catch (error) {
     console.error("Erro ao processar callback:", error)
     return NextResponse.redirect(new URL("/member/profile?payment=error", request.url))
+  }
+}
+
+/**
+ * Cria uma assinatura baseada em uma transação existente
+ */
+async function createSubscriptionFromTransaction(
+  userId: string,
+  partnerId: string,
+  partnerLinkId: string | null,
+  transactionData: any
+) {
+  try {
+    console.log("Criando assinatura a partir da transação:", {
+      userId,
+      partnerId,
+      partnerLinkId,
+      orderId: transactionData.orderId
+    })
+    
+    // Verificar se já existe uma assinatura
+    const subscriptionsRef = collection(db, "subscriptions")
+    const subscriptionQuery = query(
+      subscriptionsRef,
+      where("memberId", "==", userId),
+      where("partnerId", "==", partnerId),
+      where("paymentProvider", "==", "lastlink")
+    )
+    
+    const subscriptionSnapshot = await getDocs(subscriptionQuery)
+    
+    // Extrair dados importantes da transação
+    const {
+      orderId,
+      planName,
+      planInterval,
+      planIntervalCount,
+      amount,
+      paidAt,
+      expiresAt
+    } = transactionData
+    
+    // Dados da assinatura
+    const subscriptionData = {
+      memberId: userId,
+      partnerId: partnerId,
+      status: "active",
+      paymentProvider: "lastlink",
+      type: "lastlink",
+      orderId: orderId || "",
+      expiresAt: expiresAt || "",
+      updatedAt: new Date().toISOString(),
+      planName: planName || "Plano Premium",
+      planInterval: planInterval || "month",
+      planIntervalCount: planIntervalCount || 1,
+      paymentAmount: amount || 0,
+      currentPeriodStart: paidAt || new Date().toISOString(),
+      currentPeriodEnd: expiresAt || "",
+      priceId: `lastlink_${(planName || "premium").toLowerCase().replace(/\s/g, '_')}`,
+      partnerLinkId: partnerLinkId || null
+    }
+    
+    if (subscriptionSnapshot.empty) {
+      // Criar nova assinatura
+      const subscriptionRef = await addDoc(
+        subscriptionsRef, 
+        {
+          ...subscriptionData,
+          createdAt: new Date().toISOString()
+        }
+      )
+      console.log("Nova assinatura criada:", subscriptionRef.id)
+      
+      // Incrementar conversões do link se temos o partnerLinkId
+      if (partnerLinkId) {
+        try {
+          await updateDoc(doc(db, "partnerLinks", partnerLinkId), {
+            conversions: increment(1),
+            updatedAt: new Date().toISOString()
+          })
+          console.log("Conversões do link incrementadas")
+        } catch (err) {
+          console.error("Erro ao incrementar conversões do link:", err)
+        }
+      }
+      
+      return subscriptionRef.id
+    } else {
+      // Atualizar assinatura existente
+      const subscriptionRef = subscriptionSnapshot.docs[0].ref
+      await updateDoc(subscriptionRef, subscriptionData)
+      console.log("Assinatura existente atualizada:", subscriptionSnapshot.docs[0].id)
+      
+      return subscriptionSnapshot.docs[0].id
+    }
+  } catch (error) {
+    console.error("Erro ao criar assinatura da transação:", error)
+    return null
+  }
+}
+
+/**
+ * Cria uma assinatura baseada apenas nos dados do callback
+ */
+async function createSubscriptionFromCallback(
+  userId: string,
+  partnerId: string,
+  partnerLinkId: string | null,
+  token: string | null,
+  orderId: string | null,
+  userEmail: string,
+  userName: string
+) {
+  try {
+    console.log("Criando assinatura a partir do callback:", {
+      userId,
+      partnerId,
+      partnerLinkId,
+      token,
+      orderId
+    })
+    
+    // Verificar se já existe uma assinatura
+    const subscriptionsRef = collection(db, "subscriptions")
+    const subscriptionQuery = query(
+      subscriptionsRef,
+      where("memberId", "==", userId),
+      where("partnerId", "==", partnerId),
+      where("paymentProvider", "==", "lastlink")
+    )
+    
+    const subscriptionSnapshot = await getDocs(subscriptionQuery)
+    
+    // Calcular data de expiração (1 mês a partir de hoje)
+    const now = new Date()
+    const expiresAt = new Date(now)
+    expiresAt.setMonth(now.getMonth() + 1)
+    
+    // Dados da assinatura
+    const subscriptionData = {
+      memberId: userId,
+      partnerId: partnerId,
+      status: "active",
+      paymentProvider: "lastlink",
+      type: "lastlink",
+      orderId: orderId || "",
+      expiresAt: expiresAt.toISOString(),
+      updatedAt: new Date().toISOString(),
+      planName: "Plano Premium",
+      planInterval: "month",
+      planIntervalCount: 1,
+      paymentAmount: 0, // Valor temporário
+      currentPeriodStart: now.toISOString(),
+      currentPeriodEnd: expiresAt.toISOString(),
+      priceId: "lastlink_premium",
+      partnerLinkId: partnerLinkId || null,
+      token: token || null // Guardar o token para referência
+    }
+    
+    // Registrar também na coleção de transações para manter histórico
+    const transactionData = {
+      userId: userId,
+      partnerId: partnerId,
+      partnerLinkId: partnerLinkId,
+      orderId: orderId || "",
+      token: token || "",
+      userEmail: userEmail,
+      userName: userName,
+      status: "active",
+      type: "lastlink",
+      provider: "lastlink",
+      planName: "Plano Premium",
+      planInterval: "month",
+      planIntervalCount: 1,
+      createdAt: now.toISOString(),
+      paidAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString()
+    }
+    
+    await addDoc(collection(db, "lastlink_transactions"), transactionData)
+    
+    if (subscriptionSnapshot.empty) {
+      // Criar nova assinatura
+      const subscriptionRef = await addDoc(
+        subscriptionsRef, 
+        {
+          ...subscriptionData,
+          createdAt: new Date().toISOString()
+        }
+      )
+      console.log("Nova assinatura criada do callback:", subscriptionRef.id)
+      
+      // Incrementar conversões do link se temos o partnerLinkId
+      if (partnerLinkId) {
+        try {
+          await updateDoc(doc(db, "partnerLinks", partnerLinkId), {
+            conversions: increment(1),
+            updatedAt: new Date().toISOString()
+          })
+          console.log("Conversões do link incrementadas")
+        } catch (err) {
+          console.error("Erro ao incrementar conversões do link:", err)
+        }
+      }
+      
+      return subscriptionRef.id
+    } else {
+      // Atualizar assinatura existente
+      const subscriptionRef = subscriptionSnapshot.docs[0].ref
+      await updateDoc(subscriptionRef, subscriptionData)
+      console.log("Assinatura existente atualizada do callback:", subscriptionSnapshot.docs[0].id)
+      
+      return subscriptionSnapshot.docs[0].id
+    }
+  } catch (error) {
+    console.error("Erro ao criar assinatura do callback:", error)
+    return null
   }
 } 

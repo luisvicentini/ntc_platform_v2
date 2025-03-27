@@ -227,7 +227,19 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
       if (lastlinkUrl) {
         // Preparar URL com metadados e callback
         const baseUrl = lastlinkUrl
-        const callbackUrl = `${window.location.origin}/api/lastlink/callback`
+        
+        // Construir a URL de callback com os parâmetros necessários
+        const baseCallbackUrl = `${window.location.origin}/api/lastlink/callback`
+        const callbackUrlParams = new URLSearchParams()
+        
+        // Adicionar parâmetros importantes na URL de callback
+        callbackUrlParams.append('userId', user.uid)
+        callbackUrlParams.append('partnerId', partnerLink.partnerId)
+        callbackUrlParams.append('partnerLinkId', partnerLink.id)
+        
+        // URL de callback final
+        const callbackUrl = `${baseCallbackUrl}?${callbackUrlParams.toString()}`
+        console.log('URL de callback configurada:', callbackUrl)
         
         // Construir a URL com parâmetros
         const url = new URL(baseUrl)
@@ -244,7 +256,18 @@ export function CheckoutPreview({ partnerLink }: { partnerLink: PartnerLink }) {
         // Adicionar callback URL
         url.searchParams.append('callback_url', callbackUrl)
         
+        // Salvar informações na localStorage para uso quando o usuário retornar
+        const lastlinkCheckoutData = {
+          userId: user.uid,
+          partnerId: partnerLink.partnerId,
+          partnerLinkId: partnerLink.id,
+          timestamp: new Date().toISOString()
+        }
+        localStorage.setItem('lastlink_checkout_data', JSON.stringify(lastlinkCheckoutData))
+        
         console.log('Redirecionando para Lastlink com metadados:', url.toString())
+        console.log('Dados salvos na localStorage para uso após o pagamento')
+        
         window.location.href = url.toString()
       } else {
         toast.error('URL de checkout não encontrada')

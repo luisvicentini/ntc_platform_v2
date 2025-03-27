@@ -1,120 +1,181 @@
 "use client"
 
-import { useState, Suspense } from "react"
-import { useSearchParams,useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Loader } from "lucide-react"
-import { toast } from "sonner"
-import { useAuth } from "@/contexts/auth-context"
-
-// Componente que usa useSearchParams
-function SuccessContent() {
-  const { user } = useAuth()
-  const [loading, setLoading] = useState(false)
-
-  const searchParams = useSearchParams()
-  const router = useRouter()
-  const [resendingEmail, setResendingEmail] = useState(false)
-
-  const customerEmail = searchParams.get('customer_email')
-  const customerName = searchParams.get('customer_name')
-  const planName = searchParams.get('plan_name')
-
-  const handleResendEmail = async () => {
-    if (!customerEmail) return
-
-    try {
-      setLoading(true)
-      setResendingEmail(true)
-      const response = await fetch("/api/users/resend-activation-public", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ email: customerEmail }),
-      })
-
-      if (!response.ok) {
-        const data = await response.json()
-        throw new Error(data.error || "Erro ao reenviar email")
-      }
-
-      toast.success("Email de ativação reenviado com sucesso!")
-    } catch (error: any) {
-      console.error("Erro ao reenviar:", error)
-      toast.error(error.message || "Erro ao reenviar email de ativação")
-    } finally {
-      setResendingEmail(false)
-    }
-  }
-
-  return (
-    <div className="container mx-auto px-4 py-8 max-w-2xl">
-      <div className="text-center space-y-6">
-        <h1 className="text-3xl font-bold">
-          Parabéns, {customerName}!
-        </h1>
-        
-        <div className="bg-green-50 p-6 rounded-lg">
-          <p className="text-lg text-green-800">
-            Sua assinatura do plano {planName} foi confirmada com sucesso!
-          </p>
-        </div>
-
-        <div className="bg-purple-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold text-purple-900 mb-2">
-            Próximos passos
-          </h2>
-          <p className="text-purple-800">
-            Para acessar sua conta e começar a usar os cupons, você precisa ativá-la através do link que enviamos para:
-            <br />
-            <span className="font-medium">{customerEmail}</span>
-          </p>
-        </div>
-
-        <div className="flex flex-col gap-4">
-          <Button
-            onClick={() => router.push('/login')}
-            size="lg"
-            className="w-full bg-red-700 hover:bg-red-700"
-          >
-            {loading ? 'Processando...' : user?.userType === 'member' ? 'Ir para o feed de cupons' : 'Já ativou a conta? Faça login'}
-          </Button>
-
-          <Button
-            onClick={handleResendEmail}
-            variant="outline"
-            size="lg"
-            className="w-full"
-            disabled={resendingEmail}
-          >
-            {resendingEmail ? (
-              <>
-                <Loader className="mr-2 h-4 w-4 animate-spin" />
-                Reenviando...
-              </>
-            ) : (
-              "Reenviar email de ativação"
-            )}
-          </Button>
-        </div>
-
-        <p className="text-sm text-muted-foreground">
-          Não recebeu o email? Verifique sua caixa de spam ou clique em "Reenviar email de ativação"
-        </p>
-      </div>
-    </div>
-  )
-}
+import { useEffect, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { CheckCircle, ArrowRight } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import Image from 'next/image'
+import { useAuth } from '@/contexts/auth-context'
+import { toast } from 'sonner'
 
 export default function SuccessPage() {
-  return (
-    <Suspense fallback={
-      <div className="container flex items-center justify-center min-h-screen">
-        <Loader className="h-8 w-8 animate-spin text-purple-600" />
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const { user } = useAuth()
+  
+  const [loading, setLoading] = useState(true)
+  const [processingPayment, setProcessingPayment] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  const token = searchParams.get('token')
+  const paymentMethod = searchParams.get('paymentMethod')
+  
+  useEffect(() => {
+    const processLastlinkPayment = async () => {
+      try {
+        // Verificar se temos token na URL (redirecionamento da Lastlink)
+        if (!token) {
+          console.log('Nenhum token encontrado na URL')
+          setProcessingPayment(false)
+          return
+        }
+        
+        console.log('Token encontrado na URL:', token)
+        console.log('Método de pagamento:', paymentMethod)
+        
+        // Recuperar dados salvos na localStorage
+        const lastlinkData = localStorage.getItem('lastlink_checkout_data')
+        const checkoutData = localStorage.getItem('checkoutData')
+        
+        let userId = user?.uid
+        let partnerId = null
+        let partnerLinkId = null
+        
+        if (lastlinkData) {
+          try {
+            const parsedData = JSON.parse(lastlinkData)
+            userId = userId || parsedData.userId
+            partnerId = parsedData.partnerId
+            partnerLinkId = parsedData.partnerLinkId
+            
+            console.log('Dados recuperados do localStorage:', parsedData)
+          } catch (e) {
+            console.error('Erro ao parsear dados do localStorage:', e)
+          }
+        } else if (checkoutData) {
+          try {
+            const parsedData = JSON.parse(checkoutData)
+            partnerId = parsedData.partnerId
+            partnerLinkId = parsedData.partnerLinkId
+            
+            console.log('Dados de checkout recuperados:', parsedData)
+          } catch (e) {
+            console.error('Erro ao parsear dados de checkout:', e)
+          }
+        }
+        
+        // Se o usuário não estiver logado, não podemos processar
+        if (!userId) {
+          console.log('Usuário não está logado, redirecionando para login')
+          // Manter os dados para processamento após login
+          router.push('/auth/login?redirect=success')
+          return
+        }
+        
+        // Chamar API para associar o pagamento ao usuário
+        const response = await fetch('/api/lastlink/callback', {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        })
+        
+        if (!response.ok) {
+          throw new Error('Falha ao processar pagamento')
+        }
+        
+        console.log('Pagamento processado com sucesso')
+        
+        // Limpar dados do localStorage
+        localStorage.removeItem('lastlink_checkout_data')
+        localStorage.removeItem('checkoutData')
+        
+        setProcessingPayment(false)
+      } catch (err) {
+        console.error('Erro ao processar pagamento:', err)
+        setError('Ocorreu um erro ao processar seu pagamento. Por favor, entre em contato com o suporte.')
+        setProcessingPayment(false)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    // Processar o pagamento quando o componente montar
+    processLastlinkPayment()
+  }, [token, paymentMethod, router, user])
+  
+  const goToProfile = () => {
+    router.push('/member/profile')
+  }
+  
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-zinc-100">
+        <div className="text-center">
+          <div className="animate-spin w-16 h-16 border-t-4 border-orange-500 border-solid rounded-full mx-auto mb-4"></div>
+          <h2 className="text-2xl font-bold text-zinc-800">Processando seu pagamento...</h2>
+          <p className="text-zinc-500 mt-2">Por favor, aguarde enquanto finalizamos seu pedido.</p>
+        </div>
       </div>
-    }>
-      <SuccessContent />
-    </Suspense>
+    )
+  }
+  
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-white to-zinc-100 p-4">
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-8">
+        <div className="text-center">
+          {/* Logo */}
+          <div className="w-24 h-24 mx-auto mb-6 relative">
+            <Image
+              src="/logo.svg"
+              alt="Logo"
+              fill
+              className="object-contain"
+            />
+          </div>
+          
+          {error ? (
+            <>
+              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                <span className="text-red-500 text-2xl">!</span>
+              </div>
+              <h1 className="text-2xl font-bold text-zinc-800 mb-4">Algo deu errado</h1>
+              <p className="text-zinc-600 mb-6">{error}</p>
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle className="w-8 h-8 text-emerald-500" />
+              </div>
+              <h1 className="text-2xl font-bold text-zinc-800 mb-4">Pagamento Confirmado!</h1>
+              <p className="text-zinc-600 mb-6">
+                {processingPayment 
+                  ? "Estamos processando seu pagamento..." 
+                  : "Seu pagamento foi processado com sucesso e sua assinatura está ativa."}
+              </p>
+              
+              {/* Detalhes do pagamento */}
+              <div className="bg-zinc-50 p-4 rounded-lg mb-6 text-left">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-zinc-500">Método de pagamento:</span>
+                  <span className="font-medium text-zinc-700">{paymentMethod}</span>
+                </div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-zinc-500">Status:</span>
+                  <span className="text-emerald-600 font-medium">Confirmado</span>
+                </div>
+              </div>
+            </>
+          )}
+          
+          <Button 
+            onClick={goToProfile} 
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            Ir para minha conta <ArrowRight className="ml-2 w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+    </div>
   )
 } 
