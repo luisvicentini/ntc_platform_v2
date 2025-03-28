@@ -312,4 +312,69 @@ export async function updateAllPartnerLinksWithDefaultPrice(partnerId: string, d
   
   await Promise.all(updatePromises)
   return snapshot.docs.length
+}
+
+/**
+ * Define um link como padrão do sistema
+ */
+export async function setDefaultLink(linkId: string) {
+  try {
+    // Primeiro, remove a marcação de padrão de qualquer link existente
+    const defaultQuery = query(
+      collection(db, "partnerLinks"),
+      where("isDefault", "==", true)
+    )
+    
+    const defaultLinksSnapshot = await getDocs(defaultQuery)
+    
+    // Remover flag padrão de todos os links
+    const updatePromises = defaultLinksSnapshot.docs.map(doc => 
+      updateDoc(doc.ref, { isDefault: false })
+    )
+    
+    await Promise.all(updatePromises)
+    
+    // Agora, marca o novo link como padrão
+    const linkRef = doc(db, "partnerLinks", linkId)
+    await updateDoc(linkRef, { 
+      isDefault: true,
+      updatedAt: new Date().toISOString()
+    })
+    
+    return true
+  } catch (error) {
+    console.error("Erro ao definir link padrão:", error)
+    throw error
+  }
+}
+
+/**
+ * Obtém o link padrão do sistema
+ */
+export async function getDefaultLink() {
+  try {
+    console.log("Buscando link padrão do sistema diretamente do Firestore...")
+    const defaultQuery = query(
+      collection(db, "partnerLinks"),
+      where("isDefault", "==", true)
+    )
+    
+    const querySnapshot = await getDocs(defaultQuery)
+    
+    if (querySnapshot.empty) {
+      console.log("Nenhum link padrão encontrado")
+      return null
+    }
+    
+    const docData = querySnapshot.docs[0]
+    console.log("Link padrão encontrado:", docData.id)
+    
+    return {
+      id: docData.id,
+      ...docData.data()
+    }
+  } catch (error) {
+    console.error("Erro ao obter link padrão do Firestore:", error)
+    throw error
+  }
 } 

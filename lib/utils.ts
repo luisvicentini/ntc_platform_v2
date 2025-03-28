@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
 import { randomBytes } from "crypto"
 import jwt from "jsonwebtoken"
+import { nanoid } from 'nanoid'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -31,5 +32,12 @@ export function formatCurrency(value: number): string {
     style: 'currency',
     currency: 'BRL'
   }).format(value)
+}
+
+/**
+ * Gera um ID único com o tamanho especificado
+ */
+export function generateUniqueId(length: number = 8): string {
+  return nanoid(length)
 }
 

@@ -10,11 +10,12 @@ import { SubscriptionProvider } from "@/contexts/subscription-context"
 import { EstablishmentLinkModal } from "@/components/establishment-link-modal"
 import { AddUserModal } from "@/components/add-user-modal"
 import { DeleteUserModal } from "@/components/delete-user-modal"
+import { DefaultPaymentLinkModal } from "@/components/default-payment-link-modal"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Pagination } from "@/components/ui/pagination"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Building2, User, Users, Crown, MoreVertical, Grid, List, Check, X, Edit, Mail, Trash, Link } from "lucide-react"
+import { Building2, User, Users, Crown, MoreVertical, Grid, List, Check, X, Edit, Mail, Trash, Link, CreditCard } from "lucide-react"
 import type { UserProfile, UserListResponse } from "@/types/user"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { PopoverArrow } from "@radix-ui/react-popover"
@@ -48,6 +49,7 @@ function UsersContent() {
   const [showSubscriptionSidebar, setShowSubscriptionSidebar] = useState(false)
   const ITEMS_PER_PAGE = 12
   const [totalRecords, setTotalRecords] = useState(0)
+  const [showDefaultPaymentLinkModal, setShowDefaultPaymentLinkModal] = useState(false)
 
   useEffect(() => {
     fetchUsers()
@@ -259,14 +261,29 @@ function UsersContent() {
 
   return (
     <div className="container py-6">
-      <div className="flex justify-between items-center mb-6">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-zinc-500">Usuários</h1>
-          <p className="text-sm text-zinc-400 mt-1">
-            Total de registros: {totalRecords} | Exibindo: {getPaginatedUsers().length}
+          <h1 className="text-2xl font-bold text-zinc-500 mb-1">Gerenciar Usuários</h1>
+          <p className="text-sm text-zinc-400">
+            Total de {totalRecords} usuários no sistema | Exibindo: {getPaginatedUsers().length}
           </p>
         </div>
-        <Button className="bg-primary text-white hover:bg-primary-dark" onClick={() => setShowAddUserModal(true)}>Adicionar Usuário</Button>
+
+        <div className="flex flex-wrap gap-2">
+          <Button 
+            variant="outline" 
+            className="bg-purple-50 border-purple-100 text-purple-700 hover:bg-purple-100 hover:text-purple-800"
+            onClick={() => setShowDefaultPaymentLinkModal(true)}
+          >
+            <CreditCard className="h-4 w-4 mr-2" />
+            Link Padrão
+          </Button>
+          
+          <Button onClick={() => setShowAddUserModal(true)}>
+            <User className="h-4 w-4 mr-2" />
+            Novo Usuário
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-6">
@@ -350,6 +367,11 @@ function UsersContent() {
           setShowAddUserModal(false)
         }}
         user={selectedUser}
+      />
+
+      <DefaultPaymentLinkModal
+        isOpen={showDefaultPaymentLinkModal}
+        onClose={() => setShowDefaultPaymentLinkModal(false)}
       />
     </div>
   )

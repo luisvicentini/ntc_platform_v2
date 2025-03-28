@@ -45,4 +45,11 @@ export function getFirebaseAdminApp() {
     console.error("Erro ao inicializar Firebase Admin SDK:", error)
     throw error
   }
-} 
+}
+
+// Inicializar e exportar o app Firebase Admin
+const app = getFirebaseAdminApp()
+
+// Exportar serviços do Firebase Admin
+export const auth = admin.auth()
+export const firestore = admin.firestore() 
