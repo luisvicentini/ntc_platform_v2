@@ -178,17 +178,17 @@ export async function POST(request: Request) {
           { status: 500 }
         )
       }
-      
-      // Limpar token de recuperação
-      await updateDoc(doc(db, "users", userDoc.id), {
-        resetPasswordToken: null,
-        resetPasswordTokenExpiresAt: null,
-        updatedAt: new Date().toISOString()
-      })
+
+    // Limpar token de recuperação
+    await updateDoc(doc(db, "users", userDoc.id), {
+      resetPasswordToken: null,
+      resetPasswordTokenExpiresAt: null,
+      updatedAt: new Date().toISOString()
+    })
       
       console.log("Token de redefinição removido com sucesso")
-      
-      return NextResponse.json({ message: "Senha redefinida com sucesso" })
+
+    return NextResponse.json({ message: "Senha redefinida com sucesso" })
     } catch (adminError: any) {
       console.error("Erro com Admin SDK:", adminError)
       

@@ -66,7 +66,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
   }
 
   return (
-    <Card className="bg-zinc-50 border-zinc-200">
+    <Card className="bg-white border-zinc-200">
       <CardHeader>
         <CardTitle className="text-zinc-500">Meu Perfil</CardTitle>
       </CardHeader>

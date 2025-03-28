@@ -31,9 +31,9 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
     <RouteGuard allowedUserType="member">
       <SubscriptionProvider>
         <EstablishmentProvider>
-          <div className="min-h-screen">
+          <div className="min-h-screen bg-zinc-100">
             <Header menuItems={menuItems} />
-            <main className="container mx-auto px-4 py-8">
+            <main className="py-8">
               {children}
             </main>
           </div>

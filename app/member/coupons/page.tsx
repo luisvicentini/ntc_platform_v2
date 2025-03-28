@@ -332,14 +332,14 @@ export default function CouponsPage() {
                 placeholder="Buscar cupons..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 bg-zinc-100 border-zinc-200 text-zinc-500"
+                className="pl-8 bg-white text-zinc-500"
               />
             </div>
           </div>
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="bg-zinc-100 border-zinc-200">
-                <Filter className="h-4 w-4 text-zinc-400" />
+              <Button variant="outline" size="icon" className="hover:bg-zinc-200">
+                <Filter className="h-4 w-4 text-zinc-600" />
               </Button>
             </SheetTrigger>
             <SheetContent className="bg-zinc-50 border-zinc-200 overflow-y-auto">
@@ -370,13 +370,13 @@ export default function CouponsPage() {
           <Button
             variant="outline"
             size="icon"
-            className="bg-zinc-100 border-zinc-200"
             onClick={() => setViewMode(viewMode === "grid" ? "table" : "grid")}
+            className="hover:bg-zinc-200"
           >
             {viewMode === "grid" ? (
-              <LayoutList className="h-4 w-4 text-zinc-400" />
+              <LayoutList className="h-4 w-4 text-zinc-600" />
             ) : (
-              <LayoutGrid className="h-4 w-4 text-zinc-400" />
+              <LayoutGrid className="h-4 w-4 text-zinc-600" />
             )}
           </Button>
         </div>
@@ -386,7 +386,7 @@ export default function CouponsPage() {
         <>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {paginatedVouchers.map((voucher) => (
-              <Card key={voucher.id} className="bg-zinc-50 border-zinc-200 p-6 space-y-4">
+              <Card key={voucher.id} className="bg-white border-zinc-200 p-6 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
                     <Ticket className="h-5 w-5 text-emerald-500" />
@@ -430,9 +430,9 @@ export default function CouponsPage() {
                 <div className="relative pb-1">
                   {/* Linha pontilhada decorativa */}
                   <div className="absolute h-4 flex justify-between items-center left-[-33px] right-[-33px]">
-                    <div className="w-4 h-4 bg-white rounded-full border-r-2 border-zinc-200" />
+                    <div className="w-4 h-4 bg-zinc-100 rounded-full border-r-2 border-zinc-200" />
                     <div className="flex-1 border-t-2 border-dashed border-zinc-200 mx-2" />
-                    <div className="w-4 h-4 bg-white rounded-full border-l-2 border-zinc-200" />
+                    <div className="w-4 h-4 bg-zinc-100 rounded-full border-l-2 border-zinc-200" />
                   </div>
 
                 </div>
@@ -476,7 +476,7 @@ export default function CouponsPage() {
                   size="icon"
                   onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="bg-zinc-100 text-zinc-500 border-zinc-200"
+                  className="bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-200"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -487,7 +487,7 @@ export default function CouponsPage() {
                     variant="outline"
                     size="icon"
                     onClick={() => handlePageChange(i + 1)}
-                    className={`bg-zinc-100 border-zinc-200 ${
+                    className={`bg-white border-zinc-200 hover:bg-zinc-200 ${
                       currentPage === i + 1 ? "text-primary" : "text-zinc-500"
                     }`}
                   >
@@ -500,7 +500,7 @@ export default function CouponsPage() {
                   size="icon"
                   onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="bg-zinc-100 text-zinc-500 border-zinc-200"
+                  className="bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-200"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>
@@ -521,9 +521,9 @@ export default function CouponsPage() {
                 <TableHead className="text-zinc-400/70">Limite de uso</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody className="bg-zinc-50 border-zinc-200 rounded-xl">
+            <TableBody className="bg-white border-zinc-200 rounded-xl overflow-hidden">
               {paginatedVouchers.map((voucher) => (
-                <TableRow key={voucher.id}>
+                <TableRow key={voucher.id} className="hover:bg-zinc-50">
                   <TableCell>{voucher.establishment?.name}</TableCell>
                   <TableCell>{voucher.code}</TableCell>
                   <TableCell>
@@ -547,7 +547,7 @@ export default function CouponsPage() {
                   size="icon"
                   onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="bg-zinc-100 text-zinc-500 border-zinc-200"
+                  className="bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-200"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -555,10 +555,10 @@ export default function CouponsPage() {
                 {[...Array(totalPages)].map((_, i) => (
                   <Button
                     key={i + 1}
-                    variant="outline"
+                    variant="ghost"
                     size="icon"
                     onClick={() => handlePageChange(i + 1)}
-                    className={`bg-zinc-100 border-zinc-200 ${
+                    className={`bg-white border-zinc-200 hover:bg-zinc-200 ${
                       currentPage === i + 1 ? "text-primary" : "text-zinc-500"
                     }`}
                   >
@@ -571,7 +571,7 @@ export default function CouponsPage() {
                   size="icon"
                   onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="bg-zinc-100 text-zinc-500 border-zinc-200"
+                  className="bg-white text-zinc-500 border-zinc-200 hover:bg-zinc-200"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>

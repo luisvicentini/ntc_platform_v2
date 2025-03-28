@@ -77,7 +77,7 @@ function SuccessContent() {
           createdAt: new Date().toISOString()
         }),
       })
-      
+
       if (!response.ok) {
         const errorData = await response.json()
         console.error('Erro ao salvar dados pendentes:', errorData)
@@ -250,13 +250,13 @@ function SuccessContent() {
   
   // Mostrar estados de carregamento e erro
   if (loading || processingPayment) {
-    return (
+  return (
       <div className="flex flex-col items-center justify-center space-y-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
         <p className="text-lg text-zinc-600">
           {loading ? 'Aguarde um momento...' : 'Processando seu pagamento...'}
-        </p>
-      </div>
+          </p>
+        </div>
     )
   }
   
@@ -268,15 +268,15 @@ function SuccessContent() {
         </div>
         <h2 className="text-xl font-bold text-red-600">Ops! Algo deu errado</h2>
         <p className="text-center text-zinc-600 max-w-md">{error}</p>
-        
+
         <div className="flex space-x-4 mt-6">
-          <Button 
+          <Button
             onClick={() => router.push('/')} 
             variant="outline"
           >
             Voltar para o início
           </Button>
-          <Button 
+          <Button
             onClick={() => processPayment()}
           >
             Tentar novamente
@@ -329,14 +329,14 @@ export default function SuccessPage() {
         </div>
         
         {/* Conteúdo principal */}
-        <Suspense fallback={
+    <Suspense fallback={
           <div className="flex flex-col items-center justify-center space-y-4">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600"></div>
             <p className="text-lg text-zinc-600">Carregando...</p>
-          </div>
-        }>
-          <SuccessContent />
-        </Suspense>
+      </div>
+    }>
+      <SuccessContent />
+    </Suspense>
       </div>
     </div>
   )

@@ -159,6 +159,12 @@ export function StripeSubscriptionManagement({ userId }: StripeSubscriptionManag
     return cardBrandMap[brand] || brand
   }
 
+  const formatAmount = (amount: number): string => {
+    // Valores do Stripe vêm em centavos (ex: 59880 representa 598,80)
+    // Dividir por 100 para converter para reais
+    return formatCurrency(amount / 100)
+  }
+
   const handleCancelSubscription = async () => {
     const activeSubscription = subscriptions.find(sub => sub.status === 'active')
     if (!activeSubscription) return
@@ -213,11 +219,11 @@ export function StripeSubscriptionManagement({ userId }: StripeSubscriptionManag
   }
 
   return (
-    <Card className="bg-zinc-50 border-zinc-200">
-      <CardHeader>
+    <>
+      <CardHeader className="pt-4 pb-4 pr-0 pl-0">
         <CardTitle className="text-zinc-500">Minhas Assinaturas</CardTitle>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         {error ? (
           <div className="text-red-500 p-4">{error}</div>
         ) : subscriptions.length > 0 ? (
@@ -225,7 +231,7 @@ export function StripeSubscriptionManagement({ userId }: StripeSubscriptionManag
             {/* Assinatura Ativa */}
             {activeSubscription && (
               <div className="mb-8">
-                <div className="bg-white border border-zinc-100 rounded-xl p-6">
+                <div className="bg-white border border-zinc-200 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-semibold text-zinc-500">
                       Assinatura Ativa
@@ -243,7 +249,7 @@ export function StripeSubscriptionManagement({ userId }: StripeSubscriptionManag
                       <div>
                         <h4 className="text-sm font-sm text-zinc-400 mb-1">Valor</h4>
                         <p className="text-zinc-600">
-                          {formatCurrency(activeSubscription.amount, activeSubscription.currency)}
+                          {formatAmount(activeSubscription.amount)}
                           /{activeSubscription.interval}
                         </p>
                       </div>
@@ -308,7 +314,7 @@ export function StripeSubscriptionManagement({ userId }: StripeSubscriptionManag
                               <div className="bg-zinc-100 p-4 rounded-lg space-y-2">
                                 <h4 className="font-medium text-zinc-500">Detalhes da Assinatura</h4>
                                 <p>Plano: {activeSubscription.planName}</p>
-                                <p>Valor: {formatCurrency(activeSubscription.amount, activeSubscription.currency)}/{activeSubscription.interval}</p>
+                                <p>Valor: {formatAmount(activeSubscription.amount)}/{activeSubscription.interval}</p>
                                 <p>Período atual: {formatDate(activeSubscription.currentPeriodStart)} - {formatDate(activeSubscription.currentPeriodEnd)}</p>
                               </div>
 
@@ -381,7 +387,7 @@ export function StripeSubscriptionManagement({ userId }: StripeSubscriptionManag
                   .map((subscription) => (
                     <div
                       key={subscription.id}
-                      className="bg-white border border-zinc-100 p-4 rounded-xl"
+                      className="bg-white border border-zinc-200 p-4 rounded-xl"
                     >
                       <h3 className="text-sm font-sm text-zinc-400/70 mb-4">
                         Histórico de Assinaturas
@@ -397,7 +403,7 @@ export function StripeSubscriptionManagement({ userId }: StripeSubscriptionManag
                       <div className="text-sm text-zinc-400 space-y-1">
                         <p>
                           Valor:{' '}
-                          {formatCurrency(subscription.amount, subscription.currency)}
+                          {formatAmount(subscription.amount)}
                           /{subscription.interval}
                         </p>
                         <p>
@@ -420,7 +426,7 @@ export function StripeSubscriptionManagement({ userId }: StripeSubscriptionManag
                 <h3 className="text-sm font-sm text-zinc-400/70 mb-4">
                   Histórico de Transações
                 </h3>
-                <div className="rounded-xl border border-zinc-100 bg-white">
+                <div className="rounded-xl border border-zinc-200 bg-white overflow-hidden">
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -440,7 +446,7 @@ export function StripeSubscriptionManagement({ userId }: StripeSubscriptionManag
                             {transaction.description || 'Pagamento de assinatura'}
                           </TableCell>
                           <TableCell className="text-zinc-500">
-                            {formatCurrency(transaction.amount, transaction.currency)}
+                            {formatAmount(transaction.amount)}
                           </TableCell>
                           <TableCell className="text-zinc-500">
                             {getFormattedStatus(transaction.status).label}
@@ -467,6 +473,6 @@ export function StripeSubscriptionManagement({ userId }: StripeSubscriptionManag
           </div>
         )}
       </CardContent>
-    </Card>
+    </>
   )
 } 
