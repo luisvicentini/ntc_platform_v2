@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, addDoc, getDocs, query, where, doc, updateDoc } from "firebase/firestore"
+import { collection, addDoc, getDocs, query, where, doc, updateDoc, getDoc, DocumentData } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
 
@@ -177,54 +177,101 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    const memberId = searchParams.get("memberId")
+    const userId = searchParams.get("userId")
     const partnerId = searchParams.get("partnerId")
+    const userEmail = searchParams.get("email")
 
     const subscriptionsRef = collection(db, "subscriptions")
     let subscriptionsQuery
+    let subscriptions: DocumentData[] = []
 
-    if (memberId) {
-      subscriptionsQuery = query(
-        subscriptionsRef,
-        where("memberId", "==", memberId),
-        where("status", "==", "active")
-      )
-    } else if (partnerId) {
-      subscriptionsQuery = query(
-        subscriptionsRef,
-        where("partnerId", "==", partnerId),
-        where("status", "==", "active")
-      )
-    } else {
-      subscriptionsQuery = query(subscriptionsRef)
-    }
-
-    const querySnapshot = await getDocs(subscriptionsQuery)
-    const subscriptions = []
-
-    for (const doc of querySnapshot.docs) {
-      const subscriptionData = doc.data()
-      
-      // Buscar dados do parceiro
-      const partnersRef = collection(db, "users")
-      const partnerQuery = query(partnersRef, where("__name__", "==", subscriptionData.partnerId))
-      const partnerSnapshot = await getDocs(partnerQuery)
-      
-      if (!partnerSnapshot.empty) {
-        const partnerData = partnerSnapshot.docs[0].data()
-        subscriptions.push({
+    if (userId || userEmail) {
+      // Buscar por userId e email (para assinaturas do membro)
+      if (userId) {
+        const userIdQuery = query(
+          subscriptionsRef,
+          where("userId", "==", userId)
+        )
+        const userIdSnapshot = await getDocs(userIdQuery)
+        subscriptions.push(...userIdSnapshot.docs.map(doc => ({
           id: doc.id,
-          ...subscriptionData,
-          partner: {
-            id: subscriptionData.partnerId,
-            displayName: partnerData.displayName,
-            email: partnerData.email
+          ...doc.data()
+        })))
+      }
+
+      if (userEmail) {
+        const emailQuery = query(
+          subscriptionsRef,
+          where("userEmail", "==", userEmail)
+        )
+        const emailSnapshot = await getDocs(emailQuery)
+        // Adicionar resultados da busca por email, evitando duplicatas
+        const emailResults = emailSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }))
+        emailResults.forEach(result => {
+          if (!subscriptions.find(s => s.id === result.id)) {
+            subscriptions.push(result)
           }
         })
       }
+    } else if (partnerId) {
+      // Buscar por partnerId (para assinaturas vinculadas ao parceiro)
+      const partnerQuery = query(
+        subscriptionsRef,
+        where("partnerId", "==", partnerId)
+      )
+      const snapshot = await getDocs(partnerQuery)
+      subscriptions = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }))
+    } else {
+      // Se não houver filtro, retornar erro
+      return NextResponse.json(
+        { error: "É necessário fornecer userId, email ou partnerId" },
+        { status: 400 }
+      )
     }
 
-    return NextResponse.json(subscriptions)
+    // Enriquecer os dados com informações do parceiro
+    const enrichedSubscriptions = await Promise.all(subscriptions.map(async (subscription) => {
+      let partnerData = null
+      if (subscription.partnerId) {
+        const partnerRef = doc(db, "users", subscription.partnerId)
+        const partnerSnap = await getDoc(partnerRef)
+        if (partnerSnap.exists()) {
+          partnerData = partnerSnap.data()
+        }
+      }
+
+      return {
+        ...subscription,
+        partner: partnerData ? {
+          id: subscription.partnerId,
+          name: partnerData.displayName || partnerData.name || partnerData.businessName,
+          email: partnerData.email
+        } : null
+      }
+    }))
+
+    // Ordenar assinaturas: ativas primeiro, depois por data de criação
+    enrichedSubscriptions.sort((a, b) => {
+      // Priorizar assinaturas ativas
+      const isActiveA = a.status === 'active' || a.status === 'ativa'
+      const isActiveB = b.status === 'active' || b.status === 'ativa'
+      
+      if (isActiveA && !isActiveB) return -1
+      if (!isActiveA && isActiveB) return 1
+      
+      // Em seguida, ordenar por data (mais recente primeiro)
+      const dateA = new Date(a.createdAt || 0)
+      const dateB = new Date(b.createdAt || 0)
+      return dateB.getTime() - dateA.getTime()
+    })
+
+    return NextResponse.json(enrichedSubscriptions)
 
   } catch (error) {
     console.error("Erro ao buscar assinaturas:", error)

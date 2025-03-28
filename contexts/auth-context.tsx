@@ -31,6 +31,8 @@ interface UserData {
 }
 
 interface CustomUser extends User {
+  userName: any
+  userEmail: any
   userType: UserType
   createdAt?: string
   updatedAt?: any
