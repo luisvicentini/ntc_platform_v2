@@ -4,7 +4,7 @@ import { EstablishmentProvider } from "@/contexts/EstablishmentContext"
 import { AuthProvider } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import type { Metadata } from "next"
-import { Poppins } from "next/font/google"
+import { Poppins, Dela_Gothic_One } from "next/font/google"
 import type React from "react"
 import { VoucherNotificationProvider } from "@/contexts/VoucherNotificationContext"
 import { Toaster } from "sonner"
@@ -15,10 +15,16 @@ const poppins = Poppins({
   variable: "--font-poppins",
 })
 
+const delaGothicOne = Dela_Gothic_One({
+  subsets: ["latin-ext"],
+  weight: ["400"],
+  variable: "--font-dela-gothic-one",
+})
+
 
 export const metadata: Metadata = {
   title: process.env.NEXT_PUBLIC_APP_PROJECTNAME,
-  description: "Vouchers de descontos exclusivos em restaurantes",
+  description: "O único clube que te dá descontos nos melhores restaurantes de São Paulo",
     generator: 'naotemchef.com.br'
 }
 
@@ -29,7 +35,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={cn("min-h-screen bg-white font-sans antialiased", poppins.variable)} style={{ position: 'relative' }}>
+      <body className={cn("min-h-screen bg-white font-sans antialiased", poppins.variable, delaGothicOne.variable)} style={{ position: 'relative' }}>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -55,4 +61,6 @@ export default function RootLayout({
 
 
 
-import './globals.css'
+import './globals.css';
+import localFont from "next/font/local"
+

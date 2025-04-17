@@ -495,7 +495,7 @@ export default function FeedPage() {
                   onClick={handleSubscriptionPurchase}
                   className="bg-amber-600 hover:bg-amber-700 text-white"
                 >
-                  Adquirir assinatura
+                  Quero assinar o clube
                 </Button>
               )}
             </div>
@@ -546,10 +546,11 @@ export default function FeedPage() {
           
           <DialogFooter className="sm:justify-center">
             <Button 
+              size="xl"
               onClick={handleSubscriptionPurchase}
-              className="bg-purple-600 hover:bg-purple-700 text-white min-w-[200px]"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[200px] text-lg"
             >
-              Adquirir Assinatura
+              Quero assinar o clube
             </Button>
           </DialogFooter>
         </DialogContent>
