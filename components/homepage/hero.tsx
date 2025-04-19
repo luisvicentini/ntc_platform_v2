@@ -64,16 +64,16 @@ export default function Hero() {
     >
 
       {/* Faixas "Não Tem Chef" */}
-      <div className="relative -mx-6 md:-mx-8 lg:-mx-16 mb-28">
+      <div className="relative -mt-6 md:-mx-8 lg:-mx-16 mb-28">
         {/* Faixa amarela com texto vermelho (atrás) */}
         <div className="absolute h-12 w-full inset-0 bg-[#FFCC00] transform -rotate-3 translate-y-2">
-          <div className="absolute inset-0 flex items-center">
-            <div className="animate-marquee whitespace-nowrap">
-              {Array(10)
+          <div className="absolute inset-0 flex items-center justify-between">
+            <div className="animate-marquee whitespace-nowrap flex flex-row justify-between overflow-hidden">
+              {Array(8)
                 .fill(0)
                 .map((_, i) => (
-                  <span key={i} className="text-xl font-special-gothic font-bold mx-4 text-[#F24957]">
-                    NÃO TEM CHEF!
+                  <span key={i} className="items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={100} />
                   </span>
                 ))}
             </div>
@@ -83,12 +83,12 @@ export default function Hero() {
         {/* Faixa laranja com texto branco (frente) */}
         <div className="absolute h-12 w-full inset-0 bg-[#F24957] transform rotate-3">
           <div className="absolute inset-0 flex items-center">
-            <div className="animate-marquee-reverse whitespace-nowrap">
-              {Array(10)
+            <div className="animate-marquee whitespace-nowrap flex flex-row justify-between overflow-hidden">
+              {Array(8)
                 .fill(0)
                 .map((_, i) => (
-                  <span key={i} className="text-xl font-special-gothic font-bold mx-4 text-white">
-                    NÃO TEM CHEF!
+                  <span key={i} className="items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={100} />
                   </span>
                 ))}
             </div>
@@ -108,8 +108,8 @@ export default function Hero() {
         <Image
           src="/homepage/logo.svg"
           alt="Não Tem Chef Logo"
-          width={140}
-          height={80}
+          width={120}
+          height={60}
           className="object-contain"
         />
       </motion.div>
@@ -165,11 +165,11 @@ export default function Hero() {
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.6, duration: 0.5 }}
       >
-        <button
+       <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-[#4CAF50] hover:bg-[#45a049] text-white font-bold py-3 px-8 rounded-full text-lg transition-all"
+          className="bg-[#4CAF50] hover:bg-[#45a049] w-3/4 max-w-3xl text-white font-bold py-3 px-8 rounded-xl text-2xl hover:scale-105 transition-all"
         >
-          Quero entrar para o clube
+          Fazer minha pré-reserva para o Clube
         </button>
       </motion.div>
 

@@ -14,25 +14,22 @@ export default function About() {
   })
 
   return (
-    <section ref={ref} className="py-12 px-4 md:px-8 lg:px-16">
+    <section ref={ref} className="py-32 px-4 md:px-8 lg:px-16 bg-[url('/homepage/bg-about.jpg')] bg-cover bg-no-repeat bg-right relative bg-[#f36444]">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
         transition={{ duration: 0.7 }}
         className="max-w-4xl mx-auto"
       >
-        <h2 className="text-3xl md:text-4xl font-special-gothic font-bold mb-8 text-center">
-          QUEM É <span className="bg-[#f24957] px-2 py-1">LEO CORVO</span>?
+        <h2 className="text-3xl md:text-4xl font-special-gothic font-bold mb-8 text-left">
+          Quem é <span className="text-[#1a1a1a] px-2 py-1">Leo Corvo</span>?
         </h2>
 
-        <div className="flex flex-col md:flex-row gap-8 items-center">
-          <div className="md:w-1/3">
-            <Image src="/images/leo-corvo.jpg" alt="Leo Corvo" width={300} height={400} className="rounded-lg" />
-          </div>
+        <div className="flex flex-1">
           <div className="md:w-2/3">
-            <p className="text-gray-300 mb-6">
+            <p className="text-white mb-6 text-xl leading-relaxed">
               Leo Corvo é um dos mais apaixonados amantes da culinária, viajou os quatro cantos do mundo atrás de
-              conhecer os restaurantes perfeitos. É reconhecido como um dos nomes mais potentes da crítica gastronômica
+              conhecer os restaurantes perfeitos. <br />É reconhecido como um dos nomes mais potentes da crítica gastronômica
               nos principais veículos do país. Hoje, um conta perfil nas redes sociais com milhares de influenciadores
               que são pagos pra falar bem dos restaurantes que visitam.
             </p>
@@ -42,6 +39,9 @@ export default function About() {
             >
               Fazer minha pré-reserva para o Clube
             </button>
+          </div>
+          <div className="absolute bottom-0 right-0">
+            <Image src="/homepage/leo-corvo.png" alt="Leo Corvo" width={450} height={500} className="rounded-lg" />
           </div>
         </div>
       </motion.div>

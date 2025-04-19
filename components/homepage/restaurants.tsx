@@ -9,69 +9,80 @@ import PreReservaModal from "./pre-reserva-modal"
 const restaurants = [
   {
     name: "Ryo",
-    category: "Culinária japonesa",
+    category: "Culinária Japonesa",
     discount: "25%",
-    image: "/images/restaurant-1.jpg",
+    image: "/homepage/restaurantes/image.jpg",
+    logo: "/homepage/restaurantes-logos/image1.jpg",
   },
   {
     name: "Jun Sakamoto",
-    category: "Culinária japonesa",
+    category: "Gastronomia Japonesa",
     discount: "30%",
-    image: "/images/restaurant-2.jpg",
+    image: "/homepage/restaurantes/image-1.jpg",
+    logo: "/homepage/restaurantes-logos/image2.jpg",
   },
   {
-    name: "Sushi Yaz",
-    category: "Culinária japonesa",
+    name: "Sushi Vaz",
+    category: "Culinária Japonesa",
     discount: "40%",
-    image: "/images/restaurant-3.jpg",
+    image: "/homepage/restaurantes/image-2.jpg",
+    logo: "/homepage/restaurantes-logos/image3.jpg",
   },
   {
     name: "Bistrot de Paris",
-    category: "Culinária francesa",
+    category: "Cozinha Francesa",
     discount: "35%",
-    image: "/images/restaurant-4.jpg",
+    image: "/homepage/restaurantes/image-3.jpg",
+    logo: "/homepage/restaurantes-logos/image4.jpg",
   },
   {
     name: "Pinocchio",
-    category: "Culinária italiana",
+    category: "Cozinha Italiana",
     discount: "20%",
-    image: "/images/restaurant-5.jpg",
+    image: "/homepage/restaurantes/image-4.jpg",
+    logo: "/homepage/restaurantes-logos/image5.jpg",
   },
   {
-    name: "NTMJ",
-    category: "Culinária japonesa",
+    name: "NTMU",
+    category: "Steak House",
     discount: "50%",
-    image: "/images/restaurant-6.jpg",
+    image: "/homepage/restaurantes/image-5.jpg",
+    logo: "/homepage/restaurantes-logos/image6.jpg",
   },
   {
     name: "Hobby Hamburger",
-    category: "Burger food",
+    category: "Burger Food",
     discount: "25%",
-    image: "/images/restaurant-7.jpg",
+    image: "/homepage/restaurantes/image-6.jpg",
+    logo: "/homepage/restaurantes-logos/image7.jpg",
   },
   {
-    name: "Toreto Valerio",
-    category: "Culinária japonesa",
+    name: "Torero Valese",
+    category: "Cozinha Espanhola",
     discount: "30%",
-    image: "/images/restaurant-8.jpg",
+    image: "/homepage/restaurantes/image-7.jpg",
+    logo: "/homepage/restaurantes-logos/image8.jpg",
   },
   {
     name: "Hamburguinho",
-    category: "Burger food",
+    category: "Burger Food",
     discount: "45%",
-    image: "/images/restaurant-9.jpg",
+    image: "/homepage/restaurantes/image-8.jpg",
+    logo: "/homepage/restaurantes-logos/image9.jpg",
   },
   {
-    name: "Maius",
-    category: "Burger tradicional",
+    name: "Haus",
+    category: "Burgeria Artesanal",
     discount: "20%",
-    image: "/images/restaurant-10.jpg",
-  },
+    image: "/homepage/restaurantes/image-9.jpg",
+    logo: "/homepage/restaurantes-logos/image10.jpg",
+    },
   {
     name: "Patties",
     category: "Hamburgueria",
     discount: "35%",
-    image: "/images/restaurant-11.jpg",
+    image: "/homepage/restaurantes/image-10.jpg",
+    logo: "/homepage/restaurantes-logos/image11.jpg",
   },
 ]
 
@@ -98,44 +109,35 @@ export default function Restaurants() {
         transition={{ duration: 0.7 }}
         className="text-center mb-12 relative"
       >
-        <div className="absolute -right-4 top-0 md:right-20 lg:right-40">
-          <div className="relative w-20 h-20">
-            <div className="absolute inset-0 bg-[#f24957] rounded-full flex items-center justify-center">
-              <span className="text-xs font-bold text-center leading-tight">
-                DESCONTOS
-                <br />
-                DE ATÉ
-                <br />
-                50%
-              </span>
-            </div>
+        <div className="absolute -right-20 top-0 md:right-20 lg:right-40">
+          <div className="relative w-28 h-24">
+            <Image src="/homepage/selo-ntc.svg" alt="Selo NTC" fill />
           </div>
         </div>
 
-        <h2 className="text-3xl md:text-4xl font-special-gothic font-bold mb-2">
-          <span className="bg-[#f24957] px-2 py-1">DESCONTOS</span> DE ATÉ 50%
+        <h2 className="text-3xl md:text-4xl font-special-gothic font-bold mb-2 w-[60%] mx-auto">
+          <span className="px-2 py-1 text-[#f24957]">Descontos</span> de até 50% em restaurantes como:
         </h2>
-        <h2 className="text-3xl md:text-4xl font-special-gothic font-bold">EM RESTAURANTES COMO:</h2>
       </motion.div>
 
       {/* Grade de restaurantes */}
-      <div ref={ref} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+      <div ref={ref} className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
         {restaurants.map((restaurant, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, y: 30 }}
             animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
             transition={{ duration: 0.5, delay: index * 0.05 }}
-            className="relative rounded-lg overflow-hidden"
+            className="relative rounded-xl overflow-hidden"
           >
             <div className="aspect-square relative">
               <Image src={restaurant.image || "/placeholder.svg"} alt={restaurant.name} fill className="object-cover" />
-              <div className="absolute bottom-0 left-0 right-0 bg-black/70 p-3">
+              <div className="absolute bottom-0 left-0 right-0 bg-[#1a1a1a]/90 p-4">
                 <h3 className="font-bold text-lg">{restaurant.name}</h3>
                 <p className="text-sm text-gray-300">{restaurant.category}</p>
               </div>
-              <div className="absolute top-2 right-2 bg-white rounded-full w-10 h-10 flex items-center justify-center">
-                <span className="text-black font-bold text-sm">{restaurant.discount}</span>
+              <div className="absolute bottom-2 right-2 bg-[#1a1a1a] rounded-full w-14 h-14 border-2 border-[#1a1a1a] flex items-center justify-center overflow-hidden">
+                <Image src={restaurant.logo} alt={restaurant.name} fill className="object-cover" />
               </div>
             </div>
           </motion.div>
@@ -148,7 +150,7 @@ export default function Restaurants() {
           transition={{ duration: 0.5, delay: restaurants.length * 0.05 }}
           className="flex items-center justify-center"
         >
-          <div className="bg-[#f24957] rounded-full px-6 py-3 font-bold text-lg">E muito mais!</div>
+          <div className="font-bold text-4xl">E muito<br /> mais!</div>
         </motion.div>
       </div>
 
@@ -161,23 +163,23 @@ export default function Restaurants() {
       >
         <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-[#4CAF50] hover:bg-[#45a049] text-white font-bold py-3 px-8 rounded-full text-lg transition-all"
+          className="bg-[#4CAF50] hover:bg-[#45a049] text-white font-bold py-3 px-8 rounded-xl text-1xl hover:scale-105 transition-all"
         >
           Fazer minha pré-reserva para o Clube
         </button>
       </motion.div>
 
-      {/* Faixas "Não Tem Chef" inferior */}
-      <div className="relative h-24 -mx-4 md:-mx-8 lg:-mx-16 mt-12 overflow-hidden">
+      {/* Faixas "Não Tem Chef" */}
+      <div className="relative mt-16 md:-mx-8 lg:-mx-16 z-10">
         {/* Faixa amarela com texto vermelho (atrás) */}
-        <div className="absolute inset-0 bg-[#FFCC00] transform -rotate-1 translate-y-2">
-          <div className="absolute inset-0 flex items-center">
-            <div className="animate-marquee whitespace-nowrap">
-              {Array(10)
+        <div className="absolute h-12 w-full inset-0 bg-[#FFCC00] transform -rotate-3 translate-y-2">
+          <div className="absolute inset-0 flex items-center justify-between">
+            <div className="animate-marquee whitespace-nowrap flex flex-row justify-between overflow-hidden">
+              {Array(8)
                 .fill(0)
                 .map((_, i) => (
-                  <span key={i} className="text-xl font-special-gothic font-bold mx-4 text-[#f24957]">
-                    NÃO TEM CHEF!
+                  <span key={i} className="items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={100} />
                   </span>
                 ))}
             </div>
@@ -185,14 +187,14 @@ export default function Restaurants() {
         </div>
 
         {/* Faixa laranja com texto branco (frente) */}
-        <div className="absolute inset-0 bg-zinc-900 transform rotate-1">
+        <div className="absolute h-12 w-full inset-0 bg-[#F24957] transform rotate-3">
           <div className="absolute inset-0 flex items-center">
-            <div className="animate-marquee-reverse whitespace-nowrap">
-              {Array(10)
+            <div className="animate-marquee whitespace-nowrap flex flex-row justify-between overflow-hidden">
+              {Array(8)
                 .fill(0)
                 .map((_, i) => (
-                  <span key={i} className="text-xl font-special-gothic font-bold mx-4 text-white">
-                    NÃO TEM CHEF!
+                  <span key={i} className="items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={100} />
                   </span>
                 ))}
             </div>
