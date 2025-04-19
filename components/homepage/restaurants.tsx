@@ -109,13 +109,13 @@ export default function Restaurants() {
         transition={{ duration: 0.7 }}
         className="text-center mb-12 relative"
       >
-        <div className="absolute -right-20 top-0 md:right-20 lg:right-40">
-          <div className="relative w-28 h-24">
+        <div className="absolute -right-20 top-0 max-sm:-right-12 md:-right-10 lg:right-10">
+          <div className="relative w-28 max-sm:w-28 h-24">
             <Image src="/homepage/selo-ntc.svg" alt="Selo NTC" fill />
           </div>
         </div>
 
-        <h2 className="text-3xl md:text-4xl font-special-gothic font-bold mb-2 w-[60%] mx-auto">
+        <h2 className="max-md:w-[60%] lg:w-[40%] mx-auto font-bold line-height-3 max-sm:text-xl md:text-2xl lg:text-4xl mb-4 text-center">
           <span className="px-2 py-1 text-[#f24957]">Descontos</span> de até 50% em restaurantes como:
         </h2>
       </motion.div>
@@ -128,12 +128,12 @@ export default function Restaurants() {
             initial={{ opacity: 0, y: 30 }}
             animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
             transition={{ duration: 0.5, delay: index * 0.05 }}
-            className="relative rounded-xl overflow-hidden"
+            className="relative rounded-xl overflow-hidden hover:border-2 hover:border-white/30 duration-100 transition-all"
           >
             <div className="aspect-square relative">
               <Image src={restaurant.image || "/placeholder.svg"} alt={restaurant.name} fill className="object-cover" />
               <div className="absolute bottom-0 left-0 right-0 bg-[#1a1a1a]/90 p-4">
-                <h3 className="font-bold text-lg">{restaurant.name}</h3>
+                <h3 className="font-bold max-sm:text-2xl md:text-md lg:text-sm">{restaurant.name}</h3>
                 <p className="text-sm text-gray-300">{restaurant.category}</p>
               </div>
               <div className="absolute bottom-2 right-2 bg-[#1a1a1a] rounded-full w-14 h-14 border-2 border-[#1a1a1a] flex items-center justify-center overflow-hidden">
@@ -170,16 +170,43 @@ export default function Restaurants() {
       </motion.div>
 
       {/* Faixas "Não Tem Chef" */}
-      <div className="relative mt-16 md:-mx-8 lg:-mx-16 z-10">
+      <div className="relative mt-16 -mx-6 md:-mx-8 lg:-mx-16 z-10">
+        {/* Faixas "Não Tem Chef" */}
+      <div className="relative -mt-8 mb-28 -mx-16">
         {/* Faixa amarela com texto vermelho (atrás) */}
-        <div className="absolute h-12 w-full inset-0 bg-[#FFCC00] transform -rotate-3 translate-y-2">
-          <div className="absolute inset-0 flex items-center justify-between">
-            <div className="animate-marquee whitespace-nowrap flex flex-row justify-between overflow-hidden">
-              {Array(8)
+        <div className="absolute h-8 w-full inset-0 bg-[#FFCC00] transform -rotate-3 translate-y-2 overflow-hidden">
+          <div className="animate-marquee whitespace-nowrap flex items-center h-full">
+            {/* Versão mobile - 3 imagens */}
+            <div className="flex md:hidden">
+              {Array(3)
                 .fill(0)
                 .map((_, i) => (
-                  <span key={i} className="items-center">
-                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={100} />
+                  <span key={i} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+              {Array(3)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={`duplicate-mobile-${i}`} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+            </div>
+            {/* Versão desktop - 10 imagens */}
+            <div className="hidden md:flex">
+              {Array(10)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={i} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+              {Array(10)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={`duplicate-desktop-${i}`} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
                   </span>
                 ))}
             </div>
@@ -187,19 +214,45 @@ export default function Restaurants() {
         </div>
 
         {/* Faixa laranja com texto branco (frente) */}
-        <div className="absolute h-12 w-full inset-0 bg-[#F24957] transform rotate-3">
-          <div className="absolute inset-0 flex items-center">
-            <div className="animate-marquee whitespace-nowrap flex flex-row justify-between overflow-hidden">
-              {Array(8)
+        <div className="absolute h-8 w-full inset-0 bg-[#F24957] transform rotate-3 overflow-hidden">
+          <div className="animate-marquee-reverse whitespace-nowrap flex items-center h-full">
+            {/* Versão mobile - 3 imagens */}
+            <div className="flex md:hidden">
+              {Array(3)
                 .fill(0)
                 .map((_, i) => (
-                  <span key={i} className="items-center">
-                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={100} />
+                  <span key={i} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+              {Array(3)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={`duplicate-mobile-${i}`} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+            </div>
+            {/* Versão desktop - 10 imagens */}
+            <div className="hidden md:flex">
+              {Array(10)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={i} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+              {Array(10)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={`duplicate-desktop-${i}`} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
                   </span>
                 ))}
             </div>
           </div>
         </div>
+      </div>
       </div>
 
       {/* Modal de pré-reserva */}

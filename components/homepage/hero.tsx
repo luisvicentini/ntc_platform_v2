@@ -64,16 +64,41 @@ export default function Hero() {
     >
 
       {/* Faixas "Não Tem Chef" */}
-      <div className="relative -mt-6 md:-mx-8 lg:-mx-16 mb-28">
+      <div className="relative -mt-8 mb-28 -mx-16">
         {/* Faixa amarela com texto vermelho (atrás) */}
-        <div className="absolute h-12 w-full inset-0 bg-[#FFCC00] transform -rotate-3 translate-y-2">
-          <div className="absolute inset-0 flex items-center justify-between">
-            <div className="animate-marquee whitespace-nowrap flex flex-row justify-between overflow-hidden">
-              {Array(8)
+        <div className="absolute h-8 w-full inset-0 bg-[#FFCC00] transform -rotate-3 translate-y-2 overflow-hidden">
+          <div className="animate-marquee whitespace-nowrap flex items-center h-full">
+            {/* Versão mobile - 3 imagens */}
+            <div className="flex md:hidden">
+              {Array(3)
                 .fill(0)
                 .map((_, i) => (
-                  <span key={i} className="items-center">
-                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={100} />
+                  <span key={i} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+              {Array(3)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={`duplicate-mobile-${i}`} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+            </div>
+            {/* Versão desktop - 10 imagens */}
+            <div className="hidden md:flex">
+              {Array(10)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={i} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+              {Array(10)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={`duplicate-desktop-${i}`} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
                   </span>
                 ))}
             </div>
@@ -81,14 +106,39 @@ export default function Hero() {
         </div>
 
         {/* Faixa laranja com texto branco (frente) */}
-        <div className="absolute h-12 w-full inset-0 bg-[#F24957] transform rotate-3">
-          <div className="absolute inset-0 flex items-center">
-            <div className="animate-marquee whitespace-nowrap flex flex-row justify-between overflow-hidden">
-              {Array(8)
+        <div className="absolute h-8 w-full inset-0 bg-[#F24957] transform rotate-3 overflow-hidden">
+          <div className="animate-marquee-reverse whitespace-nowrap flex items-center h-full">
+            {/* Versão mobile - 3 imagens */}
+            <div className="flex md:hidden">
+              {Array(3)
                 .fill(0)
                 .map((_, i) => (
-                  <span key={i} className="items-center">
-                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={100} />
+                  <span key={i} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+              {Array(3)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={`duplicate-mobile-${i}`} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+            </div>
+            {/* Versão desktop - 10 imagens */}
+            <div className="hidden md:flex">
+              {Array(10)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={i} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+              {Array(10)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={`duplicate-desktop-${i}`} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
                   </span>
                 ))}
             </div>
@@ -100,7 +150,7 @@ export default function Hero() {
 
       {/* Logo */}
       <motion.div
-        className="flex justify-center mb-8"
+        className="flex justify-center mb-8 max-sm:mb-4"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -110,18 +160,18 @@ export default function Hero() {
           alt="Não Tem Chef Logo"
           width={120}
           height={60}
-          className="object-contain"
+          className="object-contain max-sm:w-[5rem] max-md:w-[8rem]"
         />
       </motion.div>
 
       {/* Título principal */}
       <motion.div
-        className="text-center mb-8 w-[80%] mx-auto"
+        className="text-center mb-8 max-md:w-[80%] max-sm:w-[100%] mx-auto"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.7 }}
       >
-        <h1 className="font-bold line-height-3 text-3xl md:text-4xl lg:text-5xl mb-2">
+        <h1 className="font-bold line-height-3 max-sm:text-2xl max-md:text-4xl lg:text-5xl  mb-2">
           O único clube que te dá <span className="text-[#F24957] px-2">descontos</span> nos melhores restaurantes de São Paulo
         </h1>
       </motion.div>
@@ -167,7 +217,7 @@ export default function Hero() {
       >
        <button
           onClick={() => setIsModalOpen(true)}
-          className="bg-[#4CAF50] hover:bg-[#45a049] w-3/4 max-w-3xl text-white font-bold py-3 px-8 rounded-xl text-2xl hover:scale-105 transition-all"
+          className="bg-[#4CAF50] hover:bg-[#45a049] max-sm:w-[100%] lg:w-[80%] xl:w-[70%] text-white font-bold py-3 px-8 rounded-xl max-sm:text-xl lg:text-xl xl:text-xl hover:scale-105 transition-all"
         >
           Fazer minha pré-reserva para o Clube
         </button>

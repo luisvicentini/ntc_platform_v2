@@ -166,3 +166,130 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Estilos para o formulário de pré-reserva */
+.bume-form {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.bume-form-field {
+  margin-bottom: 16px;
+}
+
+.bume-form-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: 14px;
+  color: #333;
+}
+
+.bume-form-field input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-sizing: border-box;
+  color: #333;
+}
+
+.bume-phone-input {
+  position: relative;
+}
+
+.bume-form-button {
+  margin-top: 20px;
+}
+
+.bume-form-button button {
+  background-color: #4caf4f;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.2s;
+}
+
+.bume-form-button button:hover {
+  background-color: #45a049;
+}
+
+.bume-form-success {
+  text-align: center;
+  padding: 20px;
+}
+
+.bume-form-success p {
+  font-size: 18px;
+  color: #059669;
+  font-weight: 500;
+}
+
+.bume-hidden-field {
+  display: none;
+}
+
+.iti {
+  width: 100%;
+}
+
+/* Ajustes para o tema escuro do modal */
+.bume-form-field input {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: #666;
+  color: #333;
+}
+
+/* Ajustes para o intl-tel-input no tema escuro */
+.iti__flag-container {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: #666;
+}
+
+.iti__selected-flag {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.iti__country-list {
+  background-color: #2A2A2A;
+  border-color: #666;
+}
+
+.iti__country:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.iti__highlight {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Animação de marquee para scroll infinito */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 20s linear infinite;
+  display: flex;
+  width: 200%;
+}
+
+.animate-marquee-reverse {
+  animation: marquee 20s linear infinite reverse;
+  display: flex;
+  width: 200%;
+}
+
+/* Ajustes para mobile */
+@media (max-width: 768px) {
+  .animate-marquee, .animate-marquee-reverse {
+    animation-duration: 15s;
+  }
+}
