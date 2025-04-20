@@ -15,6 +15,7 @@ export default function ObrigadoPage() {
 
   useEffect(() => {
     // Disparar eventos de conversão quando a página carregar
+    // Para o Google Analytics (generate_lead) e Meta Pixel (Lead)
     trackEvent("lead", {
       content_name: "pre-reserva-clube",
       currency: "BRL",
@@ -23,6 +24,14 @@ export default function ObrigadoPage() {
       page_title: document.title,
     })
 
+    // Disparar evento diretamente para o Meta Pixel
+    if (typeof window !== "undefined" && window.fbq) {
+      window.fbq("track", "Lead", {
+        content_name: "pre-reserva-clube",
+        currency: "BRL",
+        value: 0.0,
+      })
+    }
     // Contador regressivo
     if (countdown > 0) {
       const timer = setTimeout(() => {

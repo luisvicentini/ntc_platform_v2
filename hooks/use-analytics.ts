@@ -25,6 +25,15 @@ export function useAnalytics() {
         window.gtag("event", eventName, eventData)
       }
 
+
+      // Rastrear no lado do cliente (Meta Pixel)
+      if (typeof window !== "undefined" && window.fbq) {
+        // Converter o nome do evento para o formato do Meta Pixel se necessário
+        const fbEventName = eventName === "generate_lead" ? "Lead" : eventName
+        window.fbq("track", fbEventName, eventData)
+      }
+
+
       // Enviar para nossa API para rastreamento server-side
       await fetch("/api/track", {
         method: "POST",
@@ -47,10 +56,12 @@ export function useAnalytics() {
   return { trackEvent }
 }
 
-// Adicionar tipagem para o gtag global
+// Adicionar tipagem para o gtag e fbq global
 declare global {
   interface Window {
     gtag: (command: string, action: string, params?: any) => void
     dataLayer: any[]
+    fbq: (command: string, action: string, params?: any) => void
+    _fbq: any
   }
 }
