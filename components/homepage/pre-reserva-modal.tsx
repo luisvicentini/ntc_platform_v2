@@ -222,7 +222,7 @@ export default function PreReservaModal({ isOpen, onClose }: PreReservaModalProp
                 
               ) : (
                 <div className="text-center py-8">
-                  <div className="w-16 h-16 bg-[#4CAF50] rounded-full flex items-center justify-center mx-auto mb-4">
+                  <div className="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center mx-auto mb-4">
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
                       className="h-8 w-8 text-white"
@@ -233,8 +233,8 @@ export default function PreReservaModal({ isOpen, onClose }: PreReservaModalProp
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
                   </div>
-                  <h3 className="text-xl font-bold mb-2">Pré-reserva realizada!</h3>
-                  <p className="text-zinc-300">Em breve entraremos em contato com mais informações sobre o clube.</p>
+                  <h3 className="text-xl font-bold mb-2 text-zinc-900">Pré-reserva realizada!</h3>
+                  <p className="text-zinc-700">Em breve entraremos em contato com mais informações sobre o clube.</p>
                 </div>
               )}
             </div>
