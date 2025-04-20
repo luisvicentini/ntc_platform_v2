@@ -5,13 +5,24 @@ import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { CheckCircle, ArrowRight, MessageSquare, Mail } from "lucide-react"
+import { useAnalytics } from "@/hooks/use-analytics"
 
 export default function ObrigadoPage() {
   const router = useRouter()
   const [countdown, setCountdown] = useState(10)
   const whatsappLink = "https://chat.whatsapp.com/J1Y6dRhjik96YQOsOH0rjr" // Substitua pelo link real do grupo
+  const { trackEvent } = useAnalytics()
 
   useEffect(() => {
+    // Disparar eventos de conversão quando a página carregar
+    trackEvent("lead", {
+      content_name: "pre-reserva-clube",
+      currency: "BRL",
+      value: 0.0,
+      page_location: window.location.href,
+      page_title: document.title,
+    })
+
     // Contador regressivo
     if (countdown > 0) {
       const timer = setTimeout(() => {
@@ -22,7 +33,7 @@ export default function ObrigadoPage() {
       // Redirecionar quando o contador chegar a zero
       router.push(whatsappLink)
     }
-  }, [countdown, router, whatsappLink])
+  }, [countdown, router, whatsappLink, trackEvent])
 
   return (
     <main className="bg-[#1A1A1A] min-h-screen text-white overflow-hidden">
@@ -69,6 +80,7 @@ export default function ObrigadoPage() {
             <a
               href={whatsappLink}
               className="inline-flex items-center bg-[#4CAF50] hover:bg-[#45a049] text-white font-bold py-4 px-8 rounded-xl text-lg transition-all"
+              onClick={() => trackEvent("click_whatsapp_group", { button_location: "thank_you_page" })}
             >
               Entrar no grupo do WhatsApp
               <ArrowRight className="ml-2" size={20} />
@@ -93,6 +105,7 @@ export default function ObrigadoPage() {
             target="_blank"
             rel="noopener noreferrer"
             className="block mb-6 bg-[#1E1E1E] rounded-lg border-2 border-[#4CAF50] p-6 transition-transform hover:scale-105"
+            onClick={() => trackEvent("click_support_whatsapp", { support_type: "whatsapp" })}
           >
             <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-4">
               <MessageSquare size={48} className="text-[#4CAF50]" />
@@ -109,6 +122,7 @@ export default function ObrigadoPage() {
           <a
             href="mailto:suporte@naotemchef.com.br"
             className="block bg-[#1E1E1E] rounded-lg border-2 border-[#FF5733] p-6 transition-transform hover:scale-105"
+            onClick={() => trackEvent("click_support_email", { support_type: "email" })}
           >
             <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-4">
               <Mail size={48} className="text-[#FF5733]" />
