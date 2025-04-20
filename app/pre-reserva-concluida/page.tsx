@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import Image from "next/image"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
@@ -10,12 +10,20 @@ import { useAnalytics } from "@/hooks/use-analytics"
 export default function ObrigadoPage() {
   const router = useRouter()
   const [countdown, setCountdown] = useState(10)
-  const whatsappLink = "https://chat.whatsapp.com/J1Y6dRhjik96YQOsOH0rjr" // Substitua pelo link real do grupo
+  const whatsappLink = "https://chat.whatsapp.com/J1Y6dRhjik96YQOsOH0rjr" // Link do grupo do WhatsApp
   const { trackEvent } = useAnalytics()
 
+  // Ref para controlar se o evento já foi disparado
+  const eventFiredRef = useRef(false)
+
+  // Efeito para disparar o evento de conversão apenas uma vez
   useEffect(() => {
-    // Disparar eventos de conversão quando a página carregar
-    // Para o Google Analytics (generate_lead) e Meta Pixel (Lead)
+    // Verificar se o evento já foi disparado
+    if (!eventFiredRef.current) {
+      // Marcar que o evento foi disparado
+      eventFiredRef.current = true
+
+      // Disparar eventos de conversão quando a página carregar (apenas uma vez)
     trackEvent("lead", {
       content_name: "pre-reserva-clube",
       currency: "BRL",
@@ -32,17 +40,36 @@ export default function ObrigadoPage() {
         value: 0.0,
       })
     }
-    // Contador regressivo
+  }
+  }, [trackEvent]) // Removi countdown da dependência
+
+
+    // Efeito separado para o contador regressivo
+    useEffect(() => {
     if (countdown > 0) {
       const timer = setTimeout(() => {
         setCountdown(countdown - 1)
       }, 1000)
       return () => clearTimeout(timer)
     } else {
+      // Disparar evento de clique no WhatsApp antes do redirecionamento automático
+      trackEvent("click_whatsapp_group", {
+        button_location: "thank_you_page",
+        interaction_type: "auto_redirect",
+      })
+
       // Redirecionar quando o contador chegar a zero
       router.push(whatsappLink)
     }
   }, [countdown, router, whatsappLink, trackEvent])
+
+  // Função para lidar com o clique manual no botão do WhatsApp
+  const handleWhatsAppClick = () => {
+    trackEvent("click_whatsapp_group", {
+      button_location: "thank_you_page",
+      interaction_type: "manual_click",
+    })
+  }
 
   return (
     <main className="bg-[#1A1A1A] min-h-screen text-white overflow-hidden">
@@ -89,7 +116,7 @@ export default function ObrigadoPage() {
             <a
               href={whatsappLink}
               className="inline-flex items-center bg-[#4CAF50] hover:bg-[#45a049] text-white font-bold py-4 px-8 rounded-xl text-lg transition-all"
-              onClick={() => trackEvent("click_whatsapp_group", { button_location: "thank_you_page" })}
+              onClick={handleWhatsAppClick}
             >
               Entrar no grupo do WhatsApp
               <ArrowRight className="ml-2" size={20} />
