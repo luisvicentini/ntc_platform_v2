@@ -6,34 +6,35 @@ import { useInView } from "react-intersection-observer"
 const benefits = [
   {
     number: 1,
-    title: "Descontos de até 50% em restaurantes",
-    description: "Economize em cada refeição",
+    title: "Desconto de até 50% em restaurantes avaliados pelo Leo pra você usar toda semana",
+    description: "",
   },
   {
     number: 2,
-    title: "Comunidade exclusiva no WhatsApp",
-    description: "Conecte-se com outros amantes da gastronomia",
+    title: "Sorteios exclusivos todos os meses para participardas experiências com o Leo na faixa!",
+    description: "",
   },
   {
     number: 3,
-    title: "Produtos exclusivos 'Não Tem Chef'",
-    description: "Acesso a itens especiais",
+    title: "Comunidade Exclusiva no WhatsApp com descontos extras, dicas, indicações e sorteios",
+    description: "",
   },
   {
     number: 4,
-    title: "Descontos em produtos de parceiros",
-    description: "Vantagens além da gastronomia",
+    title: "Descontos em Parceiros, Carnes, Bebidas, Empórios, etc",
+    description: "",
   },
   {
     number: 5,
-    title: "Sorteios exclusivos para os assinantes",
-    description: "Chances de ganhar experiências únicas",
+    title: "Produtos Exclusivos da Grife Não Tem Chef",
+    description: "",
   },
   {
     number: 6,
-    title: "Descontos em cursos",
-    description: "Aprimore seus conhecimentos gastronômicos",
-  },
+    title: "Descontos nos melhores cursos do ramo gastronômico do Brasil",
+    description: "",
+  }
+
 ]
 
 export default function Benefits() {
@@ -42,7 +43,7 @@ export default function Benefits() {
 
       {/* Título da seção */}
       <h2 className="md:w-[60%] mx-auto font-bold line-height-3 max-sm:text-xl md:text-2xl lg:text-4xl mb-8 text-center">
-        <span className="px-2 py-1 text-[#f24957]">Todas as vantagens</span> de ser um assinante do Não Tem Chef
+        <span className="px-2 py-1 text-[#f24957]">Algumas vantagens</span> de ser assinante do Clube Não Tem Chef
       </h2>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
@@ -76,7 +77,7 @@ function BenefitCard({ benefit, index }: { benefit: (typeof benefits)[0]; index:
           </div>
         </div>
         <div>
-          <h3 className="text-xl font-bold mb-2">{benefit.title}</h3>
+          <h3 className="text-lg font-bold mb-2">{benefit.title}</h3>
           <p className="text-gray-400 text-sm">{benefit.description}</p>
         </div>
       </motion.div>
