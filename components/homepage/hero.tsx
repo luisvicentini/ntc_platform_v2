@@ -254,7 +254,7 @@ export default function Hero() {
 
           <div className="flex items-center justify-between px-6 py-4 bg-white border-b border-zinc-200">
           <Image 
-                src="http://localhost:3000/logo.svg"
+                src="https://naotemchef.com.br/homepage/logo.svg"
                 alt="Não Tem Chef Logo"
                 width={40}
                 height={40}
