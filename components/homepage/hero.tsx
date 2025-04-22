@@ -19,37 +19,43 @@ const listvouchers = [
     name: "Eataly",
     category: "Cozinha Italiana",
     city: "São Paulo",
-    image: "https://firebasestorage.googleapis.com/v0/b/ntc-platform.firebasestorage.app/o/establishments%2F1741016474972-Screenshot55.png?alt=media&token=a9a4dbbc-9706-4bba-a291-0838580eb9cc",
+    rating: "5",
+    image: "https://naotemchef.com.br/homepage/restaurantes/image-11.jpg",
   },
   {
-    name: "Torero valese",
+    name: "Torero Valese",
     category: "Cozinha Italiana",
     city: "São Paulo",
-    image: "https://firebasestorage.googleapis.com/v0/b/ntc-platform.firebasestorage.app/o/establishments%2F1741016474972-Screenshot55.png?alt=media&token=a9a4dbbc-9706-4bba-a291-0838580eb9cc",
+    rating: "4.9",
+    image: "https://naotemchef.com.br/homepage/restaurantes/image-7.jpg",
   },
   {
     name: "Pinocchio burguer",
     category: "Burger Food",
     city: "São Paulo",
-    image: "https://firebasestorage.googleapis.com/v0/b/ntc-platform.firebasestorage.app/o/establishments%2F1741016474972-Screenshot55.png?alt=media&token=a9a4dbbc-9706-4bba-a291-0838580eb9cc",
+    rating: "4.1",
+    image: "https://naotemchef.com.br/homepage/restaurantes/image-4.jpg",
   },
   {
     name: "Bistrot de Paris",
     category: "Cozinha Francesa",
     city: "São Paulo",
-    image: "https://firebasestorage.googleapis.com/v0/b/ntc-platform.firebasestorage.app/o/establishments%2F1741016474972-Screenshot55.png?alt=media&token=a9a4dbbc-9706-4bba-a291-0838580eb9cc",
+    rating: "4.3",
+    image: "https://naotemchef.com.br/homepage/restaurantes/image-3.jpg",
   },
   {
     name: "Mamma San",
     category: "Cozinha ...",
     city: "São Paulo",
-    image: "https://firebasestorage.googleapis.com/v0/b/ntc-platform.firebasestorage.app/o/establishments%2F1741016474972-Screenshot55.png?alt=media&token=a9a4dbbc-9706-4bba-a291-0838580eb9cc",
+    rating: "5",
+    image: "https://naotemchef.com.br/homepage/restaurantes/image-14.jpg",
   },
   {
     name: "Picanharia dos amigos",
     category: "Churrascaria",
     city: "São Paulo",
-    image: "https://firebasestorage.googleapis.com/v0/b/ntc-platform.firebasestorage.app/o/establishments%2F1741016474972-Screenshot55.png?alt=media&token=a9a4dbbc-9706-4bba-a291-0838580eb9cc",
+    rating: "4.2",
+    image: "https://naotemchef.com.br/homepage/restaurantes/image-13.jpg",
   }
 ]
 
@@ -303,8 +309,9 @@ export default function Hero() {
                     fill
                     className="object-cover"
                   />
-                  <div className="absolute top-2 right-2 bg-red-500 text-white text-xs px-2 py-1 rounded-full max-sm:text-[0.6rem]">
-                      Selo: NTC
+                  <div className="flex flex-1 absolute top-2 right-2 bg-black/80 text-white text-xs px-2 py-1 rounded-full max-sm:text-[0.6rem]">
+                    <span>⭐{listvouchers.rating}</span>
+                    <div className="bg-red-500 text-white px-2 ml-1 text-xs rounded-full max-sm:text-[0.6rem]">Selo: NTC</div>
                   </div>
                 </div>
                 <div className="p-3">
@@ -332,9 +339,9 @@ export default function Hero() {
 
           >
             <div className="p-6">
-              <div className="relative h-40 rounded-lg overflow-hidden mb-4">
+              <div className="relative h-32 rounded-lg overflow-hidden mb-4">
                 <Image
-                  src="https://firebasestorage.googleapis.com/v0/b/ntc-platform.firebasestorage.app/o/establishments%2F1740588589585-nostracasaristorante.jpg?alt=media&token=fb6a8790-d8f0-4a2a-8666-491260080d34"
+                  src="https://naotemchef.com.br/homepage/restaurantes/image-3.jpg"
                   alt="Restaurante em destaque"
                   fill
                   className="object-cover"
@@ -345,8 +352,8 @@ export default function Hero() {
               </div>
               <div className="space-y-2 w-full space-y-4">
                 <div className="flex flex-col">
-                  <h3 className="text-zinc-800 font-semibold text-lg max-sm:text-[1rem]">Nostra Casa Ristorante</h3>
-                  <span className="max-sm:text-[1rem] text-green-500 font-bold">20% de desconto</span>
+                  <h3 className="text-zinc-800 font-semibold text-lg max-sm:text-[1rem]">Bistrot de Paris</h3>
+                  <span className="max-sm:text-[1rem] text-green-500 font-bold line-height-1">20% de desconto de segunda a sexta</span>
                 </div>
                 
                 <div className="flex flex-row items-center gap-1 text-zinc-500 text-sm max-sm:text-[0.8rem]">
@@ -355,10 +362,10 @@ export default function Hero() {
                   <span>Valido para qualquer prato</span>
                 </div>
 
-                <div className="space-y-2 pt-4">
+                <div className="space-y-2">
                   {showVoucher ? (
-                    <div className="text-center">
-                      <p className="text-zinc-600 mb-1">Seu voucher foi gerado</p>
+                    <div className="text-center bg-zinc-100 p-2 rounded-lg">
+                      <p className="text-zinc-600">Seu voucher foi gerado</p>
                       <p className="text-xl font-bold text-violet-500">{voucherCode}</p>
                     </div>
                   ) : (
