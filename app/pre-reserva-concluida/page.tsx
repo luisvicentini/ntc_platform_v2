@@ -10,7 +10,7 @@ import { useAnalytics } from "@/hooks/use-analytics"
 export default function ObrigadoPage() {
   const router = useRouter()
   const [countdown, setCountdown] = useState(10)
-  const whatsappLink = "https://chat.whatsapp.com/J1Y6dRhjik96YQOsOH0rjr" // Link do grupo do WhatsApp
+  const whatsappLink = "https://chat.whatsapp.com/CdyRLbTZuqvCksdvocpXMY" // Link do grupo do WhatsApp
   const { trackEvent } = useAnalytics()
 
   // Ref para controlar se o evento já foi disparado
@@ -100,7 +100,7 @@ export default function ObrigadoPage() {
           </div>
 
           {/* Título e mensagem */}
-          <h1 className="text-3xl md:text-4xl font-special-gothic font-bold mb-4">
+          <h1 className="text-3xl md:text-4xl font-primary-ntc font-bold mb-4">
           <span className="text-[#f24857] px-2 py-1">Falta apenas 1 passo</span>
           </h1>
 
@@ -131,7 +131,7 @@ export default function ObrigadoPage() {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="mt-12 text-center"
         >
-          <h2 className="text-2xl md:text-3xl font-special-gothic font-bold mb-8">
+          <h2 className="text-2xl md:text-3xl font-primary-ntc font-bold mb-8">
             Fale com o suporte abaixo se precisar de alguma ajuda
           </h2>
 
@@ -146,7 +146,7 @@ export default function ObrigadoPage() {
             <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-4">
               <MessageSquare size={48} className="text-[#4CAF50]" />
               <div className="text-left">
-                <h3 className="text-xl font-special-gothic font-bold">ATENDIMENTO POR WHATSAPP</h3>
+                <h3 className="text-xl font-primary-ntc font-bold">ATENDIMENTO POR WHATSAPP</h3>
                 <p className="text-gray-300">
                   Clique no número: <span className="font-bold">(19) 99863-1982</span>
                 </p>
@@ -163,7 +163,7 @@ export default function ObrigadoPage() {
             <div className="flex flex-col md:flex-row items-center justify-center md:justify-start gap-4">
               <Mail size={48} className="text-[#FF5733]" />
               <div className="text-left">
-                <h3 className="text-xl font-special-gothic font-bold">ATENDIMENTO POR EMAIL</h3>
+                <h3 className="text-xl font-primary-ntc font-bold">ATENDIMENTO POR EMAIL</h3>
                 <p className="text-gray-300">
                   Mande um e-mail agora para: <span className="font-bold">suporte@naotemchef.com.br</span>
                 </p>

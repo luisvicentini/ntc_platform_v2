@@ -4,7 +4,7 @@ import { EstablishmentProvider } from "@/contexts/EstablishmentContext"
 import { AuthProvider } from "@/contexts/auth-context"
 import { cn } from "@/lib/utils"
 import type { Metadata } from "next"
-import { Poppins, Dela_Gothic_One } from "next/font/google"
+import { Poppins, Dela_Gothic_One, Archivo_Black } from "next/font/google"
 import type React from "react"
 import { VoucherNotificationProvider } from "@/contexts/VoucherNotificationContext"
 import { Toaster } from "sonner"
@@ -16,11 +16,12 @@ const poppins = Poppins({
   variable: "--font-poppins",
 })
 
-const delaGothicOne = Dela_Gothic_One({
+const fontPrimaryNTC = Archivo_Black({
   subsets: ["latin-ext"],
   weight: ["400"],
-  variable: "--font-dela-gothic-one",
+  variable: "--font-primary-ntc",
 })
+
 
 export const metadata: Metadata = {
   title: process.env.NEXT_PUBLIC_APP_PROJECTNAME,
@@ -45,7 +46,7 @@ export default function RootLayout({
         <meta name="google" content="nosite:naotemchef.com.br" />
       </head>
       <body
-        className={cn("min-h-screen bg-white font-sans antialiased", poppins.variable, delaGothicOne.variable)}
+        className={cn("min-h-screen bg-white font-sans antialiased", poppins.variable, fontPrimaryNTC.variable)}
         style={{ position: "relative" }}
       >
         {/* Google Analytics */}

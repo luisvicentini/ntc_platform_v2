@@ -7,33 +7,41 @@ import { useInView } from "react-intersection-observer"
 import PreReservaModal from "./pre-reserva-modal"
 
 const restaurants = [
-  {
-    name: "Ryo",
-    category: "Culinária Japonesa",
-    discount: "25%",
-    image: "/homepage/restaurantes/image.jpg",
-    logo: "/homepage/restaurantes-logos/image1.jpg",
-  },
-  {
-    name: "Jun Sakamoto",
-    category: "Gastronomia Japonesa",
-    discount: "30%",
-    image: "/homepage/restaurantes/image-1.jpg",
-    logo: "/homepage/restaurantes-logos/image2.jpg",
-  },
-  {
-    name: "Sushi Vaz",
-    category: "Culinária Japonesa",
-    discount: "40%",
-    image: "/homepage/restaurantes/image-2.jpg",
-    logo: "/homepage/restaurantes-logos/image3.jpg",
-  },
+  
   {
     name: "Bistrot de Paris",
     category: "Cozinha Francesa",
     discount: "35%",
     image: "/homepage/restaurantes/image-3.jpg",
     logo: "/homepage/restaurantes-logos/image4.jpg",
+  },
+  {
+    name: "All Fries Burger",
+    category: "Burger Food",
+    discount: "20%",
+    image: "/homepage/restaurantes/image-15.jpg",
+    logo: "",
+  },
+  {
+    name: "Asa Açaí",
+    category: "Açaí",
+    discount: "20%",
+    image: "/homepage/restaurantes/image-16.jpg",
+    logo: "",
+  },
+  {
+    name: "Xepa",
+    category: "Cozinha ...",
+    discount: "20%",
+    image: "/homepage/restaurantes/image-17.jpg",
+    logo: "",
+  },
+  {
+    name: "Mamma San",
+    category: "....",
+    discount: "20%",
+    image: "/homepage/restaurantes/image-14.jpg",
+    logo: "",
   },
   {
     name: "Pinocchio",
@@ -71,19 +79,20 @@ const restaurants = [
     logo: "/homepage/restaurantes-logos/image9.jpg",
   },
   {
-    name: "Haus",
-    category: "Burgeria Artesanal",
+    name: "Eataly",
+    category: "Cozinha Italiana",
     discount: "20%",
-    image: "/homepage/restaurantes/image-9.jpg",
-    logo: "/homepage/restaurantes-logos/image10.jpg",
-    },
-  {
-    name: "Patties",
-    category: "Hamburgueria",
-    discount: "35%",
-    image: "/homepage/restaurantes/image-10.jpg",
-    logo: "/homepage/restaurantes-logos/image11.jpg",
+    image: "/homepage/restaurantes/image-11.jpg",
+    logo: "",
   },
+  {
+    name: "Picanharia dos amigos",
+    category: "Churrascaria",
+    discount: "20%",
+    image: "/homepage/restaurantes/image-13.jpg",
+    logo: "",
+  },
+  
 ]
 
 export default function Restaurants() {
@@ -137,7 +146,7 @@ export default function Restaurants() {
                 <p className="text-sm text-gray-300">{restaurant.category}</p>
               </div>
               <div className="absolute bottom-2 right-2 bg-[#1a1a1a] rounded-full w-14 h-14 border-2 border-[#1a1a1a] flex items-center justify-center overflow-hidden">
-                <Image src={restaurant.logo} alt={restaurant.name} fill className="object-cover" />
+                <Image src={restaurant.logo || "/placeholder.svg"} alt={restaurant.name} fill className="object-cover" />
               </div>
             </div>
           </motion.div>

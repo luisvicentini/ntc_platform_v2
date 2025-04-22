@@ -22,7 +22,7 @@ export default function About() {
         className="mx-auto flex flex-row max-md:flex-col overflow-hidden"
       >
         <div className="flex flex-col max-md:mx-8">
-          <h2 className="text-3xl md:text-4xl font-special-gothic font-bold mb-8 text-left ml-20 max-md:ml-0">
+          <h2 className="text-3xl md:text-4xl font-primary-ntc font-bold mb-8 text-left ml-20 max-md:ml-0">
             Quem é <span className="text-[#1a1a1a] px-2 py-1">Leo Corvo</span>?
           </h2>
 
