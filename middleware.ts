@@ -95,7 +95,7 @@ export const config = {
      * - success page
      * - api/users/resend-activation
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\..*|success|api/users/resend-activation).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\..*|success|api/users/resend-activation|bg-ntc.jpg).*)',
     '/api/:path*'
   ]
 }

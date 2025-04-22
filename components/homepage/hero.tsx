@@ -8,6 +8,7 @@ import PreReservaModal from "./pre-reserva-modal"
 import { Archivo_Black } from "next/font/google"
 import { generateVoucherCode } from "@/lib/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
+import { url } from "inspector"
 
 const fontPrimaryNTC = Archivo_Black({
   weight: ["400"],
@@ -105,19 +106,14 @@ export default function Hero() {
 
   // Estilo dinâmico para o gradiente baseado na posição do mouse
   const gradientStyle = {
-    background: `radial-gradient(
-      circle at ${mousePosition.x * 100}% ${mousePosition.y * 100}%, 
-      rgba(255, 87, 51, 0.15) 0%, 
-      rgba(26, 26, 26, 1) 70%
-    )`,
+    background: `url('/homepage/bg-ntc.jpg') center top / cover no-repeat`,
     transition: "background 0.3s ease-out",
   }
 
   return (
     <section
       ref={headerRef}
-      className="relative pt-10 pb-4 px-4 md:px-8 lg:px-16 overflow-hidden"
-      style={gradientStyle}
+      className="relative pt-10 pb-4 px-4 md:px-8 lg:px-16 overflow-hidden bg-[url('/homepage/bg-ntc.jpg')] bg-center bg-top bg-cover bg-no-repeat max-md:bg-[url('/homepage/bg-ntc-mobile.jpg')] max-md:bg-contain"
     >
 
       {/* Faixas "Não Tem Chef" */}
@@ -223,7 +219,7 @@ export default function Hero() {
 
       {/* Título principal */}
       <motion.div
-        className="text-center mb-8 max-md:w-[80%] max-sm:w-[100%] mx-auto max-w-[1200px]"
+        className="text-center mb-8 max-md:w-[80%] max-sm:w-[100%] mx-auto max-w-[900px]"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.7 }}
@@ -231,6 +227,21 @@ export default function Hero() {
           <h1 className={`${fontPrimaryNTC.className} font-bold line-height-3 max-sm:text-2xl max-md:text-4xl lg:text-5xl  mb-2`}>
           O único clube que te dá <span className="text-[#F24957] px-2">descontos</span> nos melhores restaurantes de São Paulo
         </h1>
+      </motion.div>
+
+      {/* Botão CTA */}
+      <motion.div
+        className="flex justify-center mb-8 max-w-[1200px] mx-auto"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6, duration: 0.5 }}
+      >
+       <button
+          onClick={() => setIsModalOpen(true)}
+          className="bg-[#4CAF50] hover:bg-[#45a049] max-sm:w-[100%] lg:w-[80%] xl:w-[70%] text-white font-bold py-3 px-8 rounded-xl max-sm:text-xl lg:text-xl xl:text-xl hover:scale-105 transition-all"
+        >
+          Fazer minha pré-reserva para o Clube
+        </button>
       </motion.div>
 
       {/* Browser Animation */}
@@ -282,6 +293,7 @@ export default function Hero() {
           </div>
         </div>
 
+      
         {/* Browser Content */}
         <div className="relative h-[400px] flex">
           {/* Main Content */}
@@ -396,8 +408,6 @@ export default function Hero() {
         </div>
       </motion.div>
 
-
-
       {/* Nao Excluir esse bloco de Vídeo */}
       {/* <motion.div
         className="relative w-full max-w-3xl mx-auto aspect-video mb-8 rounded-lg overflow-hidden"
@@ -430,20 +440,7 @@ export default function Hero() {
         )}
       </motion.div> */}
 
-      {/* Botão CTA */}
-      <motion.div
-        className="flex justify-center mb-8 max-w-[1200px] mx-auto"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6, duration: 0.5 }}
-      >
-       <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-[#4CAF50] hover:bg-[#45a049] max-sm:w-[100%] lg:w-[80%] xl:w-[70%] text-white font-bold py-3 px-8 rounded-xl max-sm:text-xl lg:text-xl xl:text-xl hover:scale-105 transition-all"
-        >
-          Fazer minha pré-reserva para o Clube
-        </button>
-      </motion.div>
+      
 
       
       {/* Modal de pré-reserva */}
