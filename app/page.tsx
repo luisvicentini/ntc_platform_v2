@@ -9,6 +9,7 @@ import Restaurants from "@/components/homepage/restaurants"
 import About from "@/components/homepage/about"
 import Footer from "@/components/homepage/footer"
 
+
 export default function HomePage() {
   // const { user, loading } = useAuth()
   // const router = useRouter()
@@ -37,6 +38,9 @@ export default function HomePage() {
   //     }
   //   }
   // }, [user, loading, router])
+
+  //const router = useRouter()
+  
 
   return (
     <main className="bg-[#1A1A1A] min-h-screen text-white overflow-hidden">

@@ -5,7 +5,12 @@ import type { NextRequest } from 'next/server'
 const publicRoutes = [
   '/auth/register',
   '/checkout-redirect',
-  '/login'
+  '/login',
+  '/mc',
+  '/wp',
+  '/email',
+  '/bio',
+  '/stories'
 ]
 
 // Mapeia os tipos de usuário para suas rotas permitidas
@@ -40,7 +45,7 @@ export function middleware(request: NextRequest) {
       '/api/stripe/sync-subscription',
       '/api/lastlink/webhook',
       '/api/lastlink/callback',
-      '/api/auth/session'
+      '/api/auth/session',
     ]
 
     // Verificar se é uma rota pública

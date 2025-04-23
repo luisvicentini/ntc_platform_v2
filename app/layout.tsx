@@ -25,8 +25,42 @@ const fontPrimaryNTC = Archivo_Black({
 
 export const metadata: Metadata = {
   title: process.env.NEXT_PUBLIC_APP_PROJECTNAME,
-  description: "O único clube que te dá descontos nos melhores restaurantes de São Paulo",
+  description: "O único clube de vantagens que te dá descontos de até 50% nos melhores restaurantes de verdade",
   generator: "naotemchef.com.br",
+  icons: {
+    icon: '/favicon.ico',
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
+  openGraph: {
+    title: process.env.NEXT_PUBLIC_APP_PROJECTNAME,
+    description: "O único clube de vantagens que te dá descontos de até 50% nos melhores restaurantes de verdade",
+    url: 'https://naotemchef.com.br',
+    siteName: 'Não Tem Chef',
+    images: [
+      {
+        url: '/homepage/capa-seo.jpg',
+        width: 1200,
+        height: 630,
+        alt: 'Não Tem Chef - Clube de vantagens para restaurantes',
+      },
+    ],
+    locale: 'pt_BR',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: process.env.NEXT_PUBLIC_APP_PROJECTNAME,
+    description: "O único clube de vantagens que te dá descontos de até 50% nos melhores restaurantes de verdade",
+    images: ['/homepage/capa-seo.jpg'],
+    creator: '@naotemchef',
+    site: '@naotemchef',
+  },
+  alternates: {
+    canonical: 'https://naotemchef.com.br',
+  },
 }
 
 export default function RootLayout({
