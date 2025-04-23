@@ -39,6 +39,10 @@ const restaurants = [
   {
     name: "Botecos",
     image: "/homepage/tipos-restaurantes/boteco.jpg",
+  },
+  {
+    name: "E muito mais!",
+    image: "/homepage/tipos-restaurantes/mais.jpg",
   }
 ]
 
@@ -113,15 +117,12 @@ export default function Restaurants() {
           initial={{ opacity: 0, y: 30 }}
           animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
           transition={{ duration: 0.5, delay: restaurants.length * 0.05 }}
-          className="bg-[#F24957] rounded-xl p-6 flex items-center justify-center hover:scale-105 duration-300 transition-all cursor-pointer"
+          className="bg-[#F24957] rounded-xl p-6 flex items-center justify-center hover:scale-105 duration-300 transition-all cursor-pointer w-full"
         >
           <div className="text-center">
             <span className="font-bold text-2xl md:text-3xl">
-              E muito mais!
+              Do Michelin ao Podrão, só no Clube Não tem Chef!
             </span>
-            <p className="text-sm mt-2 opacity-90">
-              Descubra todos os restaurantes
-            </p>
           </div>
         </motion.div>
       </div>
