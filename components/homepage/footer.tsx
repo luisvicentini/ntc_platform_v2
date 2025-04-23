@@ -40,8 +40,8 @@ export default function Footer() {
           <h3 className="text-white font-bold text-lg mb-4">Contato</h3>
           <ul className="space-y-2 text-zinc-400">
             <li>
-              <a href="https://wa.me/5511999999999" className="hover:text-[#F24957] transition-colors">
-                WhatsApp: (11) 99999-9999
+              <a href="https://wa.me/5519982240767?text=Olá,%20gostaria%20de%20saber%20mais%20sobre%20o%20Não%20Tem%20Chef." className="hover:text-[#F24957] transition-colors">
+                WhatsApp: (19) 98224-0767
               </a>
             </li>
             <li>
