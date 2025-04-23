@@ -72,7 +72,7 @@ function BenefitCard({ benefit, index }: { benefit: (typeof benefits)[0]; index:
       >
         
         <div className="mr-4">
-          <div className="w-16 h-16 text-[#f24957] flex items-center justify-center text-6xl font-bold">
+          <div className="w-12 h-12 text-[#f24957] flex items-center justify-center text-6xl font-bold">
             {benefit.number}
           </div>
         </div>

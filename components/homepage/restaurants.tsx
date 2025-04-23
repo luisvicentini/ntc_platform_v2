@@ -9,22 +9,37 @@ import PreReservaModal from "./pre-reserva-modal"
 const restaurants = [
   
   {
-    name: "Restaurantes italianos",
+    name: "Restaurantes Italianos",
+    image: "/homepage/tipos-restaurantes/italiano.jpg",
   },
   {
-    name: "Restaurantes italianos",
+    name: "Restaurantes Árabes",
+    image: "/homepage/tipos-restaurantes/arabe.jpg",
   },
   {
-    name: "Restaurantes italianos",
+    name: "Restaurantes Japoneses",
+    image: "/homepage/tipos-restaurantes/japones.jpg",
   },
   {
-    name: "Restaurantes italianos",
+    name: "Restaurantes Franceses",
+    image: "/homepage/tipos-restaurantes/frances.jpg",
   },
   {
-    name: "Restaurantes italianos",
+    name: "Restaurantes Típicos Brasileiros",
+    image: "/homepage/tipos-restaurantes/brasileiro.jpg",
   },
-
-  
+  {
+    name: "Hamburguerias",
+    image: "/homepage/tipos-restaurantes/hamburgueria.jpg",
+  },
+  {
+    name: "Pizzarias",
+    image: "/homepage/tipos-restaurantes/pizzaria.jpg",
+  },
+  {
+    name: "Botecos",
+    image: "/homepage/tipos-restaurantes/boteco.jpg",
+  }
 ]
 
 export default function Restaurants() {
@@ -61,30 +76,53 @@ export default function Restaurants() {
         </h2>
       </motion.div>
 
-      {/* Grade de restaurantes */}
-      <div ref={ref} className="flex flex-wrap gap-2 max-w-6xl mx-auto">
+      {/* Grade de tipos de restaurantes */}
+      <div ref={ref} className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
         {restaurants.map((restaurant, index) => (
           <motion.div
             key={index}
             initial={{ opacity: 0, y: 30 }}
             animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
             transition={{ duration: 0.5, delay: index * 0.05 }}
-            className="relative rounded-xl overflow-hidden hover:border-2 hover:border-white/30 duration-100 transition-all"
+            className="relative h-48 rounded-xl overflow-hidden hover:scale-105 duration-300 transition-all group cursor-pointer"
           >
-            <div className="aspect-square relative">
-                <h3 className="font-bold max-sm:text-2xl md:text-md lg:text-sm">{restaurant.name}</h3>
+            {/* Imagem de fundo */}
+            <div className="absolute inset-0">
+              <Image 
+                src={restaurant.image}
+                alt={restaurant.name}
+                fill
+                className="object-cover"
+              />
+            </div>
+
+            {/* Gradiente escuro */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
+
+            {/* Texto */}
+            <div className="absolute bottom-0 left-0 right-0 p-4">
+              <h3 className="font-bold text-lg md:text-xl text-white group-hover:text-[#F24957] transition-colors text-center">
+                {restaurant.name}
+              </h3>
             </div>
           </motion.div>
         ))}
 
-        {/* Botão "E muito mais!" */}
+        {/* Card "E muito mais!" */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
           transition={{ duration: 0.5, delay: restaurants.length * 0.05 }}
-          className="flex items-center justify-center"
+          className="bg-[#F24957] rounded-xl p-6 flex items-center justify-center hover:scale-105 duration-300 transition-all cursor-pointer"
         >
-          <div className="font-bold text-4xl">E muito<br /> mais!</div>
+          <div className="text-center">
+            <span className="font-bold text-2xl md:text-3xl">
+              E muito mais!
+            </span>
+            <p className="text-sm mt-2 opacity-90">
+              Descubra todos os restaurantes
+            </p>
+          </div>
         </motion.div>
       </div>
 

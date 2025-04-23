@@ -117,7 +117,7 @@ export default function Hero() {
     >
 
       {/* Faixas "Não Tem Chef" */}
-      <div className="relative -mt-8 mb-28 -mx-16">
+      <div className="relative -mt-8 mb-16 -mx-16">
         {/* Faixa amarela com texto vermelho (atrás) */}
         <div className="absolute h-8 w-full inset-0 bg-[#FFCC00] transform -rotate-3 translate-y-2 overflow-hidden">
           <div className="animate-marquee whitespace-nowrap flex items-center h-full">
@@ -199,11 +199,9 @@ export default function Hero() {
         </div>
       </div>
 
-
-
       {/* Logo */}
       <motion.div
-        className="flex justify-center mb-8 max-sm:mb-4"
+        className="flex justify-center mb-4 max-sm:mb-4"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -227,7 +225,25 @@ export default function Hero() {
           <h1 className={`${fontPrimaryNTC.className} font-bold line-height-3 max-sm:text-2xl max-md:text-4xl lg:text-5xl  mb-2`}>
           O único clube de vantagens que te dá <span className="text-[#F24957] px-2">descontos de até 50%</span> nos melhores restaurantes de verdade.
         </h1>
-        <p className="text-zinc-300 text-lg max-sm:text-[2rem] pt-2">Aqui não tem jabá, aqui é <b className="text-white">Não Tem Chef!</b></p>
+        <p className="text-zinc-300 text-lg sm:text-xl max-sm:text-[1rem] pt-2">Aqui não tem jabá, aqui é <b className="text-white">Não Tem Chef!</b></p>
+      </motion.div>
+
+      {/* Bloco de Vídeo */}
+      <motion.div
+        className="relative w-full max-w-3xl mx-auto aspect-video mb-8 rounded-lg overflow-hidden"
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+      >
+        <div style={{position: "relative", paddingTop: "56.25%"}}>
+            <iframe id="panda-bee73ec5-d845-4d70-b4d5-2a879755343e" 
+            src="https://player-vz-f47b157e-3fb.tv.pandavideo.com.br/embed/?v=bee73ec5-d845-4d70-b4d5-2a879755343e"
+            style={{border: "none", position: "absolute", top: "0", left: "0"}}
+            allowFullScreen={true}
+            width="100%"
+            height="100%"
+          />
+        </div>
       </motion.div>
 
       {/* Botão CTA */}
@@ -245,38 +261,6 @@ export default function Hero() {
         </button>
       </motion.div>
 
-
-      {/* Nao Excluir esse bloco de Vídeo */}
-      <motion.div
-        className="relative w-full max-w-3xl mx-auto aspect-video mb-8 rounded-lg overflow-hidden"
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
-      >
-        {isVideoPlaying ? (
-          <iframe
-            width="100%"
-            height="100%"
-            src="https://www.youtube.com/embed/dQw4w9WgXcQ?autoplay=1"
-            title="Não Tem Chef Vídeo"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            className="absolute inset-0"
-          />
-        ) : (
-          <div className="relative w-full h-full bg-black/50">
-            <Image src="/homepage/video-thumbnail.jpg" alt="Thumbnail do vídeo" fill className="object-cover" />
-            <button
-              onClick={() => setIsVideoPlaying(true)}
-              className="absolute inset-0 flex items-center justify-center"
-            >
-              <div className="w-20 h-20 rounded-full bg-white/20 flex items-center justify-center">
-                <Play size={40} className="text-white ml-2" />
-              </div>
-            </button>
-          </div>
-        )}
-      </motion.div>
 
       
 
