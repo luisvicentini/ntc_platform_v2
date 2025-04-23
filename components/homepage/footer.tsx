@@ -65,6 +65,9 @@ export default function Footer() {
                 Perguntas Frequentes
               </button>
             </li>
+            <li>
+              <p className="text-zinc-400 sm:text-xs mt-4">Disclaimer: Todas as imagens são para efeito ilustrativo.</p>
+            </li>
           </ul>
 
           <Dialog open={privacyModalOpen} onOpenChange={setPrivacyModalOpen}>
@@ -125,8 +128,7 @@ export default function Footer() {
         {/* Coluna 3 - Copyright */}
         <div className="text-center md:text-left">
           <p className="text-zinc-400 mb-4">
-            O Não Tem Chef é o maior clube de vantagens gastronômicas do Brasil, 
-            oferecendo descontos exclusivos nos melhores restaurantes.
+            O único clube de vantagens que te dá descontos de até 50% nos melhores restaurantes de verdade.
           </p>
           <p className="text-sm text-zinc-500">
             © 2025 Não Tem Chef - Leo Corvo. Todos direitos reservados.

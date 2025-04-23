@@ -120,7 +120,7 @@ export default function Restaurants() {
           className="bg-[#F24957] rounded-xl p-6 flex items-center justify-center hover:scale-105 duration-300 transition-all cursor-pointer w-full"
         >
           <div className="text-center">
-            <span className="font-bold text-2xl md:text-3xl">
+            <span className="font-bold text-2xl md:text-3xl max-sm:text-xl">
               Do Michelin ao Podrão, só no Clube Não tem Chef!
             </span>
           </div>
