@@ -137,7 +137,7 @@ export default function ObrigadoPage() {
 
           {/* Card de WhatsApp */}
           <a
-            href="https://wa.me/5519998631982?text=Quero%20entrar%20no%20grupo%20do%20Clube%20Não%20Tem%20Chef"
+            href="https://wa.me/5519982240767?text=Quero%20entrar%20no%20grupo%20do%20Clube%20Não%20Tem%20Chef"
             target="_blank"
             rel="noopener noreferrer"
             className="block mb-6 bg-[#1E1E1E] rounded-lg border-2 border-[#4CAF50] p-6 transition-transform hover:scale-105"
@@ -148,7 +148,7 @@ export default function ObrigadoPage() {
               <div className="text-left">
                 <h3 className="text-xl font-primary-ntc font-bold">ATENDIMENTO POR WHATSAPP</h3>
                 <p className="text-gray-300">
-                  Clique no número: <span className="font-bold">(19) 99863-1982</span>
+                  Clique no número: <span className="font-bold">(19) 98224-0767</span>
                 </p>
               </div>
             </div>
