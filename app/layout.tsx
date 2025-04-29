@@ -9,6 +9,7 @@ import type React from "react"
 import { VoucherNotificationProvider } from "@/contexts/VoucherNotificationContext"
 import { Toaster } from "sonner"
 import Script from "next/script"
+import { Analytics } from "@vercel/analytics/react"
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -125,6 +126,7 @@ export default function RootLayout({
             <NotificationProvider>
               <VoucherNotificationProvider>
                 <EstablishmentProvider>
+                  <Analytics />
                   {children}
                   <Toaster />
                 </EstablishmentProvider>
