@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
 import { Logo } from "@/components/ui/logo"
-import { Loader2, ArrowRight } from "lucide-react"
+import { Loader2, ArrowRight, AlertCircle } from "lucide-react"
 import { FcGoogle } from "react-icons/fc"
 import { FaFacebook } from "react-icons/fa"
 import Link from "next/link"
@@ -20,6 +20,63 @@ interface UnifiedLoginFormProps {
   registerUrl: string
 }
 
+// Mapear os códigos de erro do Firebase para mensagens mais amigáveis
+const mapFirebaseErrorToMessage = (errorCode: string): string => {
+  const errorMap: Record<string, string> = {
+    // Erros de autenticação
+    "auth/invalid-credential": "Email ou senha incorretos. Verifique suas credenciais e tente novamente.",
+    "auth/user-disabled": "Esta conta foi desativada. Entre em contato com o suporte.",
+    "auth/user-not-found": "Não encontramos uma conta com este email. Verifique o email ou crie uma nova conta.",
+    "auth/wrong-password": "Senha incorreta. Tente novamente ou recupere sua senha.",
+    "auth/invalid-email": "O formato do email é inválido. Verifique se digitou corretamente.",
+    "auth/too-many-requests": "Muitas tentativas de login. Aguarde um momento e tente novamente.",
+    "auth/email-already-in-use": "Este email já está sendo usado por outra conta.",
+    "auth/network-request-failed": "Falha na conexão. Verifique sua internet e tente novamente.",
+    "auth/popup-closed-by-user": "O login foi cancelado. Tente novamente.",
+    "auth/unauthorized-domain": "Este domínio não está autorizado para operações de login.",
+    "auth/operation-not-allowed": "Esta operação não está habilitada. Entre em contato com o suporte.",
+    "auth/account-exists-with-different-credential": "Já existe uma conta com este email. Tente outro método de login.",
+    
+    // Erros específicos do sistema
+    "account-not-activated": "Sua conta ainda não foi ativada. Verifique seu email para ativar sua conta.",
+    "account-expired": "Sua assinatura expirou. Renove para continuar usando o sistema."
+  }
+  
+  return errorMap[errorCode] || "Ocorreu um erro ao fazer login. Entre em contato com o suporte."
+}
+
+// Função para extrair o código de erro do objeto de erro do Firebase
+const getFirebaseErrorCode = (error: any): string => {
+  const errorMessage = error?.message || ""
+  const matches = errorMessage.match(/\(([^)]+)\)/)
+  return matches && matches[1] ? matches[1] : ""
+}
+
+// Componente para exibir o erro com suporte para links clicáveis
+const ErrorMessage = ({ message, showWhatsAppSupport }: { message: string, showWhatsAppSupport?: boolean }) => {
+  return (
+    <div className="p-3 text-sm bg-red-500/10 border border-red-500/30 rounded text-red-500 flex items-start">
+      <AlertCircle className="h-4 w-4 mt-0.5 mr-2 flex-shrink-0" />
+      <div>
+        <div>{message}</div>
+        {showWhatsAppSupport && (
+          <div className="mt-2">
+            <p className="mb-2">Entre em contato com o suporte:</p>
+            <a 
+              href="https://wa.me/5519982240767?text=Olá,%20preciso%20de%20suporte%20pois%20estou%20com%20problemas%20para%20acessar%20minha%20conta."
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-red-600 hover:text-red-700 underline flex items-center"
+            >
+              WhatsApp Suporte: +55 (19) 98224-0767
+            </a>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginFormProps) {
   const { signIn, signInWithGoogle, signInWithFacebook, loading: authLoading } = useAuth()
   const router = useRouter()
@@ -28,6 +85,8 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [showResendActivation, setShowResendActivation] = useState(false)
+  const [showWhatsAppSupport, setShowWhatsAppSupport] = useState(false)
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -39,6 +98,8 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
     
     setLoading(true)
     setError(null)
+    setShowResendActivation(false)
+    setShowWhatsAppSupport(false)
     
     try {
       // A nova versão do signIn detecta automaticamente o tipo de usuário
@@ -47,7 +108,35 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
       // O redirecionamento será feito pelo próprio authContext baseado no tipo de usuário
     } catch (error: any) {
       console.error("Erro no login:", error)
-      setError(error.message || "Erro ao fazer login")
+      
+      // Verificar se é um erro do Firebase e obter o código
+      const errorCode = getFirebaseErrorCode(error)
+      
+      // Verificar se a conta não está ativada (verificação adicional no próprio erro)
+      if (error.message && (
+          error.message.includes("not activated") || 
+          error.message.includes("not verified") ||
+          error.message.includes("inactive")
+      )) {
+        setError("Sua conta ainda não foi ativada. Verifique seu email para ativar sua conta.")
+        setShowResendActivation(true)
+      } else if (error.message && error.message.includes("não encontrado no banco de dados")) {
+        setError("Usuário não encontrado no banco de dados.")
+        setShowWhatsAppSupport(true)
+      } else if (errorCode) {
+        // Mapear o código para uma mensagem amigável
+        setError(mapFirebaseErrorToMessage(errorCode))
+        
+        // Se for erro de credenciais, verificar se pode ser falta de ativação
+        if (errorCode === "auth/invalid-credential" || errorCode === "auth/user-not-found") {
+          // Mostrar opção de reenviar ativação como precaução
+          setShowResendActivation(true)
+        }
+      } else {
+        // Erros não mapeados ou sem código específico
+        setError(error.message || "Erro ao fazer login. Tente novamente mais tarde.")
+        setShowWhatsAppSupport(true)
+      }
     } finally {
       setLoading(false)
     }
@@ -56,6 +145,8 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
   const handleGoogleSignIn = async () => {
     setLoading(true)
     setError(null)
+    setShowResendActivation(false)
+    setShowWhatsAppSupport(false)
     
     try {
       // A nova versão do signInWithGoogle detecta automaticamente o tipo de usuário
@@ -64,7 +155,21 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
       // O redirecionamento será feito pelo próprio authContext
     } catch (error: any) {
       console.error("Erro no login com Google:", error)
-      setError(error.message || "Erro ao fazer login com Google")
+      
+      const errorCode = getFirebaseErrorCode(error)
+      
+      if (error.message && error.message.includes("não encontrado no banco de dados")) {
+        setError("Usuário não encontrado no banco de dados.")
+        setShowWhatsAppSupport(true)
+      } else if (errorCode) {
+        setError(mapFirebaseErrorToMessage(errorCode))
+      } else if (error.message && error.message.includes("not activated")) {
+        setError("Sua conta ainda não foi ativada. Verifique seu email para ativar sua conta.")
+        setShowResendActivation(true)
+      } else {
+        setError(error.message || "Erro ao fazer login com Google. Tente novamente mais tarde.")
+        setShowWhatsAppSupport(true)
+      }
     } finally {
       setLoading(false)
     }
@@ -73,6 +178,8 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
   const handleFacebookSignIn = async () => {
     setLoading(true)
     setError(null)
+    setShowResendActivation(false)
+    setShowWhatsAppSupport(false)
     
     try {
       // A nova versão do signInWithFacebook detecta automaticamente o tipo de usuário
@@ -81,7 +188,53 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
       // O redirecionamento será feito pelo próprio authContext
     } catch (error: any) {
       console.error("Erro no login com Facebook:", error)
-      setError(error.message || "Erro ao fazer login com Facebook")
+      
+      const errorCode = getFirebaseErrorCode(error)
+      
+      if (error.message && error.message.includes("não encontrado no banco de dados")) {
+        setError("Usuário não encontrado no banco de dados.")
+        setShowWhatsAppSupport(true)
+      } else if (errorCode) {
+        setError(mapFirebaseErrorToMessage(errorCode))
+      } else if (error.message && error.message.includes("not activated")) {
+        setError("Sua conta ainda não foi ativada. Verifique seu email para ativar sua conta.")
+        setShowResendActivation(true)
+      } else {
+        setError(error.message || "Erro ao fazer login com Facebook. Tente novamente mais tarde.")
+        setShowWhatsAppSupport(true)
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResendActivation = async () => {
+    if (!email) {
+      setError("Digite seu email para reenviar o link de ativação")
+      return
+    }
+    
+    setLoading(true)
+    try {
+      // Chamar API para reenviar email de ativação
+      const response = await fetch("/api/auth/resend-activation", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ email })
+      })
+      
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || "Erro ao reenviar email de ativação")
+      }
+      
+      toast.success("Email de ativação reenviado com sucesso! Verifique sua caixa de entrada.")
+      setShowResendActivation(false)
+    } catch (error: any) {
+      console.error("Erro ao reenviar ativação:", error)
+      setError(error.message || "Erro ao reenviar email de ativação. Tente novamente mais tarde.")
     } finally {
       setLoading(false)
     }
@@ -135,8 +288,25 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
             </div>
             
             {error && (
-              <div className="p-3 text-sm bg-red-500/10 border border-red-500/30 rounded text-red-500">
-                {error}
+              <div>
+                <ErrorMessage 
+                  message={error} 
+                  showWhatsAppSupport={showWhatsAppSupport} 
+                />
+                {showResendActivation && (
+                  <div className="mt-2 flex justify-center">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleResendActivation}
+                      disabled={loading || authLoading}
+                      className="text-xs bg-white border-red-200 hover:bg-red-50 hover:text-red-600 text-red-500"
+                    >
+                      Reenviar email de ativação
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
             

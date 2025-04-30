@@ -44,7 +44,9 @@ export function middleware(request: NextRequest) {
       '/api/stripe/webhook',
       '/api/stripe/sync-subscription',
       '/api/lastlink/webhook',
+      '/api/lastlink/webhook-create-user',
       '/api/lastlink/callback',
+      '/api/lastlink/redirect',
       '/api/auth/session',
     ]
 

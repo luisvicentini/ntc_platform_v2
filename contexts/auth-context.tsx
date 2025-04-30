@@ -10,7 +10,8 @@ import {
   signOut as firebaseSignOut,
   onAuthStateChanged,
   User,
-  fetchSignInMethodsForEmail
+  fetchSignInMethodsForEmail,
+  AuthError
 } from "firebase/auth"
 import { doc, getDoc, setDoc, serverTimestamp, collection, query, where, getDocs, updateDoc } from "firebase/firestore"
 import { auth, db } from "@/lib/firebase"
@@ -28,6 +29,7 @@ interface UserData {
   createdAt?: string
   updatedAt?: any
   authProvider?: string
+  status?: string // 'active', 'inactive', 'expired'
 }
 
 interface CustomUser extends User {
@@ -50,6 +52,22 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType)
+
+// Código de custom error para quando a conta não foi ativada
+export class AccountNotActivatedError extends Error {
+  constructor(message = "Conta não ativada") {
+    super(message);
+    this.name = "AccountNotActivatedError";
+  }
+}
+
+// Código de custom error para quando a conta está expirada
+export class AccountExpiredError extends Error {
+  constructor(message = "Conta expirada") {
+    super(message);
+    this.name = "AccountExpiredError";
+  }
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CustomUser | null>(null)
@@ -190,27 +208,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('Tentando autenticar com email:', email)
-      const { user: firebaseUser } = await signInWithEmailAndPassword(auth, email, password)
-      console.log('Usuário autenticado no Firebase:', firebaseUser.uid)
       
-      // Buscar usuário pelo email
+      // Verificar primeiro se o usuário existe e está ativo
       const usersRef = collection(db, "users")
       const emailQuery = query(usersRef, where("email", "==", email.toLowerCase()))
       const querySnapshot = await getDocs(emailQuery)
 
       if (querySnapshot.empty) {
-        throw new Error("Usuário não encontrado no banco de dados")
+        throw new Error(`Usuário não encontrado no banco de dados. Entre em contato com o suporte através do WhatsApp: <a href="https://wa.me/5519982240767?text=Olá,%20preciso%20de%20suporte%20pois%20minha%20conta%20não%20está%20sendo%20encontrada%20no%20banco%20de%20dados." target="_blank">+55 (19) 98224-0767</a>`)
       }
 
-      // Pegar o primeiro documento encontrado
+      // Verificar o status do usuário antes da autenticação
       const userDoc = querySnapshot.docs[0]
       const userData = userDoc.data() as UserData
+      
+      if (userData.status === "inactive") {
+        throw new AccountNotActivatedError("Sua conta ainda não foi ativada. Verifique seu email para ativar sua conta.")
+      }
+      
+      if (userData.status === "expired") {
+        throw new AccountExpiredError("Sua assinatura expirou. Renove para continuar usando o sistema.")
+      }
+      
+      // Tentar autenticar com o Firebase
+      const { user: firebaseUser } = await signInWithEmailAndPassword(auth, email, password)
+      console.log('Usuário autenticado no Firebase:', firebaseUser.uid)
       
       // Atualizar o documento com o firebaseUid
       await updateDoc(doc(db, "users", userDoc.id), {
         firebaseUid: firebaseUser.uid,
         authProvider: 'password',
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        lastLogin: serverTimestamp()
       })
 
       // Criar objeto do usuário com os dados existentes
@@ -246,8 +275,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Redirecionar com base no tipo de usuário
       redirectBasedOnUserType(userData.userType)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing in:", error)
+      
+      // Verificar se é um erro específico do sistema
+      if (error instanceof AccountNotActivatedError || error instanceof AccountExpiredError) {
+        throw error
+      }
+      
+      // Se for um erro de autenticação do Firebase, tentar obter informações adicionais
+      if ((error as AuthError)?.code) {
+        // Verificar se o erro pode ser devido à conta não ativada
+        if ((error as AuthError).code === 'auth/invalid-credential' || 
+            (error as AuthError).code === 'auth/user-not-found' ||
+            (error as AuthError).code === 'auth/wrong-password') {
+          
+          // Verificar se a conta existe mas não está ativa
+          try {
+            const usersRef = collection(db, "users")
+            const emailQuery = query(usersRef, where("email", "==", email.toLowerCase()))
+            const querySnapshot = await getDocs(emailQuery)
+            
+            if (!querySnapshot.empty) {
+              const userData = querySnapshot.docs[0].data() as UserData
+              if (userData.status === "inactive") {
+                throw new AccountNotActivatedError("Sua conta ainda não foi ativada. Verifique seu email para ativar sua conta.")
+              } else if (userData.status === "expired") {
+                throw new AccountExpiredError("Sua assinatura expirou. Renove para continuar usando o sistema.")
+              }
+            }
+          } catch (checkError) {
+            // Se o erro for um dos nossos erros específicos, lançar
+            if (checkError instanceof AccountNotActivatedError || 
+                checkError instanceof AccountExpiredError) {
+              throw checkError
+            }
+            // Senão, continuar com o erro original do Firebase
+          }
+        }
+      }
+      
+      // Propagar o erro original
       throw error
     }
   }
@@ -263,12 +331,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const querySnapshot = await getDocs(emailQuery)
 
       if (querySnapshot.empty) {
-        throw new Error("Usuário não encontrado no banco de dados")
+        throw new Error(`Usuário não encontrado no banco de dados. Entre em contato com o suporte através do WhatsApp: <a href="https://wa.me/5519982240767?text=Olá,%20preciso%20de%20suporte%20pois%20minha%20conta%20não%20está%20sendo%20encontrada%20no%20banco%20de%20dados." target="_blank">+55 (19) 98224-0767</a>`)
       }
 
       // Pegar o primeiro documento encontrado
       const userDoc = querySnapshot.docs[0]
       const userData = userDoc.data() as UserData
+      
+      // Verificar se a conta está ativa
+      if (userData.status === "inactive") {
+        throw new AccountNotActivatedError("Sua conta ainda não foi ativada. Verifique seu email para ativar sua conta.")
+      }
+      
+      if (userData.status === "expired") {
+        throw new AccountExpiredError("Sua assinatura expirou. Renove para continuar usando o sistema.")
+      }
       
       // Atualizar o documento com o firebaseUid
       await updateDoc(doc(db, "users", userDoc.id), {
@@ -278,7 +355,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         photoURL: firebaseUser.photoURL || userData.photoURL || "",
         emailVerified: firebaseUser.emailVerified,
         phoneNumber: firebaseUser.phoneNumber || userData.phoneNumber || "",
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        lastLogin: serverTimestamp()
       })
 
       // Criar objeto do usuário com os dados existentes
@@ -313,7 +391,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Ao final, redirecionar com base no tipo do usuário
       redirectBasedOnUserType(userData.userType)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing in with Google:", error)
       throw error
     }
@@ -330,12 +408,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const querySnapshot = await getDocs(emailQuery)
 
       if (querySnapshot.empty) {
-        throw new Error("Usuário não encontrado no banco de dados")
+        throw new Error(`Usuário não encontrado no banco de dados. Entre em contato com o suporte através do WhatsApp: <a href="https://wa.me/5519982240767?text=Olá,%20preciso%20de%20suporte%20pois%20minha%20conta%20não%20está%20sendo%20encontrada%20no%20banco%20de%20dados." target="_blank">+55 (19) 98224-0767</a>`)
       }
 
       // Pegar o primeiro documento encontrado
       const userDoc = querySnapshot.docs[0]
       const userData = userDoc.data() as UserData
+      
+      // Verificar se a conta está ativa
+      if (userData.status === "inactive") {
+        throw new AccountNotActivatedError("Sua conta ainda não foi ativada. Verifique seu email para ativar sua conta.")
+      }
+      
+      if (userData.status === "expired") {
+        throw new AccountExpiredError("Sua assinatura expirou. Renove para continuar usando o sistema.")
+      }
       
       // Atualizar o documento com o firebaseUid
       await updateDoc(doc(db, "users", userDoc.id), {
@@ -345,7 +432,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         photoURL: firebaseUser.photoURL || userData.photoURL || "",
         emailVerified: firebaseUser.emailVerified,
         phoneNumber: firebaseUser.phoneNumber || userData.phoneNumber || "",
-        updatedAt: serverTimestamp()
+        updatedAt: serverTimestamp(),
+        lastLogin: serverTimestamp()
       })
 
       // Criar objeto do usuário com os dados existentes
@@ -380,7 +468,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Ao final, redirecionar com base no tipo do usuário
       redirectBasedOnUserType(userData.userType)
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing in with Facebook:", error)
       throw error
     }
@@ -408,7 +496,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const querySnapshot = await getDocs(emailQuery)
 
       if (querySnapshot.empty) {
-        throw new Error("Usuário não encontrado no banco de dados")
+        throw new Error(`Usuário não encontrado no banco de dados. Entre em contato com o suporte através do WhatsApp: <a href="https://wa.me/5519982240767?text=Olá,%20preciso%20de%20suporte%20pois%20minha%20conta%20não%20está%20sendo%20encontrada%20no%20banco%20de%20dados." target="_blank">+55 (19) 98224-0767</a>`)
       }
 
       // Pegar o primeiro documento encontrado
