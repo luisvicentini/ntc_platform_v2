@@ -25,9 +25,9 @@ import {
 } from "@/components/ui/select"
 import { toast } from "sonner"
 import { Label } from "@/components/ui/label"
-import { countries } from "@/lib/countries"
+import { countries } from "@/lib/utils/countries"
 import InputMask from "react-input-mask-next"
-import { phoneMasks, getPhoneMask } from "@/lib/phone-masks"
+import { phoneMasks, getPhoneMask } from "@/lib/utils/phone-masks"
 
 interface Subscription {
   createdAt: string

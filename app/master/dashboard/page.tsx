@@ -84,7 +84,7 @@ export default function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-zinc-500">{dashboardData?.totalUsers}</div>
-            <p className="text-xs text-zinc-400">+5% em relação ao mês passado</p>
+            <p className="text-xs text-zinc-400">+0% em relação ao mês passado</p>
           </CardContent>
         </Card>
         <Card className="bg-zinc-100 border-zinc-200">
@@ -93,8 +93,8 @@ export default function DashboardPage() {
             <Building className="h-4 w-4 text-zinc-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-zinc-500">123</div>
-            <p className="text-xs text-zinc-400">3 novos esta semana</p>
+            <div className="text-2xl font-bold text-zinc-500">0</div>
+            <p className="text-xs text-zinc-400">0 novos esta semana</p>
           </CardContent>
         </Card>
         <Card className="bg-zinc-100 border-zinc-200">
@@ -103,8 +103,8 @@ export default function DashboardPage() {
             <Ticket className="h-4 w-4 text-zinc-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-zinc-500">45,678</div>
-            <p className="text-xs text-zinc-400">+15% em relação ao mês passado</p>
+            <div className="text-2xl font-bold text-zinc-500">0</div>
+            <p className="text-xs text-zinc-400">+0% em relação ao mês passado</p>
           </CardContent>
         </Card>
         <Card className="bg-zinc-100 border-zinc-200">
@@ -113,8 +113,8 @@ export default function DashboardPage() {
             <TrendingUp className="h-4 w-4 text-zinc-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-zinc-500">8.5%</div>
-            <p className="text-xs text-zinc-400">+2.5% em relação ao mês anterior</p>
+            <div className="text-2xl font-bold text-zinc-500">0%</div>
+            <p className="text-xs text-zinc-400">+0% em relação ao mês anterior</p>
           </CardContent>
         </Card>
       </div>

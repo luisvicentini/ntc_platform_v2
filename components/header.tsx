@@ -19,7 +19,7 @@ import {
 import { useState, useEffect } from "react"
 import { useTheme } from "next-themes"
 import React from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils/utils"
 import { usePathname } from "next/navigation"
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
@@ -75,8 +75,8 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userData, user, theme = "da
       <DropdownMenuContent className="w-56 bg-white border-zinc-200 text-zinc-500" align="end">
         <div className="flex items-center justify-start gap-2 p-2">
           <div className="flex flex-col space-y-1 leading-none">
-            <p className="font-medium">{userData.displayName || user?.displayName || "Nome não informado"}</p>
-            <p className="text-sm text-zinc-400">{userData.email || user?.email || "Email não informado"}</p>
+            <p className="font-medium truncate max-w-[180px]">{userData.displayName || user?.displayName || "Nome não informado"}</p>
+            <p className="text-sm text-zinc-400 truncate max-w-[180px]">{userData.email || user?.email || "Email não informado"}</p>
           </div>
         </div>
         <DropdownMenuSeparator />
@@ -89,7 +89,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userData, user, theme = "da
         </DropdownMenuItem> */}
         <DropdownMenuSeparator />
         <DropdownMenuItem 
-          className="text-red-500 cursor-pointer" 
+          className="cursor-pointer" 
           onClick={handleLogout}
         >
           <LogOut className="mr-2 h-4 w-4" />
@@ -222,12 +222,12 @@ export function Header({ menuItems = [] }: HeaderProps) {
               <Logo />
             </div>
 
-            <nav className="flex items-center space-x-6">
+            <nav className="flex items-center space-x-2">
               {menuItems.map((item) => (
                 <Link key={item.href} href={item.href}>
                   <Button
                     variant="ghost"
-                    size="icon"
+                    size="default"
                     className={cn(pathname === item.href ? "bg-zinc-100 text-zinc-500" : "text-zinc-500")}
                   >
                     {item.icon}

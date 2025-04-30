@@ -3,7 +3,7 @@ import { db } from "@/lib/firebase"
 import { collection, addDoc, doc, getDoc } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
-import { generateVoucherCode } from "@/app/utils/voucher"
+import { generateVoucherCode } from "@/lib/utils/voucher"
 import { addDays } from "date-fns"
 
 export async function POST(request: Request) {

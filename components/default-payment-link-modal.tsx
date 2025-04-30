@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CheckCircle2, Info, Link as LinkIcon, RefreshCw, AlertCircle } from "lucide-react"
 import { getDefaultLink, setDefaultLink } from "@/lib/firebase/partner-links"
 import { toast } from "sonner"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils/utils"
 import { db } from "@/lib/firebase"
 import { collection, getDocs, query, where } from "firebase/firestore"
 

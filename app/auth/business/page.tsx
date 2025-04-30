@@ -1,12 +1,5 @@
-import { LoginForm } from "@/components/auth/login-form"
+import { redirect } from "next/navigation"
 
-export default function BusinessLoginPage() {
-  return (
-    <LoginForm
-      title="Login de Estabelecimento"
-      subtitle="Entre com sua conta de estabelecimento para acessar o sistema"
-      userType="business"
-      registerUrl="/auth/register"
-    />
-  )
+export default function MemberLoginPage() {
+  redirect("/login")
 }

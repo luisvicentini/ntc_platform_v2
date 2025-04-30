@@ -13,7 +13,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
 import { Loader } from "@/components/ui/loader"
 import { Loader2Icon } from "lucide-react"
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils/utils"
 
 type CardBrand = 'visa' | 'mastercard' | 'amex' | 'discover' | 'jcb' | 'diners' | 'unionpay'
 

@@ -1182,7 +1182,7 @@ export async function GET(request: Request) {
                  request.headers.get("x-api-key")
     
     // Token fornecido pela Lastlink
-    const expectedToken = "fdf8727af48b4962bb74226ff491ca37"
+    const expectedToken = process.env.LASTLINK_TOKEN
     
     // Aceitar qualquer token para debug
     return NextResponse.json({

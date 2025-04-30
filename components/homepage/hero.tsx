@@ -6,7 +6,7 @@ import { motion } from "framer-motion"
 import { Bell, Play } from "lucide-react"
 import PreReservaModal from "./pre-reserva-modal"
 import { Archivo_Black } from "next/font/google"
-import { generateVoucherCode } from "@/lib/utils"
+import { generateVoucherCode } from "@/lib/utils/utils"
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar"
 import { url } from "inspector"
 

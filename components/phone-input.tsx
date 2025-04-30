@@ -6,9 +6,9 @@ import { Label } from "@/components/ui/label"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem } from "@/components/ui/command"
-import { phoneCodes, formatPhoneNumber } from "@/lib/phone-codes"
+import { phoneCodes, formatPhoneNumber } from "@/lib/utils/phone-codes"
 import { Check, ChevronsUpDown } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils/utils"
 
 interface PhoneInputProps {
   value: string

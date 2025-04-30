@@ -1,12 +1,5 @@
-import { LoginForm } from "@/components/auth/login-form"
+import { redirect } from "next/navigation"
 
-export default function PartnerLoginPage() {
-  return (
-    <LoginForm
-      title="Login de Parceiro"
-      subtitle="Entre com sua conta de parceiro para acessar o sistema"
-      userType="partner"
-      registerUrl="/auth/register"
-    />
-  )
+export default function MemberLoginPage() {
+  redirect("/login")
 }

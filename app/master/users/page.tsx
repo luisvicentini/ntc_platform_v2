@@ -307,7 +307,7 @@ function UsersContent() {
             />
             <Button
               variant="outline"
-              size="icon"
+              size="default"
               onClick={() => setViewMode(viewMode === "card" ? "table" : "card")}
               className="bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-100 hover:text-zinc-500"
             >
@@ -622,7 +622,7 @@ function UsersContent() {
                   <div className="dropdown-container relative">
                     <Button
                       variant="ghost"
-                      size="icon"
+                      size="default"
                       onClick={() => setOpenDropdownId(openDropdownId === user.id ? null : user.id)}
                       className="relative z-10 hover:bg-zinc-100"
                     >

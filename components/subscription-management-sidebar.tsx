@@ -614,10 +614,10 @@ export function SubscriptionManagementSidebar({
                 <AccordionContent>
                   <Card className="bg-zinc-100 border-zinc-200">
                     <CardContent className="space-y-4 pt-4">
-                      <Tabs defaultValue="stripe" onValueChange={setActiveCheckoutTab}>
+                      <Tabs defaultValue="lastlink" onValueChange={setActiveCheckoutTab}>
                         <TabsList className="grid w-full grid-cols-2 mb-4">
-                          <TabsTrigger className="bg-white border-zinc-200" value="stripe">Stripe</TabsTrigger>
                           <TabsTrigger className="bg-white border-zinc-200" value="lastlink">Lastlink</TabsTrigger>
+                          <TabsTrigger className="bg-white border-zinc-200" value="stripe">Stripe</TabsTrigger>
                         </TabsList>
                         
                         <TabsContent value="stripe">
@@ -676,6 +676,7 @@ export function SubscriptionManagementSidebar({
                               >
                                 <div>
                                   <p className="font-medium">{link.name}</p>
+                                  <p className="text-sm text-zinc-400">{`${window.location.origin}/checkout/${link.code}`}</p>
                                   <p className="text-sm text-zinc-400">
                                     Cliques: {link.clicks} | Conversões: {link.conversions}
                                   </p>
@@ -755,6 +756,7 @@ export function SubscriptionManagementSidebar({
                                 >
                                   <div>
                                     <p className="font-medium">{link.name}</p>
+                                    <p className="text-sm text-zinc-400 mb-3">{`${window.location.origin}/checkout/${link.code}`}</p>
                                     <p className="text-sm text-zinc-400">
                                       Cliques: {link.clicks} | Conversões: {link.conversions}
                                     </p>

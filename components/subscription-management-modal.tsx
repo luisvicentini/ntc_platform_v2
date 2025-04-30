@@ -12,7 +12,7 @@ import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
 import { toast } from "sonner"
 import { useSubscription } from "@/contexts/subscription-context"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils/utils"
 
 interface Partner {
   id: string

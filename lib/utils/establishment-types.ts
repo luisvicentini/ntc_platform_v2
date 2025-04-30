@@ -6,6 +6,7 @@ export const establishmentTypes = [
       "Brasileira",
       "Italiana",
       "Japonesa",
+      "Espanhola",
       "Chinesa",
       "Mexicana",
       "Árabe",

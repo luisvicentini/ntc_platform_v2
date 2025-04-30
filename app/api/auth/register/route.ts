@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
 import { collection, doc, setDoc, query, where, getDocs } from "firebase/firestore"
-import { generateActivationToken } from "@/lib/utils"
+import { generateActivationToken } from "@/lib/utils/utils"
 import { sendActivationEmail } from "@/lib/email"
 import jwt from "jsonwebtoken"
 import { cookies } from 'next/headers'

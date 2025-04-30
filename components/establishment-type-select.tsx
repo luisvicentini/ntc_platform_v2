@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { establishmentTypes } from "@/lib/establishment-types"
+import { establishmentTypes } from "@/lib/utils/establishment-types"
 
 interface EstablishmentTypeSelectProps {
   value?: {

@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge'
 import { Loader } from "@/components/ui/loader"
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-import { formatCurrency } from "@/lib/utils"
+import { formatCurrency } from "@/lib/utils/utils"
 
 // Base interface for transactions
 interface BaseTransaction {

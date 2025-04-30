@@ -81,7 +81,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
               />
               <AvatarFallback>{user.displayName?.charAt(0) || "U"}</AvatarFallback>
             </Avatar>
-            {isEditing && (
+            {/* {isEditing && (
               <>
                 <input
                   type="file"
@@ -179,7 +179,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
                   </svg>
                 </label>
               </>
-            )}
+            )} */}
           </div>
           <Button variant="outline" onClick={() => setIsEditing(!isEditing)}>
             {isEditing ? "Cancelar" : "Editar Perfil"}

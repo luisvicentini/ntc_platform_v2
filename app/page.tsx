@@ -11,35 +11,33 @@ import Footer from "@/components/homepage/footer"
 
 
 export default function HomePage() {
-  // const { user, loading } = useAuth()
-  // const router = useRouter()
+  const { user, loading } = useAuth()
+  const router = useRouter()
 
-  // useEffect(() => {
-  //   if (!loading) {
-  //     if (user) {
-  //       // Redirecionar com base no tipo de usuário
-  //       switch (user.userType) {
-  //         case 'member':
-  //           router.push('/member/feed')
-  //           break
-  //         case 'partner':
-  //           router.push('/partner/dashboard')
-  //           break
-  //         case 'business':
-  //           router.push('/business/dashboard')
-  //           break
-  //         case 'master':
-  //           router.push('/master/dashboard')
-  //           break
-  //       }
-  //     } else {
-  //       // Se não estiver autenticado, redirecionar para a página de login
-  //       router.push('/login')
-  //     }
-  //   }
-  // }, [user, loading, router])
-
-  //const router = useRouter()
+  useEffect(() => {
+    if (user !== null) {
+      if (user) {
+        // Redirecionar com base no tipo de usuário
+        switch (user.userType) {
+          case 'member':
+            router.push('/member/feed')
+            break
+          case 'partner':
+            router.push('/partner/dashboard')
+            break
+          case 'business':
+            router.push('/business/dashboard')
+            break
+          case 'master':
+            router.push('/master/dashboard')
+            break
+        }
+      } else {
+        // Se não estiver autenticado, redirecionar para a página de login
+        router.push('/login')
+      }
+    }
+  }, [user, loading, router])
   
 
   return (
