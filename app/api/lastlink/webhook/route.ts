@@ -981,7 +981,7 @@ async function createOrUpdateSubscription(
     // Se ainda não temos o partnerId, vamos usar um valor padrão para assinaturas Lastlink
     if (!partnerId && status === "active") {
       console.log("Parceiro não encontrado, usando o parceiro lastlink padrão")
-      partnerId = process.env.DEFAULT_LASTLINK_PARTNER_ID || "MChsM1JopUMB2ye2Tdvp" // ID do parceiro padrão
+      partnerId = process.env.DEFAULT_LASTLINK_PARTNER_ID || "t0daqXpfxg3M1nm6v1vB" // ID do parceiro padrão
     }
 
     console.log(`Parceiro final: ${partnerId}`)

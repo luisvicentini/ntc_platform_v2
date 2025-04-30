@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Pagination } from "@/components/ui/pagination"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { Building2, User, Users, Crown, MoreVertical, Grid, List, Check, X, Edit, Mail, Trash, Link, CreditCard } from "lucide-react"
+import { Building2, User, Users, Crown, MoreVertical, Grid, List, Check, X, Edit, Mail, Trash, Link, CreditCard, RefreshCw } from "lucide-react"
 import type { UserProfile, UserListResponse } from "@/types/user"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { PopoverArrow } from "@radix-ui/react-popover"
@@ -34,6 +34,7 @@ function UsersContent() {
   const [allUsers, setAllUsers] = useState<UserProfile[]>([])
   const [filteredUsers, setFilteredUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
+  const [isRefreshing, setIsRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState<string>("all")
   const [currentPage, setCurrentPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
@@ -78,6 +79,7 @@ function UsersContent() {
   const fetchUsers = async () => {
     try {
       setLoading(true)
+      setIsRefreshing(true)
       const response = await fetch("/api/users/list", { credentials: "include" })
 
       if (!response.ok) {
@@ -88,10 +90,13 @@ function UsersContent() {
       setAllUsers(data.users)
       setTotalRecords(data.total)
       filterUsers()
+      toast.success("Lista de usuários atualizada com sucesso")
     } catch (error) {
       console.error("Erro ao carregar usuários:", error)
+      toast.error("Erro ao atualizar lista de usuários")
     } finally {
       setLoading(false)
+      setIsRefreshing(false)
     }
   }
 
@@ -250,6 +255,11 @@ function UsersContent() {
     setCurrentPage(page)
   }
 
+  // Função para recarregar a lista de usuários
+  const handleRefresh = () => {
+    fetchUsers()
+  }
+
   if (loading) {
     return (
       <div className="container py-6">
@@ -298,13 +308,24 @@ function UsersContent() {
             </TabsList>
           </Tabs>
 
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-2">
+          <Button
+              variant="outline"
+              size="default"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              className="bg-zinc-100 text-zinc-500 border-zinc-200 hover:bg-zinc-100 hover:text-zinc-500"
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </Button>
+            
             <Input
               placeholder="Buscar usuários..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-64 bg-zinc-100 border-zinc-200"
             />
+            
             <Button
               variant="outline"
               size="default"
