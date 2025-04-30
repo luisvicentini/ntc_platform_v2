@@ -8,6 +8,9 @@ const DEFAULT_PARTNER_ID = "t0daqXpfxg3M1nm6v1vB"
 // Interface para os eventos do Lastlink
 interface LastlinkEventData {
   event?: string
+  Event?: string
+  IsTest?: boolean
+  Data?: any
   Buyer?: {
     Id?: string
     Email?: string
@@ -89,30 +92,61 @@ export async function POST(request: Request) {
     console.log("Corpo da requisição (texto):", text)
     
     // Decodificar JSON
-    const data = JSON.parse(text)
-    console.log("Webhook Lastlink recebido (decodificado):", JSON.stringify(data))
+    const rawData = JSON.parse(text) as LastlinkEventData
+    console.log("Webhook Lastlink recebido (decodificado):", JSON.stringify(rawData))
     
-    // Extrair tipo de evento (assumindo compra/assinatura se não especificado)
-    const eventType = data.Event || 'Purchase_Order_Confirmed'
-    console.log("Tipo de evento (assumido):", eventType)
+    // Verificar se os dados estão dentro de um campo "Data" ou diretamente no objeto
+    let actualData: LastlinkEventData = { ...rawData }
+    
+    // Extrair dados do formato correto (pode estar dentro do campo Data)
+    if (rawData.Data && typeof rawData.Data === 'object') {
+      console.log("Dados encontrados dentro do campo 'Data'")
+      
+      // Verificar se o objeto Data tem os campos necessários
+      const dataObj = rawData.Data as LastlinkEventData
+      
+      // Extrair dados diretamente do objeto Data se existirem
+      actualData.Buyer = dataObj.Buyer || actualData.Buyer
+      actualData.Products = dataObj.Products || actualData.Products
+      actualData.Purchase = dataObj.Purchase || actualData.Purchase
+      actualData.Subscriptions = dataObj.Subscriptions || actualData.Subscriptions
+      actualData.Offer = dataObj.Offer || actualData.Offer
+      actualData.Seller = dataObj.Seller || actualData.Seller
+      actualData.Event = dataObj.Event || actualData.Event || actualData.event
+      
+      console.log("Dados mesclados de Data:", 
+        "Buyer:", !!actualData.Buyer, 
+        "Products:", !!actualData.Products, 
+        "Purchase:", !!actualData.Purchase)
+    }
+    
+    // Extrair tipo de evento
+    const eventType = actualData.Event || actualData.event || 'Purchase_Order_Confirmed'
+    console.log("Tipo de evento (extraído):", eventType)
     
     // Ignorar eventos de teste
-    if (data.IsTest) {
+    if (actualData.IsTest) {
       console.log("Webhook de teste ignorado")
       return NextResponse.json({ status: 'success', message: 'Webhook de teste recebido' })
     }
     
     // Extrair dados úteis
-    const products = data.Products || []
-    const buyer = data.Buyer || {}
-    const purchase = data.Purchase || {}
-    const subscriptions = data.Subscriptions || [] as LastlinkSubscription[]
+    const products = actualData.Products || []
+    const buyer = actualData.Buyer || {}
+    const purchase = actualData.Purchase || {}
+    const subscriptions = actualData.Subscriptions || [] as LastlinkSubscription[]
     
     console.log("Dados extraídos:")
     console.log("- Produtos:", products)
     console.log("- Comprador:", buyer)
     console.log("- Compra:", purchase)
     console.log("- Assinaturas:", subscriptions)
+    
+    // Verificar dados críticos antes de continuar
+    if (!buyer) {
+      console.error("Dados do comprador não encontrados no webhook")
+      return NextResponse.json({ status: 'error', message: 'Dados do comprador não encontrados' }, { status: 400 })
+    }
     
     // Obter dados para identificação do parceiro
     let partnerId = DEFAULT_PARTNER_ID
@@ -126,8 +160,8 @@ export async function POST(request: Request) {
     }
     
     // Tente obter informações da UTM se disponíveis
-    if (data.Utm) {
-      console.log("Informações de UTM encontradas:", data.Utm)
+    if (actualData.Utm) {
+      console.log("Informações de UTM encontradas:", actualData.Utm)
       // Aqui podemos adicionar lógica para rastrear origem via UTM
     }
     
@@ -139,6 +173,8 @@ export async function POST(request: Request) {
     
     if (!userEmail) {
       console.error("Email do usuário não fornecido no webhook")
+      console.error("Estrutura do objeto buyer:", JSON.stringify(buyer))
+      console.error("Estrutura completa dos dados:", JSON.stringify(actualData))
       return NextResponse.json({ status: 'error', message: 'Email do usuário não fornecido' }, { status: 400 })
     }
     
