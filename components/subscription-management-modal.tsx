@@ -57,7 +57,7 @@ export function SubscriptionManagementModal({
         
         // Filtrar parceiros que já têm assinaturas ativas
         const subscribedIds = new Set([...activeSubscriptions, ...newSubscriptions].map(p => p.id))
-        const available = data.filter(partner => !subscribedIds.has(partner.id))
+        const available = data.filter((partner: Partner) => !subscribedIds.has(partner.id))
         setAvailablePartners(available)
       } catch (error) {
         console.error("Erro ao carregar parceiros:", error)
@@ -75,12 +75,12 @@ export function SubscriptionManagementModal({
       try {
         const subscriptions = await getMemberSubscriptions(memberId)
         const activeOnes = subscriptions
-          .filter(sub => sub.status === 'active')
+          .filter(sub => sub.status === 'active' || sub.status === 'ativa' || sub.status === 'iniciada' || sub.status === 'paid' || sub.status === 'trialing')
           .map(sub => ({
             id: sub.partnerId,
             displayName: sub.partnerName || 'Parceiro não identificado',
             email: sub.partnerEmail || '',
-            expirationDate: sub.expiresAt
+            expirationDate: sub.expiresAt || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 dias padrão se não estiver definido
           }))
         
         console.log('Assinaturas ativas carregadas:', activeOnes)
@@ -219,7 +219,7 @@ export function SubscriptionManagementModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl bg-zinc-100 text-zinc-500 p-0">
         <DialogHeader className="p-6 border-b border-zinc-200">
-          <DialogTitle className="text-xl font-semibold">Vincular Assinante a uma assinatura de parceiro</DialogTitle>
+          <DialogTitle className="text-xl font-semibold">Vincular Assinante a um parceiro</DialogTitle>
         </DialogHeader>
 
         <div className="grid grid-cols-2 gap-6 p-6">

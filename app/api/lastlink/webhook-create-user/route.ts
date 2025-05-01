@@ -320,11 +320,13 @@ export async function POST(request: Request) {
       status: 'active',
       type: 'lastlink',
       provider: 'lastlink',
-      rawData: text,
+      rawData: JSON.stringify(text), // Convertendo para string para evitar problemas
       buyerId: buyer.Id || null,
       affiliateId: purchase.Affiliate?.Id || null,
       affiliateEmail: purchase.Affiliate?.Email || null,
-      subscriptionIds: subscriptions.map((sub: LastlinkSubscription) => sub.Id) || []
+      subscriptionIds: subscriptions.map((sub: LastlinkSubscription) => sub.Id) || [],
+      // Verificar se utmParams existe antes de adicioná-lo
+      ...(actualData.Utm ? { utmParams: actualData.Utm } : {})
     }
     
     console.log("Salvando transação no banco de dados:", transactionData)
@@ -389,6 +391,7 @@ export async function POST(request: Request) {
       const subscriptionData = {
         id: newSubscriptionRef.id,
         userId,
+        memberId: userId,
         partnerId,
         partnerLinkId,
         transactionId,
@@ -435,6 +438,59 @@ export async function POST(request: Request) {
         updatedAt: now.toISOString()
       })
       console.log(`Usuário ${userId} atualizado com partnerId ${partnerId}`)
+    }
+    
+    // ADICIONADO: Criar ou atualizar registro na coleção memberPartners
+    try {
+      console.log("Verificando registro existente em memberPartners...")
+      const memberPartnersRef = collection(db, "memberPartners")
+      const mpQuery = query(
+        memberPartnersRef,
+        where("memberId", "==", userId),
+        where("partnerId", "==", partnerId)
+      )
+      
+      const mpSnapshot = await getDocs(mpQuery)
+      
+      if (mpSnapshot.empty) {
+        console.log("Criando novo registro em memberPartners")
+        // Criar novo registro
+        const memberPartnerData = {
+          memberId: userId,
+          userId: userId, // Adicionando userId também para ter os dois campos
+          partnerId: partnerId,
+          status: "active",
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+          expiresAt: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 ano
+          transactionId: transactionId,
+          userEmail: userEmail.toLowerCase(),
+          planName: planName,
+          planInterval: planInterval,
+          planIntervalCount: planIntervalCount,
+          price: purchase.Price?.Value || 0,
+          provider: 'lastlink',
+          type: 'lastlink',
+          startDate: now.toISOString()
+        }
+        
+        await addDoc(memberPartnersRef, memberPartnerData)
+        console.log("Registro criado em memberPartners com sucesso")
+      } else {
+        console.log("Atualizando registro existente em memberPartners")
+        // Atualizar registro existente
+        const mpDoc = mpSnapshot.docs[0]
+        await updateDoc(doc(memberPartnersRef, mpDoc.id), {
+          status: "active",
+          updatedAt: now.toISOString(),
+          expiresAt: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+          transactionId: transactionId
+        })
+        console.log("Registro atualizado em memberPartners com sucesso")
+      }
+    } catch (error) {
+      console.error("Erro ao criar/atualizar registro em memberPartners:", error)
+      // Não interrompe o fluxo principal em caso de erro
     }
     
     console.log("========= FIM DO PROCESSAMENTO DO WEBHOOK =========")

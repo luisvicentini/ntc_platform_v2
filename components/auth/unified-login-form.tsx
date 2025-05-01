@@ -293,20 +293,6 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
                   message={error} 
                   showWhatsAppSupport={showWhatsAppSupport} 
                 />
-                {showResendActivation && (
-                  <div className="mt-2 flex justify-center">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleResendActivation}
-                      disabled={loading || authLoading}
-                      className="text-xs bg-white border-red-200 hover:bg-red-50 hover:text-red-600 text-red-500"
-                    >
-                      Reenviar email de ativação
-                    </Button>
-                  </div>
-                )}
               </div>
             )}
             

@@ -51,9 +51,30 @@ interface Subscription {
   [key: string]: any;
 }
 
+// Interface simplificada para representar um estabelecimento no feed
+interface FeedEstablishment {
+  id: string;
+  name: string;
+  images: string[];
+  rating: number;
+  isFeatured?: boolean;
+  partnerId: string;
+  partnerName?: string;
+  address?: {
+    city?: string;
+    [key: string]: any;
+  };
+  type?: {
+    type?: string;
+    category?: string;
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
 export default function FeedPage() {
   const router = useRouter()
-  const { establishments } = useEstablishment()
+  // Removemos a dependência do useEstablishment para evitar confusão
   const { user } = useAuth()
   const { loadMemberSubscriptions, subscriptions, hasAnyActiveSubscription } = useSubscription()
   const [searchTerm, setSearchTerm] = useState("")
@@ -64,14 +85,14 @@ export default function FeedPage() {
     partnerId: "all",
     minRating: 0,
   })
-  const [selectedEstablishment, setSelectedEstablishment] = useState<AvailableEstablishment | null>(null)
+  const [selectedEstablishment, setSelectedEstablishment] = useState<FeedEstablishment | null>(null)
   const [activeTab, setActiveTab] = useState("explore")
   const [partners, setPartners] = useState<{ id: string, displayName: string }[]>([])
   const [feedStatus, setFeedStatus] = useState<FeedStatus>({
     status: "loading"
   })
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
-  const [establishmentsData, setEstablishmentsData] = useState<any[]>([])
+  const [establishmentsData, setEstablishmentsData] = useState<FeedEstablishment[]>([])
   const [subscriptionsLoaded, setSubscriptionsLoaded] = useState(false)
 
   // Verificar se o usuário tem uma assinatura ativa usando o contexto de assinatura
@@ -94,7 +115,7 @@ export default function FeedPage() {
         console.log("Verificando assinatura para:", { userId, userEmail });
         
         // Usar a nova função que verifica por ID e email
-        const hasActiveSubscription = await hasAnyActiveSubscription(userId, userEmail);
+        const hasActiveSubscription = await hasAnyActiveSubscription(userId || undefined, userEmail || undefined);
         
         console.log("Status da assinatura:", hasActiveSubscription ? "Ativa" : "Inativa");
         
@@ -157,121 +178,166 @@ export default function FeedPage() {
   useEffect(() => {
     const loadEstablishments = async () => {
       try {
+        console.log("Carregando estabelecimentos da API...");
         const response = await fetch("/api/member/feed", {
           credentials: "include",
           headers: {
             "x-session-token": localStorage.getItem("session_token") || "",
           }
-        })
+        });
         
         if (!response.ok) {
-          throw new Error("Erro ao carregar estabelecimentos")
+          throw new Error("Erro ao carregar estabelecimentos");
         }
         
-        const data = await response.json()
+        const data = await response.json();
+        console.log("Dados recebidos da API:", data);
         
         if (data.establishments && Array.isArray(data.establishments)) {
-          setEstablishmentsData(data.establishments)
+          console.log(`Recebidos ${data.establishments.length} estabelecimentos`);
+          
+          // Garantir que todos os estabelecimentos tenham as propriedades necessárias
+          const processedEstablishments = data.establishments.map((est: any) => ({
+            id: est.id || "",
+            name: est.name || "Estabelecimento sem nome",
+            images: Array.isArray(est.images) ? est.images : [],
+            rating: typeof est.rating === 'number' ? est.rating : 0,
+            isFeatured: !!est.isFeatured,
+            partnerId: est.partnerId || "",
+            partnerName: est.partnerName || "",
+            address: est.address || { city: "Cidade não informada" },
+            type: est.type || { type: "Tipo não informado", category: "Categoria não informada" }
+          }));
+          
+          setEstablishmentsData(processedEstablishments);
           
           // Extrair parceiros únicos dos estabelecimentos
           const uniquePartners = Array.from(
-            new Set(data.establishments.map((e: any) => e.partnerId))
+            new Set(processedEstablishments.map((e: FeedEstablishment) => e.partnerId))
           ).map(partnerId => {
-            const establishment = data.establishments.find((e: any) => e.partnerId === partnerId)
+            const establishment = processedEstablishments.find((e: FeedEstablishment) => e.partnerId === partnerId);
             return {
               id: String(partnerId), 
               displayName: establishment?.partnerName || String(partnerId)
-            }
-          }) as { id: string, displayName: string }[]
+            };
+          });
           
-          setPartners(uniquePartners)
+          setPartners(uniquePartners);
+          console.log(`Identificados ${uniquePartners.length} parceiros únicos`);
+        } else {
+          console.warn("API não retornou estabelecimentos válidos:", data);
         }
       } catch (error) {
-        console.error("Erro ao carregar dados:", error)
+        console.error("Erro ao carregar dados:", error);
       }
-    }
+    };
     
-    loadEstablishments()
-  }, [])
+    loadEstablishments();
+  }, []);
 
   // Funções para extrair dados únicos dos estabelecimentos
   const getUniqueCities = () => {
-    return Array.from(new Set(establishments.map(e => e.address.city)))
+    if (!establishmentsData.length) return [];
+    
+    const cities = establishmentsData
+      .filter(e => e?.address?.city)
+      .map(e => e.address?.city as string);
+    
+    return Array.from(new Set(cities))
       .sort()
-      .map(city => ({ id: city, label: city }))
-  }
+      .map(city => ({ id: city, label: city }));
+  };
 
   const getUniqueCategories = () => {
-    return Array.from(new Set(establishments.map(e => e.type.category)))
+    if (!establishmentsData.length) return [];
+    
+    const categories = establishmentsData
+      .filter(e => e?.type?.category)
+      .map(e => e.type?.category as string);
+    
+    return Array.from(new Set(categories))
       .sort()
-      .map(category => ({ id: category, label: category }))
-  }
+      .map(category => ({ id: category, label: category }));
+  };
 
   const getUniqueTypes = () => {
-    return Array.from(new Set(establishments.map(e => e.type.type)))
+    if (!establishmentsData.length) return [];
+    
+    const types = establishmentsData
+      .filter(e => e?.type?.type)
+      .map(e => e.type?.type as string);
+    
+    return Array.from(new Set(types))
       .sort()
-      .map(type => ({ id: type, label: type }))
-  }
+      .map(type => ({ id: type, label: type }));
+  };
 
   const getUniquePartners = () => {
-    const uniquePartnerIds = Array.from(new Set(establishments.map(e => e.partnerId)))
+    if (!establishmentsData.length || !partners.length) return [];
+    
+    const uniquePartnerIds = Array.from(new Set(establishmentsData.map(e => e.partnerId)));
+    
     return uniquePartnerIds
       .map(partnerId => {
-        const partner = partners.find(p => p.id === partnerId)
-        return partner ? { id: partnerId, label: partner.displayName } : null
+        const partner = partners.find(p => p.id === partnerId);
+        return partner ? { id: partnerId, label: partner.displayName } : null;
       })
       .filter(Boolean)
-      .sort((a, b) => a!.label.localeCompare(b!.label))
-  }
+      .sort((a, b) => a!.label.localeCompare(b!.label));
+  };
 
-  // Filtro para os estabelecimentos - sempre aplicamos os filtros
-  const filteredEstablishments = establishments.filter((establishment) => {
+  // Filtro para os estabelecimentos usando establishmentsData
+  const filteredEstablishments = establishmentsData.filter((establishment) => {
+    if (!establishment || !establishment.name) {
+      return false;
+    }
+    
     const matchesSearch =
       establishment.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      establishment.type.type.toLowerCase().includes(searchTerm.toLowerCase())
+      (establishment.type?.type && establishment.type.type.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesFilters =
-      (filters.city === "all" || establishment.address.city === filters.city) &&
-      (filters.category === "all" || establishment.type.category === filters.category) &&
-      (filters.type === "all" || establishment.type.type === filters.type) &&
+      (filters.city === "all" || (establishment.address?.city === filters.city)) &&
+      (filters.category === "all" || (establishment.type?.category === filters.category)) &&
+      (filters.type === "all" || (establishment.type?.type === filters.type)) &&
       (filters.partnerId === "all" || establishment.partnerId === filters.partnerId) &&
-      establishment.rating >= filters.minRating
+      (establishment.rating >= filters.minRating);
 
-    return matchesSearch && matchesFilters
-  }) as AvailableEstablishment[]
+    return matchesSearch && matchesFilters;
+  });
 
   const featuredEstablishments = filteredEstablishments.filter((establishment) => 
     establishment.isFeatured
-  )
+  );
 
   const handleSearch = (term: string) => {
-    setSearchTerm(term)
-  }
+    setSearchTerm(term);
+  };
 
-  const handleEstablishmentClick = (establishment: AvailableEstablishment) => {
+  const handleEstablishmentClick = (establishment: FeedEstablishment) => {
     // Verificar se o usuário tem uma assinatura ativa
     if (feedStatus.status !== "active") {
       // Se não tiver, mostrar o modal de assinatura
-      setShowSubscriptionModal(true)
+      setShowSubscriptionModal(true);
     } else {
       // Se tiver, mostrar o detalhe do estabelecimento
-      setSelectedEstablishment(establishment)
+      setSelectedEstablishment(establishment);
     }
-  }
+  };
 
   const handleSubscriptionPurchase = () => {
     // Redirecionar para o link padrão de assinatura
     if (feedStatus.defaultPaymentLink?.lastlinkUrl) {
-      window.location.href = feedStatus.defaultPaymentLink.lastlinkUrl
+      window.location.href = feedStatus.defaultPaymentLink.lastlinkUrl;
     } else if (feedStatus.defaultPaymentLink?.code) {
-      router.push(`/checkout/${feedStatus.defaultPaymentLink.code}`)
+      router.push(`/checkout/${feedStatus.defaultPaymentLink.code}`);
     } else {
       // Caso não tenha um link padrão, redirecionar para a página de planos
-      router.push("/planos")
+      router.push("/planos");
     }
-  }
+  };
 
-  const renderEstablishmentCards = (establishments: AvailableEstablishment[]) => (
+  const renderEstablishmentCards = (establishments: FeedEstablishment[]) => (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       {establishments.map((establishment) => (
         <Card
@@ -312,13 +378,13 @@ export default function FeedPage() {
           <div className="p-4 space-y-2">
             <h3 className="font-semibold text-zinc-500 group-hover:text-zinc-500">{establishment.name}</h3>
             <p className="text-sm text-zinc-400">
-              {establishment.type.type} • {establishment.address.city}
+              {establishment.type?.type || "Tipo não informado"} • {establishment.address?.city || "Cidade não informada"}
             </p>
           </div>
         </Card>
       ))}
     </div>
-  )
+  );
 
   // Renderizar skeletons para o estado de carregamento
   const renderSkeletons = () => (
@@ -335,7 +401,15 @@ export default function FeedPage() {
         </Card>
       ))}
     </div>
-  )
+  );
+
+  // Adicionar logs para debug
+  console.log("Estado atual:", {
+    feedStatus: feedStatus.status,
+    estabelecimentosCarregados: establishmentsData.length,
+    estabelecimentosFiltrados: filteredEstablishments.length,
+    estabelecimentosDestaque: featuredEstablishments.length
+  });
 
   return (
     <div className="container py-6">
@@ -558,7 +632,7 @@ export default function FeedPage() {
 
       {selectedEstablishment && (
         <EstablishmentSheet
-          establishment={selectedEstablishment}
+          establishment={selectedEstablishment as unknown as AvailableEstablishment}
           isOpen={!!selectedEstablishment}
           onClose={() => setSelectedEstablishment(null)}
         />

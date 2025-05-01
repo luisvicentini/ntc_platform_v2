@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback } from "react"
 import { toast } from "sonner"
 import type { Subscription } from "@/types/subscription"
-import { collection, getDocs, query, where, addDoc, doc, deleteDoc, updateDoc } from "firebase/firestore"
+import { collection, getDocs, query, where, addDoc, doc, deleteDoc, updateDoc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
 interface SubscriptionContextData {
@@ -302,20 +302,125 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const getMemberSubscriptions = useCallback(async (memberId: string) => {
     try {
-      const response = await fetch(`/api/subscriptions?memberId=${memberId}`, {
-        credentials: "include"
-      })
-
-      if (!response.ok) {
-        throw new Error("Erro ao carregar assinaturas")
+      console.log("Buscando assinaturas para membro:", memberId)
+      
+      // 1. Buscar primeiro pela API (que vai buscar apenas por memberId)
+      let subscriptionsData: Subscription[] = []
+      
+      try {
+        const response = await fetch(`/api/subscriptions?memberId=${memberId}`, {
+          credentials: "include"
+        })
+  
+        if (response.ok) {
+          const apiData = await response.json()
+          subscriptionsData = apiData
+          console.log("Assinaturas encontradas pela API:", subscriptionsData.length)
+        }
+      } catch (apiError) {
+        console.error("Erro ao buscar assinaturas pela API:", apiError)
       }
-
-      const data = await response.json()
-      setSubscriptions(data)
-      return data
+      
+      // 2. Buscar diretamente no Firestore para garantir que pegamos todas as variações 
+      try {
+        const subscriptionsRef = collection(db, "subscriptions")
+        
+        // Buscar por memberId
+        const memberIdQuery = query(
+          subscriptionsRef,
+          where("memberId", "==", memberId)
+        )
+        
+        const memberIdSnapshot = await getDocs(memberIdQuery)
+        
+        const memberIdResults = memberIdSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          partnerName: doc.data().partnerName || "Parceiro não identificado", 
+          partnerEmail: doc.data().partnerEmail || ""
+        })) as Subscription[]
+        
+        console.log("Assinaturas encontradas por memberId:", memberIdResults.length)
+        
+        // Buscar por userId (para compatibilidade com webhook da Lastlink)
+        const userIdQuery = query(
+          subscriptionsRef,
+          where("userId", "==", memberId) // memberId é na verdade o userId neste contexto
+        )
+        
+        const userIdSnapshot = await getDocs(userIdQuery)
+        
+        const userIdResults = userIdSnapshot.docs.map(doc => {
+          // Informações do parceiro
+          let partnerName = doc.data().partnerName
+          let partnerEmail = doc.data().partnerEmail
+          
+          // Se não tiver nome do parceiro, tentamos extrair de outros campos
+          if (!partnerName) {
+            partnerName = "Parceiro não identificado"
+          }
+          
+          return {
+            id: doc.id,
+            ...doc.data(),
+            memberId: doc.data().memberId || memberId, // Garantir que memberId esteja presente
+            partnerName, 
+            partnerEmail: partnerEmail || ""
+          }
+        }) as Subscription[]
+        
+        console.log("Assinaturas encontradas por userId:", userIdResults.length)
+        
+        // Combinar resultados sem duplicações (por id da assinatura)
+        const combinedResults = [...subscriptionsData]
+        
+        // Adicionar resultados do memberId se não existirem
+        memberIdResults.forEach(sub => {
+          if (!combinedResults.some(existing => existing.id === sub.id)) {
+            combinedResults.push(sub)
+          }
+        })
+        
+        // Adicionar resultados do userId se não existirem
+        userIdResults.forEach(sub => {
+          if (!combinedResults.some(existing => existing.id === sub.id)) {
+            combinedResults.push(sub)
+          }
+        })
+        
+        console.log("Total de assinaturas após combinar:", combinedResults.length)
+        
+        // 3. Buscar informações dos parceiros para enriquecer os dados
+        for (const sub of combinedResults) {
+          if (sub.partnerId && (!sub.partnerName || sub.partnerName === "Parceiro não identificado")) {
+            try {
+              const partnerRef = doc(db, "users", sub.partnerId)
+              const partnerDoc = await getDoc(partnerRef)
+              
+              if (partnerDoc.exists()) {
+                const data = partnerDoc.data()
+                sub.partnerName = data.displayName || data.name || data.businessName || "Parceiro não identificado"
+                sub.partnerEmail = data.email || ""
+              }
+            } catch (error) {
+              console.error(`Erro ao buscar informações do parceiro ${sub.partnerId}:`, error)
+            }
+          }
+        }
+        
+        setSubscriptions(combinedResults)
+        return combinedResults
+      } catch (firestoreError) {
+        console.error("Erro ao buscar assinaturas no Firestore:", firestoreError)
+      }
+      
+      // Se chegou até aqui, usamos os dados que temos
+      setSubscriptions(subscriptionsData)
+      return subscriptionsData
     } catch (error: any) {
-      toast.error(error.message)
-      throw error
+      console.error("Erro ao carregar assinaturas:", error)
+      toast.error("Erro ao carregar assinaturas")
+      return []
     }
   }, [])
 
