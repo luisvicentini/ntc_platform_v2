@@ -53,12 +53,32 @@ export function middleware(request: NextRequest) {
       '/api/lastlink/redirect',
       '/api/auth/session',
       '/api/account-activation/verify',
-      '/api/account-activation/set-password'
+      '/api/account-activation/set-password',
+      '/api/public/restaurants'
     ]
 
     // Verificar se é uma rota pública
-    if (publicApiRoutes.some(route => pathname.startsWith(route))) {
-      return NextResponse.next()
+    const isPublicApiRoute = publicApiRoutes.some(route => pathname.startsWith(route));
+    
+    // Adicionar log para depuração
+    if (pathname.includes('/public/restaurants')) {
+      console.log(`[MIDDLEWARE] Acesso detectado à rota: ${pathname}`);
+      console.log(`[MIDDLEWARE] É uma rota pública? ${isPublicApiRoute ? 'SIM' : 'NÃO'}`);
+      console.log(`[MIDDLEWARE] Ação: ${isPublicApiRoute ? 'Permitir acesso' : 'Verificar autenticação'}`);
+      console.log(`[MIDDLEWARE] Headers:`, {
+        host: request.headers.get('host'),
+        referer: request.headers.get('referer'),
+        userAgent: request.headers.get('user-agent')?.substring(0, 100)
+      });
+      
+      // Verificar se há sessão
+      const hasSession = request.cookies.has('__session');
+      console.log(`[MIDDLEWARE] Sessão existe? ${hasSession ? 'SIM' : 'NÃO'}`);
+    }
+    
+    if (isPublicApiRoute) {
+      console.log(`[MIDDLEWARE] Permitindo acesso à rota pública: ${pathname}`);
+      return NextResponse.next();
     }
 
     // Verificar se é uma rota de autenticação

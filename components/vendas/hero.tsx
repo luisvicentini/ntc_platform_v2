@@ -31,11 +31,11 @@ export default function Hero() {
   return (
     <section
       ref={headerRef}
-      className="relative pt-20 pb-4 px-4 md:px-8 lg:px-16 overflow-hidden bg-[url('/homepage/bg-ntc.jpg')] bg-center bg-top bg-cover bg-no-repeat max-md:bg-[url('/homepage/bg-ntc-mobile.jpg')] max-md:bg-contain"
+      className="relative pt-40 pb-4 px-4 md:px-8 lg:px-16 overflow-hidden bg-[url('/homepage/bg-ntc.jpg')] bg-center bg-top bg-cover bg-no-repeat max-md:bg-[url('/homepage/bg-ntc-mobile.jpg')] max-md:bg-contain"
     >
 
       {/* Logo */}
-      <motion.div
+      {/* <motion.div
         className="flex justify-center mb-4 max-sm:mb-4"
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -48,7 +48,7 @@ export default function Hero() {
           height={60}
           className="object-contain max-sm:w-[5rem] max-md:w-[8rem]"
         />
-      </motion.div>
+      </motion.div> */}
 
       {/* Título principal */}
       <motion.div
@@ -60,7 +60,7 @@ export default function Hero() {
           <h1 className={`${fontPrimaryNTC.className} font-bold line-height-3 max-sm:text-2xl max-md:text-4xl lg:text-5xl  mb-2`}>
           O único clube de vantagens que te dá <span className="text-[#F24957] px-2">descontos de até 50%</span> nos melhores restaurantes de verdade.
         </h1>
-        <p className="text-zinc-300 text-lg sm:text-xl max-sm:text-[1rem] pt-2">Aqui não tem jabá, aqui é <b className="text-white">Não Tem Chef!</b></p>
+        <p className="text-zinc-300 text-lg sm:text-xl max-sm:text-[1rem] pt-2">Do Michelin ao Podrão, só no <b className="text-white">Clube Não Tem Chef!</b></p>
       </motion.div>
 
       {/* Bloco de Vídeo */}
@@ -71,13 +71,15 @@ export default function Hero() {
         transition={{ delay: 0.4, duration: 0.5 }}
       >
         <div style={{position: "relative", paddingTop: "56.25%"}}>
-            <iframe id="panda-bee73ec5-d845-4d70-b4d5-2a879755343e" 
-            src="https://player-vz-f47b157e-3fb.tv.pandavideo.com.br/embed/?v=bee73ec5-d845-4d70-b4d5-2a879755343e"
-            style={{border: "none", position: "absolute", top: "0", left: "0"}}
-            allowFullScreen={true}
-            width="100%"
-            height="100%"
-          />
+          <iframe id="panda-e8dc1524-3915-4cae-a779-e385c902a9f0" 
+          src="https://player-vz-f47b157e-3fb.tv.pandavideo.com.br/embed/?v=e8dc1524-3915-4cae-a779-e385c902a9f0" 
+          style={{border: "none", position: "absolute", top: "0", left: "0"}} 
+          allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture" 
+          allowFullScreen={true} 
+          width="100%" 
+          height="100%" 
+          >
+          </iframe>
         </div>
       </motion.div>
 

@@ -11,6 +11,7 @@ import BonusSection from "@/components/vendas/bonus-section"
 import PlansSection from "@/components/vendas/plans-section"
 import HowItWorks from "@/components/vendas/how-it-works"
 import FAQSection from "@/components/vendas/faq-section"
+import RestaurantsSection from "@/components/vendas/restaurants-section"
 
 export default function VendasPage() {
   return (
@@ -23,6 +24,17 @@ export default function VendasPage() {
       
       {/* Seção de benefícios (modificada para carrossel) */}
       <Benefits isCarousel={true} />
+      
+      
+      {/* Nova seção de restaurantes */}
+      <Suspense 
+        fallback={
+          <div className="h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-[#F24957]"></div>
+        </div>}
+      >
+        <RestaurantsSection />
+      </Suspense>
       
       {/* Restaurantes */}
       <Restaurants />

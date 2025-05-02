@@ -54,10 +54,16 @@ export default function Benefits({ isCarousel = false }: BenefitsProps) {
   const carouselRef = useRef<HTMLDivElement>(null)
   const [visibleItems, setVisibleItems] = useState(3)
   const [showPartial, setShowPartial] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Estado para controle de drag do mouse
   const [isDragging, setIsDragging] = useState(false)
   const [startX, setStartX] = useState(0)
   const [scrollLeft, setScrollLeft] = useState(0)
-  const [isMobile, setIsMobile] = useState(false)
+  
+  // Controle de debounce para wheel
+  const wheelTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const [isWheelActive, setIsWheelActive] = useState(false)
 
   // Calcula quantos itens são visíveis baseado no tamanho da tela
   useEffect(() => {
@@ -123,18 +129,93 @@ export default function Benefits({ isCarousel = false }: BenefitsProps) {
     }
   }
 
-  // Eventos para scroll do mouse no carrossel
+  // Eventos para scroll do mouse no carrossel (com debounce)
   const handleWheel = (e: WheelEvent) => {
-    if (!carouselRef.current || !isCarousel) return
+    if (!carouselRef.current || !isCarousel || isWheelActive) return
 
-    // Previne o scroll da página
+    // Previne o scroll da página apenas se o carrossel estiver em foco
     e.preventDefault()
+    
+    setIsWheelActive(true)
+    
+    // Implementa debounce para evitar mudanças rápidas demais
+    if (wheelTimeoutRef.current) {
+      clearTimeout(wheelTimeoutRef.current)
+    }
+    
+    wheelTimeoutRef.current = setTimeout(() => {
+      // Determina a direção do scroll com um threshold para evitar mudanças acidentais
+      const threshold = 15
+      if (Math.abs(e.deltaY) > threshold) {
+        if (e.deltaY > 0) {
+          nextSlide()
+        } else {
+          prevSlide()
+        }
+      }
+      setIsWheelActive(false)
+    }, 150) // Delay para evitar múltiplas mudanças em sequência
+  }
 
-    // Scroll para a direita (deltaY positivo) ou esquerda (deltaY negativo)
-    if (e.deltaY > 0) {
-      nextSlide()
-    } else {
-      prevSlide()
+  // Eventos para mouse drag
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!carouselRef.current || !isCarousel) return
+    
+    setIsDragging(true)
+    setStartX(e.clientX)
+    setScrollLeft(currentIndex)
+    
+    // Altera o cursor durante o arrasto
+    if (carouselRef.current) {
+      carouselRef.current.style.cursor = 'grabbing'
+    }
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !carouselRef.current || !isCarousel) return
+
+    // Calcular a distância arrastada
+    const x = e.clientX
+    const distance = startX - x
+    
+    // Não processar movimentos muito pequenos para evitar detecção acidental
+    if (Math.abs(distance) < 10) return
+    
+    // Determina a distância mínima para mudar de slide
+    const cardWidth = carouselRef.current.offsetWidth / (isMobile && showPartial ? 1 : visibleItems)
+    const moveThreshold = cardWidth * 0.2 // 20% da largura do card
+    
+    if (Math.abs(distance) > moveThreshold) {
+      if (distance > 0 && currentIndex < getMaxIndex()) {
+        setCurrentIndex(scrollLeft + 1)
+        setIsDragging(false)
+      } else if (distance < 0 && currentIndex > 0) {
+        setCurrentIndex(scrollLeft - 1)
+        setIsDragging(false)
+      }
+      
+      // Restaura o cursor
+      if (carouselRef.current) {
+        carouselRef.current.style.cursor = 'grab'
+      }
+    }
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+    // Restaura o cursor
+    if (carouselRef.current) {
+      carouselRef.current.style.cursor = 'grab'
+    }
+  }
+
+  const handleMouseLeave = () => {
+    if (isDragging) {
+      setIsDragging(false)
+      // Restaura o cursor
+      if (carouselRef.current) {
+        carouselRef.current.style.cursor = 'grab'
+      }
     }
   }
 
@@ -152,6 +233,9 @@ export default function Benefits({ isCarousel = false }: BenefitsProps) {
 
     const x = e.touches[0].clientX
     const distance = startX - x
+    
+    // Não processar movimentos muito pequenos
+    if (Math.abs(distance) < 10) return
     
     // Determina a distância mínima para mudar de slide
     const cardWidth = carouselRef.current.offsetWidth / (isMobile && showPartial ? 1 : visibleItems)
@@ -176,12 +260,16 @@ export default function Benefits({ isCarousel = false }: BenefitsProps) {
   useEffect(() => {
     const carousel = carouselRef.current
     if (carousel && isCarousel) {
-      carousel.addEventListener('wheel', handleWheel as any)
+      carousel.addEventListener('wheel', handleWheel, { passive: false })
       return () => {
-        carousel.removeEventListener('wheel', handleWheel as any)
+        carousel.removeEventListener('wheel', handleWheel)
+        // Limpa o timeout no cleanup para evitar memory leaks
+        if (wheelTimeoutRef.current) {
+          clearTimeout(wheelTimeoutRef.current)
+        }
       }
     }
-  }, [carouselRef, currentIndex, isCarousel])
+  }, [carouselRef, currentIndex, isCarousel, isWheelActive])
 
   return (
     <section className="py-12 px-4 md:px-8 lg:px-16">
@@ -209,7 +297,11 @@ export default function Benefits({ isCarousel = false }: BenefitsProps) {
           
           <div 
             ref={carouselRef}
-            className="overflow-hidden touch-pan-y"
+            className="overflow-hidden cursor-grab touch-pan-y"
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseLeave}
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
