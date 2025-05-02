@@ -10,7 +10,9 @@ const publicRoutes = [
   '/wp',
   '/email',
   '/bio',
-  '/stories'
+  '/stories',
+  '/success',
+  '/lastlink-success'
 ]
 
 // Mapeia os tipos de usuário para suas rotas permitidas

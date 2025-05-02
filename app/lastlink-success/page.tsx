@@ -1,13 +1,14 @@
 "use client"
 
-import { useState, useEffect } from 'react'
-import { CheckCircle, ArrowRight, Mail } from 'lucide-react'
+import { useState, useEffect, Suspense } from 'react'
+import { CheckCircle, ArrowRight, Mail, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 
-export default function LastlinkSuccessPage() {
+// Componente principal do conteúdo
+function LastlinkSuccessContent() {
   const [emailChecked, setEmailChecked] = useState(false)
 
   return (
@@ -98,5 +99,21 @@ export default function LastlinkSuccessPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+// Componente principal com Suspense
+export default function LastlinkSuccessPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-emerald-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-zinc-700">Carregando confirmação...</h2>
+        </div>
+      </div>
+    }>
+      <LastlinkSuccessContent />
+    </Suspense>
   )
 } 

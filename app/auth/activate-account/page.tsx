@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -94,7 +94,8 @@ function PasswordStrengthMeter({ password }: { password: string }) {
   )
 }
 
-export default function ActivateAccountPage() {
+// Componente principal com a lógica de ativação
+function ActivateAccountContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const token = searchParams?.get("token")
@@ -359,5 +360,21 @@ export default function ActivateAccountPage() {
         </CardFooter>
       </Card>
     </div>
+  )
+}
+
+// Componente principal da página com Suspense
+export default function ActivateAccountPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin text-emerald-600 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-zinc-700">Carregando...</h2>
+        </div>
+      </div>
+    }>
+      <ActivateAccountContent />
+    </Suspense>
   )
 } 
