@@ -77,7 +77,7 @@ export default function HowItWorks() {
           >
             <div className="relative w-[280px] md:w-[320px]">
               {/* Frame do iPhone */}
-              <div className="relative w-full aspect-[9/19.5] bg-black rounded-[40px] p-3 border-4 border-zinc-800 shadow-2xl">
+              <div className="relative w-full aspect-[9/19.5] max-h-[600px] bg-black rounded-[40px] p-3 border-4 border-zinc-800 shadow-2xl">
                 {/* Notch */}
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-1/3 h-7 bg-black rounded-b-xl z-20"></div>
                 

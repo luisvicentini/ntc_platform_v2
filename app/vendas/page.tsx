@@ -40,8 +40,14 @@ export default function VendasPage() {
         <PlansSection />
       </Suspense>
       
-      {/* Como funciona o clube */}
-      <HowItWorks />
+      <Suspense 
+        fallback={
+          <div className="h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-[#F24957]"></div>
+        </div>}
+      >
+        <HowItWorks />
+      </Suspense>
       
       {/* FAQ */}
       <FAQSection />

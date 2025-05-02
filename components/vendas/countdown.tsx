@@ -29,7 +29,7 @@ export default function Countdown({ initialMinutes, initialSeconds }: CountdownP
 
   return (
     <div className="fixed top-0 left-0 right-0 bg-[#F24957] text-white py-3 px-4 z-50 flex items-center justify-center shadow-md">
-      <div className="container mx-auto flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-6">
+      <div className="container mx-auto flex flex-row items-center justify-center gap-3 sm:gap-2">
         <p className="text-sm sm:text-base md:text-lg font-semibold">
           Essa oferta de lançamento vai expirar em:
         </p>

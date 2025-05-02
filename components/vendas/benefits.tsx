@@ -3,7 +3,7 @@
 import { motion } from "framer-motion"
 import { useInView } from "react-intersection-observer"
 import Image from "next/image"
-import { useState, useRef, useEffect } from "react"
+import { useState, useRef, useEffect, TouchEvent } from "react"
 import { ChevronLeft, ChevronRight } from "lucide-react"
 
 const benefits = [
@@ -11,7 +11,7 @@ const benefits = [
     number: 1,
     title: "Desconto de até 50% em restaurantes avaliados pelo Leo pra você usar toda semana",
     description: "",
-    image: "/homepage/beneficios/beneficio-1.jpg"
+    image: "/homepage/tipos-restaurantes/hamburgueria.jpg"
   },
   {
     number: 2,
@@ -53,16 +53,27 @@ export default function Benefits({ isCarousel = false }: BenefitsProps) {
   const [currentIndex, setCurrentIndex] = useState(0)
   const carouselRef = useRef<HTMLDivElement>(null)
   const [visibleItems, setVisibleItems] = useState(3)
+  const [showPartial, setShowPartial] = useState(false)
+  const [isDragging, setIsDragging] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [scrollLeft, setScrollLeft] = useState(0)
+  const [isMobile, setIsMobile] = useState(false)
 
   // Calcula quantos itens são visíveis baseado no tamanho da tela
   useEffect(() => {
     function handleResize() {
       if (window.innerWidth < 640) {
         setVisibleItems(1)
+        setShowPartial(true)
+        setIsMobile(true)
       } else if (window.innerWidth < 1024) {
         setVisibleItems(2)
+        setShowPartial(false)
+        setIsMobile(false)
       } else {
         setVisibleItems(3)
+        setShowPartial(false)
+        setIsMobile(false)
       }
     }
 
@@ -71,8 +82,33 @@ export default function Benefits({ isCarousel = false }: BenefitsProps) {
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
+  const getCardWidth = () => {
+    // Se for mobile e showPartial=true, cada card principal ocupa 80% da largura visível
+    // e mostra 20% do próximo card
+    if (isMobile && showPartial) {
+      return 80
+    }
+    return 100 / visibleItems
+  }
+
+  const getTransformValue = () => {
+    if (isMobile && showPartial) {
+      // Cada card principal ocupa 80% da largura
+      return `translateX(-${currentIndex * 80}%)`
+    }
+    return `translateX(-${currentIndex * (100 / visibleItems)}%)`
+  }
+
+  const getMaxIndex = () => {
+    if (isMobile && showPartial) {
+      // Permitimos um índice a mais para mostrar o último card completo
+      return benefits.length - 1
+    }
+    return benefits.length - visibleItems
+  }
+
   const nextSlide = () => {
-    if (currentIndex < benefits.length - visibleItems) {
+    if (currentIndex < getMaxIndex()) {
       setCurrentIndex(prev => prev + 1)
     } else {
       setCurrentIndex(0)
@@ -83,9 +119,69 @@ export default function Benefits({ isCarousel = false }: BenefitsProps) {
     if (currentIndex > 0) {
       setCurrentIndex(prev => prev - 1)
     } else {
-      setCurrentIndex(benefits.length - visibleItems)
+      setCurrentIndex(getMaxIndex())
     }
   }
+
+  // Eventos para scroll do mouse no carrossel
+  const handleWheel = (e: WheelEvent) => {
+    if (!carouselRef.current || !isCarousel) return
+
+    // Previne o scroll da página
+    e.preventDefault()
+
+    // Scroll para a direita (deltaY positivo) ou esquerda (deltaY negativo)
+    if (e.deltaY > 0) {
+      nextSlide()
+    } else {
+      prevSlide()
+    }
+  }
+
+  // Eventos para touch no carrossel
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!carouselRef.current || !isCarousel) return
+
+    setIsDragging(true)
+    setStartX(e.touches[0].clientX)
+    setScrollLeft(currentIndex)
+  }
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isDragging || !carouselRef.current || !isCarousel) return
+
+    const x = e.touches[0].clientX
+    const distance = startX - x
+    
+    // Determina a distância mínima para mudar de slide
+    const cardWidth = carouselRef.current.offsetWidth / (isMobile && showPartial ? 1 : visibleItems)
+    const moveThreshold = cardWidth * 0.2 // 20% da largura do card
+    
+    if (Math.abs(distance) > moveThreshold) {
+      if (distance > 0 && currentIndex < getMaxIndex()) {
+        setCurrentIndex(scrollLeft + 1)
+        setIsDragging(false)
+      } else if (distance < 0 && currentIndex > 0) {
+        setCurrentIndex(scrollLeft - 1)
+        setIsDragging(false)
+      }
+    }
+  }
+
+  const handleTouchEnd = () => {
+    setIsDragging(false)
+  }
+
+  // Adiciona event listener para o wheel event
+  useEffect(() => {
+    const carousel = carouselRef.current
+    if (carousel && isCarousel) {
+      carousel.addEventListener('wheel', handleWheel as any)
+      return () => {
+        carousel.removeEventListener('wheel', handleWheel as any)
+      }
+    }
+  }, [carouselRef, currentIndex, isCarousel])
 
   return (
     <section className="py-12 px-4 md:px-8 lg:px-16">
@@ -113,17 +209,20 @@ export default function Benefits({ isCarousel = false }: BenefitsProps) {
           
           <div 
             ref={carouselRef}
-            className="overflow-hidden"
+            className="overflow-hidden touch-pan-y"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
           >
             <div 
               className="flex transition-transform duration-300 ease-in-out"
-              style={{ transform: `translateX(-${currentIndex * (100 / visibleItems)}%)` }}
+              style={{ transform: getTransformValue() }}
             >
               {benefits.map((benefit, index) => (
                 <div 
                   key={index} 
                   className="px-2 flex-shrink-0"
-                  style={{ width: `${100 / visibleItems}%` }}
+                  style={{ width: `${getCardWidth()}%` }}
                 >
                   <BenefitCardWithImage benefit={benefit} index={index} />
                 </div>
@@ -133,7 +232,7 @@ export default function Benefits({ isCarousel = false }: BenefitsProps) {
           
           {/* Indicadores */}
           <div className="flex justify-center mt-4 gap-2">
-            {Array.from({ length: benefits.length - visibleItems + 1 }).map((_, index) => (
+            {Array.from({ length: getMaxIndex() + 1 }).map((_, index) => (
               <button
                 key={index}
                 onClick={() => setCurrentIndex(index)}
@@ -160,7 +259,7 @@ function BenefitCard({ benefit, index }: { benefit: (typeof benefits)[0]; index:
   })
 
   return (
-    <div className="hover:scale-105 transition-all">
+    <div>
       <motion.div
         ref={ref}
         initial={{ opacity: 0, y: 30 }}
@@ -189,7 +288,7 @@ function BenefitCardWithImage({ benefit, index }: { benefit: (typeof benefits)[0
   })
 
   return (
-    <div className="hover:scale-105 transition-all h-full">
+    <div className="h-full">
       <motion.div
         ref={ref}
         initial={{ opacity: 0, y: 30 }}
