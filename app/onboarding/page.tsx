@@ -15,7 +15,7 @@ export default function OnboardingPage() {
   useEffect(() => {
     // Se não estiver logado, redireciona para o registro
     if (!user) {
-      router.push('/register')
+      router.push('/auth/register')
       return
     }
 

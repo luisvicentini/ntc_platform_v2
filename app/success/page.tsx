@@ -93,6 +93,29 @@ function SuccessContent() {
     }
   }
   
+  // Função para enviar email de ativação
+  const sendActivationEmail = async (email: string, name?: string) => {
+    try {
+      const response = await fetch('/api/account-activation', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, name }),
+      })
+      
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Erro ao enviar email de ativação')
+      }
+      
+      return await response.json()
+    } catch (error) {
+      console.error('Erro ao enviar email de ativação:', error)
+      throw error
+    }
+  }
+  
   // Função para processar o pagamento
   const processPayment = async () => {
     try {
@@ -211,6 +234,46 @@ function SuccessContent() {
       setPaymentDetails(data)
       setProcessingPayment(false)
       
+      // Enviar email de ativação se for um novo usuário
+      if (!user) {
+        // Obter os dados necessários de fontes seguras
+        const customerEmail = data?.customerEmail || storedData?.userEmail
+        const customerName = data?.customerName || storedData?.userName
+        
+        if (customerEmail) {
+          console.log('Enviando email de ativação para:', customerEmail)
+          try {
+            await sendActivationEmail(
+              customerEmail,
+              customerName || ''
+            )
+            console.log('Email de ativação enviado com sucesso')
+          } catch (activationError) {
+            console.error('Erro ao enviar email de ativação:', activationError)
+            // Continuar mesmo se o envio falhar, para não bloquear o fluxo
+            setPaymentDetails({
+              ...data,
+              customerEmail,
+              requiresActivation: true,
+              activationError: true
+            })
+            return
+          }
+        }
+        
+        // Definir detalhes do pagamento
+        setPaymentDetails({
+          ...data,
+          customerEmail,
+          requiresActivation: true
+        })
+      } else {
+        setPaymentDetails({
+          ...data,
+          requiresActivation: false
+        })
+      }
+      
       // Limpar dados armazenados após processamento bem-sucedido
       localStorage.removeItem('lastlink_checkout_data')
       localStorage.removeItem('checkoutData')
@@ -295,15 +358,34 @@ function SuccessContent() {
       
       <h2 className="text-2xl font-bold text-emerald-600">Pagamento confirmado!</h2>
       
-      <p className="text-center text-zinc-600 max-w-md">
-        Seu pagamento foi processado com sucesso. Você já tem acesso a todos os benefícios da plataforma.
-      </p>
+      {paymentDetails?.requiresActivation ? (
+        <>
+          <p className="text-center text-zinc-600 max-w-md">
+            Seu pagamento foi processado com sucesso! Enviamos um email para 
+            <strong> {paymentDetails.customerEmail}</strong> com instruções para ativar sua conta.
+          </p>
+          <p className="text-center text-zinc-500 max-w-md">
+            Por favor, verifique sua caixa de entrada e siga as instruções para definir sua senha e 
+            começar a usar a plataforma.
+          </p>
+          {paymentDetails.activationError && (
+            <p className="text-center text-amber-600 max-w-md mt-2">
+              Houve um problema ao enviar o email de ativação. Por favor, entre em contato com 
+              o suporte se não receber o email em alguns minutos.
+            </p>
+          )}
+        </>
+      ) : (
+        <p className="text-center text-zinc-600 max-w-md">
+          Seu pagamento foi processado com sucesso. Você já tem acesso a todos os benefícios da plataforma.
+        </p>
+      )}
       
       <Button 
-        onClick={() => router.push('/member/feed')} 
+        onClick={() => router.push(user?.userType === 'member' ? '/member/feed' : '/')} 
         className="mt-8 bg-emerald-600 hover:bg-emerald-700 flex items-center space-x-2"
       >
-        <span>Ir para meu perfil</span>
+        <span>{paymentDetails?.requiresActivation ? 'Voltar ao início' : 'Ir para o feed'}</span>
         <ArrowRight className="w-4 h-4" />
       </Button>
     </div>

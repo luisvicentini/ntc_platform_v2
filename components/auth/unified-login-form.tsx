@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
 import { Logo } from "@/components/ui/logo"
-import { Loader2, ArrowRight, AlertCircle } from "lucide-react"
+import { Loader2, ArrowRight, AlertCircle, Eye, EyeOff } from "lucide-react"
 import { FcGoogle } from "react-icons/fc"
 import { FaFacebook } from "react-icons/fa"
 import Link from "next/link"
@@ -18,6 +18,8 @@ interface UnifiedLoginFormProps {
   title: string
   subtitle: string
   registerUrl: string
+  initialEmail?: string
+  initialPassword?: string
 }
 
 // Mapear os códigos de erro do Firebase para mensagens mais amigáveis
@@ -77,14 +79,15 @@ const ErrorMessage = ({ message, showWhatsAppSupport }: { message: string, showW
   )
 }
 
-export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginFormProps) {
+export function UnifiedLoginForm({ title, subtitle, registerUrl, initialEmail = "", initialPassword = "" }: UnifiedLoginFormProps) {
   const { signIn, signInWithGoogle, signInWithFacebook, loading: authLoading } = useAuth()
   const router = useRouter()
   
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [loading, setLoading] = useState(false)
+  const [isLoading, setIsLoading] = useState<boolean>(false)
+  const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [email, setEmail] = useState(initialEmail)
+  const [password, setPassword] = useState(initialPassword)
   const [showResendActivation, setShowResendActivation] = useState(false)
   const [showWhatsAppSupport, setShowWhatsAppSupport] = useState(false)
 
@@ -96,7 +99,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
       return
     }
     
-    setLoading(true)
+    setIsLoading(true)
     setError(null)
     setShowResendActivation(false)
     setShowWhatsAppSupport(false)
@@ -138,12 +141,12 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
         setShowWhatsAppSupport(true)
       }
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
   const handleGoogleSignIn = async () => {
-    setLoading(true)
+    setIsLoading(true)
     setError(null)
     setShowResendActivation(false)
     setShowWhatsAppSupport(false)
@@ -171,12 +174,12 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
         setShowWhatsAppSupport(true)
       }
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
   const handleFacebookSignIn = async () => {
-    setLoading(true)
+    setIsLoading(true)
     setError(null)
     setShowResendActivation(false)
     setShowWhatsAppSupport(false)
@@ -204,7 +207,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
         setShowWhatsAppSupport(true)
       }
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -214,7 +217,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
       return
     }
     
-    setLoading(true)
+    setIsLoading(true)
     try {
       // Chamar API para reenviar email de ativação
       const response = await fetch("/api/auth/resend-activation", {
@@ -236,7 +239,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
       console.error("Erro ao reenviar ativação:", error)
       setError(error.message || "Erro ao reenviar email de ativação. Tente novamente mais tarde.")
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
@@ -277,14 +280,23 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
                   Esqueceu a senha?
                 </Link>
               </div>
-              <Input
-                id="password"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="bg-white border-zinc-200"
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="bg-white border-zinc-200"
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-zinc-400 hover:text-zinc-500"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
             
             {error && (
@@ -299,9 +311,9 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
             <Button 
               type="submit" 
               className="w-full bg-primary hover:bg-primary-dark text-white"
-              disabled={loading || authLoading}
+              disabled={isLoading || authLoading}
             >
-              {loading || authLoading ? (
+              {isLoading || authLoading ? (
                 <>
                   <Loader2 className="mr-2 h-6 w-4 animate-spin" /> Entrando...
                 </>
@@ -326,7 +338,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
             <Button
               variant="outline"
               onClick={handleGoogleSignIn}
-              disabled={loading || authLoading}
+              disabled={isLoading || authLoading}
               className="bg-white border-zinc-200 hover:bg-white hover:text-zinc-500"
             >
               <FcGoogle className="mr-2 h-4 w-4" />
@@ -335,7 +347,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl }: UnifiedLoginF
             {/* <Button
               variant="outline"
               onClick={handleFacebookSignIn}
-              disabled={loading || authLoading}
+              disabled={isLoading || authLoading}
               className="bg-transparent border-zinc-200 hover:bg-white hover:text-zinc-500"
             >
               <FaFacebook className="mr-2 h-4 w-4 text-blue-600" />
