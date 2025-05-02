@@ -1,23 +1,13 @@
+"use client"
+
 import { UnifiedLoginForm } from "@/components/auth/unified-login-form"
-import { useRouter, useSearchParams } from "next/navigation"
-import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 
 export default function LoginPage() {
-  const router = useRouter()
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
+  // Apenas capturar o parâmetro de email da URL
   const searchParams = useSearchParams()
+  const email = searchParams?.get('email') || ""
   
-  // Preencher o email se vier como parâmetro da URL
-  useEffect(() => {
-    const emailParam = searchParams?.get('email')
-    if (emailParam) {
-      setEmail(emailParam)
-    }
-  }, [searchParams])
-
   return (
     <UnifiedLoginForm
       title="Login"
