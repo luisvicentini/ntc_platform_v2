@@ -12,7 +12,8 @@ const publicRoutes = [
   '/bio',
   '/stories',
   '/success',
-  '/lastlink-success'
+  '/lastlink-success',
+  '/auth/activate-account'
 ]
 
 // Mapeia os tipos de usuário para suas rotas permitidas
@@ -50,6 +51,8 @@ export function middleware(request: NextRequest) {
       '/api/lastlink/callback',
       '/api/lastlink/redirect',
       '/api/auth/session',
+      '/api/account-activation/verify',
+      '/api/account-activation/set-password'
     ]
 
     // Verificar se é uma rota pública
