@@ -44,11 +44,11 @@ function PasswordStrengthMeter({ password }: { password: string }) {
   }
   
   const getStrengthColor = () => {
-    if (strength === 0) return "bg-zinc-200"
-    if (strength <= 25) return "bg-red-500"
-    if (strength <= 50) return "bg-orange-500"
-    if (strength <= 75) return "bg-yellow-500"
-    return "bg-green-500"
+    if (strength === 0) return "text-zinc-200"
+    if (strength <= 25) return "text-red-500"
+    if (strength <= 50) return "text-orange-500"
+    if (strength <= 75) return "text-yellow-500"
+    return "text-green-500"
   }
   
   return (
@@ -58,9 +58,8 @@ function PasswordStrengthMeter({ password }: { password: string }) {
           <Shield className="h-4 w-4 mr-2 text-zinc-500" />
           <span className="text-sm text-zinc-500">Força da senha</span>
         </div>
-        <span className="text-sm font-medium">{getStrengthLabel()}</span>
+        <span className={`text-sm font-medium ${getStrengthColor()}`}>{getStrengthLabel()}</span>
       </div>
-      <Progress value={strength} className={getStrengthColor()} />
       
       {password && (
         <div className="text-xs space-y-1 mt-2">
@@ -224,7 +223,7 @@ function ActivateAccountContent() {
   // Renderizar diferentes estados da página
   if (verifying) {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
+      <div className="flex items-center justify-center p-4 w-full h-full">
         <div className="text-center">
           <div className="flex justify-center mb-4">
             <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
@@ -238,7 +237,7 @@ function ActivateAccountContent() {
   
   if (verificationStatus === 'error') {
     return (
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
+      <div className="flex items-center justify-center p-4 w-full h-full">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
@@ -260,8 +259,8 @@ function ActivateAccountContent() {
   }
   
   return (
-    <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="flex items-center justify-center rounded-xl shadow-lg w-full max-w-md">
+      <Card className="w-full border-none">
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-6">
             <div className="relative w-24 h-24">
@@ -367,7 +366,7 @@ function ActivateAccountContent() {
 export default function ActivateAccountPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-zinc-50 flex items-center justify-center p-4">
+      <div className="min-h-screen flex items-center justify-center p-4">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-emerald-600 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-zinc-700">Carregando...</h2>

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
@@ -83,18 +83,34 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl, initialEmail = 
   const { signIn, signInWithGoogle, signInWithFacebook, loading: authLoading } = useAuth()
   const router = useRouter()
   
-  // Apenas capturar o parâmetro de email da URL
+  // Obter parâmetros da URL
   const searchParams = useSearchParams()
-
+  
+  // Obter o email da URL 
+  const emailFromUrl = searchParams?.get('email') || ""
+  
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [email, setEmail] = useState(initialEmail)
+  const [email, setEmail] = useState(initialEmail || emailFromUrl)
   const [password, setPassword] = useState(initialPassword)
   const [showResendActivation, setShowResendActivation] = useState(false)
   const [showWhatsAppSupport, setShowWhatsAppSupport] = useState(false)
 
-  const getEmailParam = searchParams?.get('email') || ""
+  // Atualizar o email quando o parâmetro da URL mudar
+  useEffect(() => {
+    if (emailFromUrl) {
+      setEmail(emailFromUrl)
+    }
+  }, [emailFromUrl])
+
+  // Verificar se veio de uma ativação de conta bem-sucedida
+  useEffect(() => {
+    const activationStatus = searchParams?.get('activation')
+    if (activationStatus === 'success') {
+      toast.success("Conta ativada com sucesso! Você já pode fazer login.")
+    }
+  }, [searchParams])
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -268,7 +284,6 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl, initialEmail = 
                 id="email"
                 type="email"
                 value={email}
-                defaultValue={getEmailParam}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
                 className="bg-white border-zinc-200"
