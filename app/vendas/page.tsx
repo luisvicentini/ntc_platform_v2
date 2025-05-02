@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import Hero from "@/components/vendas/hero"
 import Benefits from "@/components/vendas/benefits"
 import Restaurants from "@/components/vendas/restaurants"
@@ -31,7 +31,14 @@ export default function VendasPage() {
       <BonusSection />
       
       {/* Seção de planos e ofertas */}
-      <PlansSection />
+      <Suspense 
+        fallback={
+          <div className="h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-[#F24957]"></div>
+        </div>}
+      >
+        <PlansSection />
+      </Suspense>
       
       {/* Como funciona o clube */}
       <HowItWorks />
