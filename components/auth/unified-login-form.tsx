@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -83,6 +83,9 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl, initialEmail = 
   const { signIn, signInWithGoogle, signInWithFacebook, loading: authLoading } = useAuth()
   const router = useRouter()
   
+  // Apenas capturar o parâmetro de email da URL
+  const searchParams = useSearchParams()
+
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -90,6 +93,8 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl, initialEmail = 
   const [password, setPassword] = useState(initialPassword)
   const [showResendActivation, setShowResendActivation] = useState(false)
   const [showWhatsAppSupport, setShowWhatsAppSupport] = useState(false)
+
+  const getEmailParam = searchParams?.get('email') || ""
 
   const handleEmailSignIn = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -263,6 +268,7 @@ export function UnifiedLoginForm({ title, subtitle, registerUrl, initialEmail = 
                 id="email"
                 type="email"
                 value={email}
+                defaultValue={getEmailParam}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="seu@email.com"
                 className="bg-white border-zinc-200"
