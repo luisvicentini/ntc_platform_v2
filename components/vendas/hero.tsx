@@ -57,15 +57,15 @@ export default function Hero() {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.7 }}
       >
-          <h1 className={`${fontPrimaryNTC.className} font-bold line-height-3 max-sm:text-2xl max-md:text-4xl lg:text-5xl  mb-2`}>
-          O único clube de vantagens que te dá <span className="text-[#F24957] px-2">descontos de até 50%</span> nos melhores restaurantes de verdade.
+          <h1 className={`${fontPrimaryNTC.className} font-bold max-sm:leading-[1] leading-normal max-sm:text-[1.8rem] min-md:text-4xl lg:text-5xl mb-2`}>
+          O único clube de vantagens que te dá <span className="text-[#F24957] px-2">descontos de até 50%</span> nos melhores restaurantes.
         </h1>
-        <p className="text-zinc-300 text-lg sm:text-xl max-sm:text-[1rem] pt-2">Do Michelin ao Podrão, só no <b className="text-white">Clube Não Tem Chef!</b></p>
+        <p className="text-zinc-300 text-lg sm:text-xl max-sm:text-sm pt-2">Do Michelin ao Podrão, só no <b className="text-white">Clube Não Tem Chef!</b></p>
       </motion.div>
 
       {/* Bloco de Vídeo */}
       <motion.div
-        className="relative w-full max-w-3xl mx-auto aspect-video mb-8 rounded-lg overflow-hidden"
+        className="relative w-full max-w-3xl mx-auto aspect-video mb-4 rounded-lg overflow-hidden"
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.4, duration: 0.5 }}
