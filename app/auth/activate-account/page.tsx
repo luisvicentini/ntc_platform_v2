@@ -361,4 +361,3 @@ export default function ActivateAccountPage() {
     </div>
   )
 } 
-} 
