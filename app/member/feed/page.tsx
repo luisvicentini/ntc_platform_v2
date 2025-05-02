@@ -1,9 +1,9 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Search, Filter, AlertTriangle, LockIcon } from "lucide-react"
+import { Search, Filter, AlertTriangle, LockIcon, ChevronLeft, ChevronRight } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Label } from "@/components/ui/label"
@@ -72,6 +72,12 @@ interface FeedEstablishment {
   [key: string]: any;
 }
 
+// Interface para agrupar estabelecimentos por categoria
+interface CategoryGroup {
+  category: string;
+  establishments: FeedEstablishment[];
+}
+
 export default function FeedPage() {
   const router = useRouter()
   // Removemos a dependência do useEstablishment para evitar confusão
@@ -94,6 +100,71 @@ export default function FeedPage() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
   const [establishmentsData, setEstablishmentsData] = useState<FeedEstablishment[]>([])
   const [subscriptionsLoaded, setSubscriptionsLoaded] = useState(false)
+  
+  // Ref para cada carrossel por categoria
+  const carouselRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Função para obter saudação com base no horário
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    
+    if (hour >= 5 && hour < 12) return "Bom dia";
+    if (hour >= 12 && hour < 18) return "Boa tarde";
+    return "Boa noite";
+  };
+
+  // Função para obter o nome do usuário a partir de várias propriedades possíveis
+  const getUserName = () => {
+    if (!user) return 'visitante';
+    
+    // Log para debug - vamos ver o que contém o objeto de usuário
+    console.log("Dados do usuário:", {
+      uid: user.uid,
+      email: user.email,
+      displayName: user.displayName,
+      properties: Object.keys(user)
+    });
+    
+    // Usar type casting seguro para acessar propriedades que podem não estar no tipo
+    const userAny = user as any;
+    
+    // Tentar diferentes propriedades onde o nome pode estar armazenado
+    return user.displayName || 
+           userAny.name || 
+           userAny.businessName || 
+           userAny.firstName || 
+           (userAny.firstName && userAny.lastName ? `${userAny.firstName} ${userAny.lastName}` : null) || 
+           user.email?.split('@')[0] || 
+           'visitante';
+  };
+
+  // Função para agrupar estabelecimentos por categoria
+  const groupEstablishmentsByCategory = (establishments: FeedEstablishment[]): CategoryGroup[] => {
+    const groupedMap = new Map<string, FeedEstablishment[]>();
+    
+    // Primeiro, agrupar por categoria
+    establishments.forEach(establishment => {
+      const category = establishment.type?.category || "Sem categoria";
+      
+      if (!groupedMap.has(category)) {
+        groupedMap.set(category, []);
+      }
+      
+      groupedMap.get(category)!.push(establishment);
+    });
+    
+    // Converter o mapa em array de CategoryGroup
+    const result: CategoryGroup[] = [];
+    groupedMap.forEach((establishments, category) => {
+      result.push({
+        category,
+        establishments
+      });
+    });
+    
+    // Ordenar categorias alfabeticamente
+    return result.sort((a, b) => a.category.localeCompare(b.category));
+  };
 
   // Verificar se o usuário tem uma assinatura ativa usando o contexto de assinatura
   useEffect(() => {
@@ -306,6 +377,9 @@ export default function FeedPage() {
     return matchesSearch && matchesFilters;
   });
 
+  // Agrupar estabelecimentos filtrados por categoria
+  const categorizedEstablishments = groupEstablishmentsByCategory(filteredEstablishments);
+
   const featuredEstablishments = filteredEstablishments.filter((establishment) => 
     establishment.isFeatured
   );
@@ -321,7 +395,38 @@ export default function FeedPage() {
       setShowSubscriptionModal(true);
     } else {
       // Se tiver, mostrar o detalhe do estabelecimento
-      setSelectedEstablishment(establishment);
+      // Adicionar propriedades padrão que o EstablishmentSheet espera
+      const completeEstablishment = {
+        ...establishment,
+        // Propriedades de telefone
+        phone: {
+          ddi: "55", // Valor padrão para Brasil
+          phone: establishment.phone || establishment?.contact?.phone || "",
+          ...establishment.phone
+        },
+        // Propriedades de descontos e vouchers
+        discountValue: establishment.discountValue || "10%",
+        voucherDescription: establishment.voucherDescription || "Desconto válido para qualquer item",
+        voucherExpiration: establishment.voucherExpiration || "24",
+        openingHours: establishment.openingHours || "Segunda a Domingo, 08:00 às 22:00",
+        description: establishment.description || "Estabelecimento parceiro do clube de benefícios",
+        discountRules: establishment.discountRules || "Válido para pagamentos à vista",
+        usageLimit: establishment.usageLimit || "1 por dia",
+        // Garantir que address tenha todas as propriedades necessárias
+        address: {
+          street: establishment.address?.street || "",
+          number: establishment.address?.number || "",
+          complement: establishment.address?.complement || "",
+          neighborhood: establishment.address?.neighborhood || "",
+          city: establishment.address?.city || "Cidade não informada",
+          state: establishment.address?.state || "UF",
+          zipcode: establishment.address?.zipcode || "",
+          ...establishment.address
+        }
+      };
+      
+      console.log("Establishment completo:", completeEstablishment);
+      setSelectedEstablishment(completeEstablishment);
     }
   };
 
@@ -337,68 +442,153 @@ export default function FeedPage() {
     }
   };
 
-  const renderEstablishmentCards = (establishments: FeedEstablishment[]) => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {establishments.map((establishment) => (
-        <Card
-          key={establishment.id}
-          className={`overflow-hidden group cursor-pointer bg-zinc-50 border-zinc-100 relative ${feedStatus.status !== "active" ? "opacity-95" : ""}`}
-          onClick={() => handleEstablishmentClick(establishment)}
-        >
-          <div className="relative aspect-video">
-            <img
-              src={establishment.images[0] || "/placeholder.svg"}
-              alt={establishment.name}
-              className="object-cover w-full h-full"
+  // Função para navegar no carrossel
+  const scrollCarousel = (categoryId: string, direction: 'left' | 'right') => {
+    const container = carouselRefs.current.get(categoryId);
+    if (!container) return;
+    
+    const scrollAmount = container.clientWidth * 0.8; // Ajuste para rolar aproximadamente a largura de um card completo
+    
+    if (direction === 'left') {
+      container.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+    } else {
+      container.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
+  // Renderizar o card do estabelecimento
+  const renderEstablishmentCard = (establishment: FeedEstablishment) => (
+    <Card
+      key={establishment.id}
+      className={`overflow-hidden group cursor-pointer bg-zinc-50 border-zinc-100 relative h-full ${feedStatus.status !== "active" ? "opacity-95" : ""}`}
+      onClick={() => handleEstablishmentClick(establishment)}
+    >
+      <div className="relative aspect-video">
+        <img
+          src={establishment.images[0] || "/placeholder.svg"}
+          alt={establishment.name}
+          className="object-cover w-full h-full"
+        />
+        <div className="absolute top-2 right-2 bg-black/75 text-white pl-2 pr-1 py-1 rounded-full text-sm flex items-center space-x-2">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            className="w-4 h-4 text-yellow-400"
+          >
+            <path
+              fillRule="evenodd"
+              d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z"
+              clipRule="evenodd"
             />
-            <div className="absolute top-2 right-2 bg-black/75 text-white pl-2 pr-1 py-1 rounded-full text-sm flex items-center space-x-2">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-4 h-4 text-yellow-400"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10.788 3.21c.448-1.077 1.976-1.077 2.424 0l2.082 5.007 5.404.433c1.164.093 1.636 1.545.749 2.305l-4.117 3.527 1.257 5.273c.271 1.136-.964 2.033-1.96 1.425L12 18.354 7.373 21.18c-.996.608-2.231-.29-1.96-1.425l1.257-5.273-4.117-3.527c-.887-.76-.415-2.212.749-2.305l5.404-.433 2.082-5.006z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              <span>{establishment.rating.toFixed(1)}</span>
-              <span>{establishment.isFeatured && <FeaturedBadge />}</span>
+          </svg>
+          <span>{establishment.rating.toFixed(1)}</span>
+          <span>{establishment.isFeatured && <FeaturedBadge />}</span>
+        </div>
+        
+        {/* Ícone de cadeado para indicar conteúdo bloqueado */}
+        {feedStatus.status !== "active" && (
+          <div className="absolute top-2 left-2 bg-black/75 text-white p-1 rounded-full">
+            <LockIcon className="w-4 h-4" />
+          </div>
+        )}
+      </div>
+      <div className="p-4 space-y-2">
+        <h3 className="font-semibold text-zinc-500 group-hover:text-zinc-500">{establishment.name}</h3>
+        <p className="text-sm text-zinc-400">
+          {establishment.type?.type || "Tipo não informado"} • {establishment.address?.city || "Cidade não informada"}
+        </p>
+      </div>
+    </Card>
+  );
+
+  // Renderizar o carrossel por categoria
+  const renderCategoryCarousel = (category: string, establishments: FeedEstablishment[]) => (
+    <div key={category} className="mb-12">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-xl font-semibold text-zinc-500">{category}</h2>
+        <div className="flex space-x-2">
+          <Button 
+            variant="outline" 
+            size="default" 
+            className="rounded-full" 
+            onClick={() => scrollCarousel(category, 'left')}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button 
+            variant="outline" 
+            size="default" 
+            className="rounded-full" 
+            onClick={() => scrollCarousel(category, 'right')}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+      
+      <div 
+        className="relative -mx-4 px-4" // Wrapper para garantir que o carrossel vai até a borda
+      >
+        <div 
+          className="flex overflow-x-auto pb-4 gap-4 scrollbar-hide carousel-container"
+          style={{ 
+            scrollbarWidth: 'none', 
+            msOverflowStyle: 'none',
+            WebkitOverflowScrolling: 'touch',
+          }}
+          ref={(el) => {
+            if (el) carouselRefs.current.set(category, el);
+          }}
+        >
+          {establishments.map(establishment => (
+            <div 
+              key={establishment.id} 
+              className="carousel-item"
+              style={{
+                width: 'calc(80% - 16px)',  // Mobile: 80% da largura com espaço para o próximo card
+                flexShrink: 0,
+              }}
+            >
+              {renderEstablishmentCard(establishment)}
             </div>
-            
-            {/* Ícone de cadeado para indicar conteúdo bloqueado */}
-            {feedStatus.status !== "active" && (
-              <div className="absolute top-2 left-2 bg-black/75 text-white p-1 rounded-full">
-                <LockIcon className="w-4 h-4" />
-              </div>
-            )}
-          </div>
-          <div className="p-4 space-y-2">
-            <h3 className="font-semibold text-zinc-500 group-hover:text-zinc-500">{establishment.name}</h3>
-            <p className="text-sm text-zinc-400">
-              {establishment.type?.type || "Tipo não informado"} • {establishment.address?.city || "Cidade não informada"}
-            </p>
-          </div>
-        </Card>
-      ))}
+          ))}
+        </div>
+      </div>
     </div>
   );
 
   // Renderizar skeletons para o estado de carregamento
   const renderSkeletons = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-      {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
-        <Card key={i} className="overflow-hidden bg-zinc-50 border-zinc-100">
-          <div className="aspect-video">
-            <Skeleton className="h-full w-full" />
+    <div className="space-y-8">
+      {[1, 2, 3].map((categoryIndex) => (
+        <div key={categoryIndex} className="mb-8">
+          <div className="flex justify-between items-center mb-4">
+            <Skeleton className="h-8 w-[200px]" />
+            <div className="flex space-x-2">
+              <Skeleton className="h-8 w-8 rounded-full" />
+              <Skeleton className="h-8 w-8 rounded-full" />
+            </div>
           </div>
-          <div className="p-4 space-y-3">
-            <Skeleton className="h-5 w-3/4" />
-            <Skeleton className="h-4 w-1/2" />
+          
+          <div className="relative -mx-4 px-4">
+            <div className="flex overflow-x-auto pb-4 gap-4">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="carousel-item" style={{ width: 'calc(80% - 16px)', flexShrink: 0 }}>
+                  <Card className="overflow-hidden bg-zinc-50 border-zinc-100 h-full">
+                    <div className="aspect-video">
+                      <Skeleton className="h-full w-full" />
+                    </div>
+                    <div className="p-4 space-y-3">
+                      <Skeleton className="h-5 w-3/4" />
+                      <Skeleton className="h-4 w-1/2" />
+                    </div>
+                  </Card>
+                </div>
+              ))}
+            </div>
           </div>
-        </Card>
+        </div>
       ))}
     </div>
   );
@@ -408,199 +598,255 @@ export default function FeedPage() {
     feedStatus: feedStatus.status,
     estabelecimentosCarregados: establishmentsData.length,
     estabelecimentosFiltrados: filteredEstablishments.length,
-    estabelecimentosDestaque: featuredEstablishments.length
+    estabelecimentosDestaque: featuredEstablishments.length,
+    categorias: categorizedEstablishments.length
   });
 
   return (
-    <div className="container py-6">
-      <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between mb-6">
-        <h1 className="text-2xl font-bold text-zinc-500">Cupons disponíveis</h1>
-
-        <div className="flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
-          <div className="relative w-full sm:w-[400px]">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
-            <Input
-              placeholder="Pesquisar local"
-              className="pl-10 bg-zinc-100 text-zinc-500 border-zinc-200"
-              value={searchTerm}
-              onChange={(e) => handleSearch(e.target.value)}
-            />
-          </div>
-
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto space-x-2 bg-zinc-100 text-zinc-500 border-zinc-200"
-              >
-                <Filter className="h-4 w-4" />
-                <span>Filtrar</span>
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="bg-zinc-100 text-zinc-500 overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle className="text-zinc-500">Filtros</SheetTitle>
-                <SheetDescription className="text-zinc-400">
-                  Ajuste os filtros para encontrar o estabelecimento ideal
-                </SheetDescription>
-              </SheetHeader>
-
-              <div className="space-y-6 py-4">
-                <div className="space-y-2">
-                  <Label className="text-zinc-400">Cidade</Label>
-                  <Select
-                    value={filters.city}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, city: value }))}
-                  >
-                    <SelectTrigger className="bg-zinc-100 border-zinc-300 text-zinc-500">
-                      <SelectValue placeholder="Selecione uma cidade" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      {getUniqueCities().map((city) => (
-                        <SelectItem key={city.id} value={city.id}>
-                          {city.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-zinc-400">Categoria</Label>
-                  <Select
-                    value={filters.category}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
-                  >
-                    <SelectTrigger className="bg-zinc-100 border-zinc-300 text-zinc-500">
-                      <SelectValue placeholder="Selecione uma categoria" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todas</SelectItem>
-                      {getUniqueCategories().map((category) => (
-                        <SelectItem key={category.id} value={category.id}>
-                          {category.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-zinc-400">Tipo</Label>
-                  <Select
-                    value={filters.type}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
-                  >
-                    <SelectTrigger className="bg-zinc-100 border-zinc-300 text-zinc-500">
-                      <SelectValue placeholder="Selecione um tipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {getUniqueTypes().map((type) => (
-                        <SelectItem key={type.id} value={type.id}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-zinc-400">Partner</Label>
-                  <Select
-                    value={filters.partnerId}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, partnerId: value }))}
-                  >
-                    <SelectTrigger className="bg-zinc-100 border-zinc-300 text-zinc-500">
-                      <SelectValue placeholder="Selecione um partner" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {getUniquePartners().map((partner) => partner && (
-                        <SelectItem key={partner.id} value={partner.id}>
-                          {partner.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex justify-between">
-                    <Label className="text-zinc-400">Avaliação Mínima</Label>
-                    <span className="text-zinc-400">{filters.minRating}</span>
-                  </div>
-                  <Slider
-                    value={[filters.minRating]}
-                    min={0}
-                    max={5}
-                    step={0.5}
-                    onValueChange={(value) => setFilters(prev => ({ ...prev, minRating: value[0] }))}
-                  />
-                </div>
-              </div>
-            </SheetContent>
-          </Sheet>
+    <div className="container md:py-6 sm:py-1">
+      {/* Header da página - Saudação e informações do usuário */}
+      <header className="mb-10">
+        <div className="mb-2">
+          <h1 className="text-2xl font-bold text-zinc-700">
+            {getGreeting()}, {getUserName()}!
+          </h1>
+          <p className="text-zinc-500 mt-2">
+            Confira os cupons disponíveis hoje para você nos melhores restaurantes.
+          </p>
         </div>
-      </div>
+      </header>
 
-      {/* Mensagem de status quando não está ativo e não está carregando */}
-      {feedStatus.status !== "active" && feedStatus.status !== "loading" && (
-        <div className="mb-6 bg-amber-50 p-4 rounded-lg border border-amber-200">
-          <div className="flex items-start gap-3">
-            <AlertTriangle 
-              className={`h-5 w-5 ${feedStatus.status === 'pending' ? 'text-amber-500' : 'text-red-500'} mt-1 flex-shrink-0`} 
-            />
-            <div>
-              <h3 className="font-medium text-amber-700">
-                {feedStatus.status === 'pending' 
-                  ? 'Assinatura Pendente' 
-                  : feedStatus.status === 'canceled' 
-                    ? 'Assinatura Cancelada' 
-                    : 'Sem Assinatura Ativa'}
-              </h3>
-              <p className="text-sm text-amber-600 mb-2">
-                {feedStatus.message || 'Você precisa de uma assinatura ativa para acessar os cupons.'}
-              </p>
-              {(feedStatus.status === 'canceled' || feedStatus.status === 'none') && feedStatus.defaultPaymentLink && (
-                <Button 
-                  size="sm"
-                  onClick={handleSubscriptionPurchase}
-                  className="bg-amber-600 hover:bg-amber-700 text-white"
-                >
-                  Quero assinar o clube
-                </Button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Conteúdo principal - sempre mostrado, independente do status */}
-      {feedStatus.status === "loading" ? (
-        renderSkeletons()
-      ) : (
-        <div className="space-y-10">
-          {featuredEstablishments.length > 0 && (
-            <div>
-              <h2 className="text-xl font-semibold text-zinc-500 mb-4">Em destaque</h2>
-              {renderEstablishmentCards(featuredEstablishments)}
-            </div>
-          )}
-
-          <div>
-            <h2 className="text-xl font-semibold text-zinc-500 mb-4">Explore todos os cupons</h2>
-            {filteredEstablishments.length > 0 ? (
-              renderEstablishmentCards(filteredEstablishments)
-            ) : (
-              <div className="text-center p-10 bg-zinc-50 rounded-xl border border-zinc-100">
-                <p className="text-zinc-400">Nenhum resultado encontrado com os filtros selecionados</p>
-              </div>
+      {/* Barra de pesquisa e filtros */}
+      <section className="bg-white rounded-xl p-5 shadow-sm border border-zinc-100 mb-8">
+        <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between">
+          <div className="flex items-center">
+            <h2 className="text-md font-semibold text-zinc-600">Cupons disponíveis</h2>
+            {filteredEstablishments.length > 0 && (
+              <span className="ml-3 px-2.5 py-0.5 bg-zinc-100 text-zinc-600 text-sm rounded-full">
+                {filteredEstablishments.length} {filteredEstablishments.length === 1 ? 'estabelecimento' : 'estabelecimentos'}
+              </span>
             )}
           </div>
+
+          <div className="flex flex-row items-center space-x-2">
+            {/* Campo de busca */}
+            <div className="relative w-full sm:w-[300px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
+              <Input
+                placeholder="Pesquisar estabelecimentos..."
+                className="pl-10 bg-zinc-50 text-zinc-600 rounded-xl border-none focus:ring-2 focus:ring-zinc-200 focus:border-zinc-300"
+                value={searchTerm}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+            </div>
+
+            {/* Botão de filtros */}
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="hover:bg-zinc-100 hover:text-zinc-700 rounded-xl"
+                >
+                  <Filter className="h-4 w-4" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent className="bg-white text-zinc-600 border-l border-zinc-200">
+                <SheetHeader className="border-b border-zinc-100 pb-4 mb-4">
+                  <SheetTitle className="text-zinc-700">Opções de filtro</SheetTitle>
+                  <SheetDescription className="text-zinc-500">
+                    Refine sua busca para encontrar os melhores cupons
+                  </SheetDescription>
+                </SheetHeader>
+
+                <div className="space-y-6 py-2">
+                  {/* Filtro de cidade */}
+                  <div className="space-y-2">
+                    <Label className="text-zinc-600 font-medium">Cidade</Label>
+                    <Select
+                      value={filters.city}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, city: value }))}
+                    >
+                      <SelectTrigger className="bg-zinc-50 border-zinc-200 text-zinc-700 rounded-lg">
+                        <SelectValue placeholder="Selecione uma cidade" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as cidades</SelectItem>
+                        {getUniqueCities().map((city) => (
+                          <SelectItem key={city.id} value={city.id}>
+                            {city.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Filtro de categoria */}
+                  <div className="space-y-2">
+                    <Label className="text-zinc-600 font-medium">Categoria</Label>
+                    <Select
+                      value={filters.category}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, category: value }))}
+                    >
+                      <SelectTrigger className="bg-zinc-50 border-zinc-200 text-zinc-700 rounded-lg">
+                        <SelectValue placeholder="Selecione uma categoria" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todas as categorias</SelectItem>
+                        {getUniqueCategories().map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Filtro de tipo */}
+                  <div className="space-y-2">
+                    <Label className="text-zinc-600 font-medium">Tipo</Label>
+                    <Select
+                      value={filters.type}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, type: value }))}
+                    >
+                      <SelectTrigger className="bg-zinc-50 border-zinc-200 text-zinc-700 rounded-lg">
+                        <SelectValue placeholder="Selecione um tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os tipos</SelectItem>
+                        {getUniqueTypes().map((type) => (
+                          <SelectItem key={type.id} value={type.id}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Filtro de parceiro */}
+                  <div className="space-y-2">
+                    <Label className="text-zinc-600 font-medium">Parceiro</Label>
+                    <Select
+                      value={filters.partnerId}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, partnerId: value }))}
+                    >
+                      <SelectTrigger className="bg-zinc-50 border-zinc-200 text-zinc-700 rounded-lg">
+                        <SelectValue placeholder="Selecione um parceiro" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os parceiros</SelectItem>
+                        {getUniquePartners().map((partner) => partner && (
+                          <SelectItem key={partner.id} value={partner.id}>
+                            {partner.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Filtro de avaliação */}
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-zinc-600 font-medium">Avaliação Mínima</Label>
+                      <div className="bg-zinc-100 px-2 py-0.5 rounded text-zinc-600 text-sm font-medium">
+                        {filters.minRating} {filters.minRating === 1 ? 'estrela' : 'estrelas'}
+                      </div>
+                    </div>
+                    <Slider
+                      value={[filters.minRating]}
+                      min={0}
+                      max={5}
+                      step={0.5}
+                      onValueChange={(value) => setFilters(prev => ({ ...prev, minRating: value[0] }))}
+                      className="mt-2"
+                    />
+                    <div className="flex justify-between text-xs text-zinc-400 mt-1">
+                      <span>0</span>
+                      <span>5</span>
+                    </div>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
+      </section>
+
+      {/* Alerta de status da assinatura */}
+      {feedStatus.status !== "active" && feedStatus.status !== "loading" && (
+        <section className="mb-8">
+          <div className="bg-amber-50 p-5 rounded-xl border border-amber-200 shadow-sm">
+            <div className="flex items-start gap-4">
+              <div className="bg-amber-100 p-2 rounded-full">
+                <AlertTriangle 
+                  className={`h-5 w-5 ${feedStatus.status === 'pending' ? 'text-amber-500' : 'text-red-500'}`} 
+                />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-amber-800 text-lg mb-1">
+                  {feedStatus.status === 'pending' 
+                    ? 'Assinatura Pendente' 
+                    : feedStatus.status === 'canceled' 
+                      ? 'Assinatura Cancelada' 
+                      : 'Sem Assinatura Ativa'}
+                </h3>
+                <p className="text-amber-700 mb-4">
+                  {feedStatus.message || 'Você precisa de uma assinatura ativa para acessar os cupons.'}
+                </p>
+                {(feedStatus.status === 'canceled' || feedStatus.status === 'none') && feedStatus.defaultPaymentLink && (
+                  <Button 
+                    size="default"
+                    onClick={handleSubscriptionPurchase}
+                    className="bg-amber-600 hover:bg-amber-700 text-white rounded-lg"
+                  >
+                    Quero assinar o clube
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
       )}
+
+      {/* Conteúdo principal */}
+      <main>
+        {feedStatus.status === "loading" ? (
+          // Skeleton loader para estado de carregamento
+          <div className="animate-pulse">
+            {renderSkeletons()}
+          </div>
+        ) : (
+          <div className="space-y-12">
+            {/* Seção de destaques */}
+            {featuredEstablishments.length > 0 && (
+              <section>
+                {renderCategoryCarousel("Em destaque", featuredEstablishments)}
+              </section>
+            )}
+
+            {/* Estabelecimentos por categoria */}
+            {categorizedEstablishments.length > 0 ? (
+              <section>
+                {categorizedEstablishments.map(group => 
+                  <div key={group.category} className="mb-10">
+                    {renderCategoryCarousel(group.category, group.establishments)}
+                  </div>
+                )}
+              </section>
+            ) : (
+              // Mensagem quando não há resultados
+              <section className="py-10">
+                <div className="text-center p-10 bg-zinc-50 rounded-xl border border-zinc-100 shadow-sm">
+                  <div className="mb-4 inline-flex items-center justify-center w-12 h-12 rounded-full bg-zinc-100">
+                    <Search className="h-6 w-6 text-zinc-400" />
+                  </div>
+                  <h3 className="text-lg font-medium text-zinc-600 mb-2">Nenhum resultado encontrado</h3>
+                  <p className="text-zinc-500">Tente ajustar os filtros ou realizar uma nova busca.</p>
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+      </main>
 
       {/* Modal para quando o usuário tenta acessar um estabelecimento sem assinatura */}
       <Dialog open={showSubscriptionModal} onOpenChange={setShowSubscriptionModal}>
@@ -637,6 +883,42 @@ export default function FeedPage() {
           onClose={() => setSelectedEstablishment(null)}
         />
       )}
+
+      <style jsx global>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        
+        /* Ajuste responsivo para o carrossel */
+        @media (min-width: 768px) {
+          .carousel-item {
+            width: calc(40% - 16px) !important; /* Tablet: 2 cartões + parte do terceiro */
+          }
+        }
+        
+        @media (min-width: 1024px) {
+          .carousel-item {
+            width: calc(25% - 16px) !important; /* Desktop: 4 cartões por linha */
+          }
+        }
+        
+        /* Garantir que o último card de cada linha mostre parte do próximo */
+        .carousel-container {
+          padding-right: 20%;
+        }
+        
+        @media (min-width: 768px) {
+          .carousel-container {
+            padding-right: 10%;
+          }
+        }
+        
+        @media (min-width: 1024px) {
+          .carousel-container {
+            padding-right: 5%;
+          }
+        }
+      `}</style>
     </div>
   )
 }

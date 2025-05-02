@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Card, CardContent } from "@/components/ui/card"
-import { ChevronLeft, ChevronRight, MapPin, Clock, Phone, Ticket } from "lucide-react"
+import { ChevronLeft, ChevronRight, MapPin, Clock, Phone, Ticket, CircleAlert, Siren } from "lucide-react"
 import { useNotification } from "@/contexts/NotificationContext"
 import { useEstablishment } from "@/contexts/EstablishmentContext"
 import { useAuth } from "@/contexts/auth-context"
@@ -246,15 +246,15 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
 
           <div className="space-y-4">
             <div className="flex items-center text-zinc-500 space-x-2">
-              <MapPin className="h-4 w-4" />
+              <MapPin className="h-6 w-6" />
               <span>{establishment.address.street}, {establishment.address.number} - {establishment.address.neighborhood}, {establishment.address.city}/{establishment.address.state}</span>
             </div>
             <div className="flex items-center text-zinc-500 space-x-2">
-              <Clock className="h-4 w-4" />
+              <Clock className="h-4 w-6" />
               <span>{establishment.openingHours}</span>
             </div>
             <div className="flex items-center text-zinc-500 space-x-2">
-              <Phone className="h-4 w-4" />
+              <Phone className="h-4 w-6" />
               <span>+{establishment.phone.ddi} {establishment.phone.phone}</span>
             </div>
           </div>
@@ -264,29 +264,20 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             <p className="text-zinc-400">{establishment.description}</p>
           </div>
 
-          <div className="space-y-2">
-            <h3 className="font-semibold text-zinc-500">Regras e Limites</h3>
-            <p className="text-zinc-400">{establishment.discountRules}</p>
-            <p className="text-zinc-400">Limite de uso: {establishment.usageLimit}</p>
+          <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
+            <p className="text-amber-700 font-medium flex items-center gap-2">
+              <CircleAlert />
+              {establishment.discountRules}
+            </p>
+            <p className="text-amber-700 font-medium flex items-center gap-2">
+              <Siren />
+              Limite de uso: {establishment.usageLimit}
+            </p>
           </div>
-
-          {currentVoucher && (
-            <Card className="bg-zinc-100 border border-zinc-200">
-              <CardContent className="p-6 text-center">
-                <h3 className="text-lg font-semibold text-zinc-400 mb-2">Seu Voucher</h3>
-                <p className="text-3xl font-bold text-primary mb-2">{currentVoucher.code}</p>
-                {timeLeft > 0 && (
-                  <p className="text-sm text-muted-foreground">
-                    Expira em: {formatTimeLeft()}
-                  </p>
-                )}
-              </CardContent>
-            </Card>
-          )}
         </div>
 
         <div className="p-6 border-t border-zinc-200 mt-auto">
-          {!currentVoucher && (
+          {!currentVoucher ? (
             <div className="space-y-2">
               <Button 
                 onClick={handleGenerateVoucher}
@@ -295,6 +286,18 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
                 Gerar Voucher
               </Button>
             </div>
+          ) : (
+            <Card className="bg-zinc-100 border border-zinc-200">
+              <CardContent className="p-2 text-center">
+                <h3 className="text-lg font-semibold text-zinc-400 mb-1">Seu Voucher</h3>
+                <p className="text-3xl font-bold text-primary mb-2">{currentVoucher.code}</p>
+                {timeLeft > 0 && (
+                  <p className="text-sm text-muted-foreground">
+                    Expira em: {formatTimeLeft()}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
           )}
         </div>
       </SheetContent>

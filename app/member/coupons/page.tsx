@@ -323,7 +323,7 @@ export default function CouponsPage() {
   return (
     <div className="container py-6">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
-        <h1 className="text-2xl font-bold text-zinc-500">Meus Cupons</h1>
+        <h1 className="text-xl font-bold text-zinc-500">Meus Cupons</h1>
         <div className="flex gap-2">
           <div className="flex-1 md:w-[300px]">
             <div className="relative">
@@ -332,13 +332,13 @@ export default function CouponsPage() {
                 placeholder="Buscar cupons..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-8 bg-white text-zinc-500"
+                className="pl-8 bg-white text-zinc-500 rounded-xl"
               />
             </div>
           </div>
           <Sheet>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="hover:bg-zinc-200">
+              <Button variant="outline" size="default" className="hover:bg-zinc-200 rounded-xl">
                 <Filter className="h-4 w-4 text-zinc-600" />
               </Button>
             </SheetTrigger>
@@ -369,9 +369,9 @@ export default function CouponsPage() {
           </Sheet>
           <Button
             variant="outline"
-            size="icon"
+            size="default"
             onClick={() => setViewMode(viewMode === "grid" ? "table" : "grid")}
-            className="hover:bg-zinc-200"
+            className="hover:bg-zinc-200 rounded-xl"
           >
             {viewMode === "grid" ? (
               <LayoutList className="h-4 w-4 text-zinc-600" />

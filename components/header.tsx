@@ -3,7 +3,7 @@
 import { Logo } from "./ui/logo"
 import { Button } from "./ui/button"
 import Link from "next/link"
-import { LogOut, Bell, MoonIcon, SunIcon } from "lucide-react"
+import { LogOut, Bell, MoonIcon, SunIcon, User } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
 import { useNotification } from "@/contexts/NotificationContext"
 import { useAuth } from "@/contexts/auth-context"
@@ -33,6 +33,7 @@ interface MenuItem {
 
 interface HeaderProps {
   menuItems?: MenuItem[]
+  pageTitle?: string;
 }
 
 interface UserDropdownProps {
@@ -41,6 +42,14 @@ interface UserDropdownProps {
     email: string;
     photoURL: string;
   };
+  user: any;
+  theme?: string;
+  setTheme: (theme: string) => void;
+}
+
+interface MobileFooterProps {
+  menuItems: MenuItem[];
+  userData: any;
   user: any;
   theme?: string;
   setTheme: (theme: string) => void;
@@ -108,7 +117,7 @@ const NotificationButton: React.FC<{ isOpen: boolean; onOpenChange: (open: boole
 }) => (
   <Sheet open={isOpen} onOpenChange={onOpenChange}>
     <SheetTrigger asChild>
-      <Button variant="ghost" size="sm" className="relative hover:bg-zinc-100 hover:text-zinc-500">
+      <Button variant="ghost" size="sm" className="relative hover:bg-zinc-100 hover:text-zinc-500 rounded-xl">
         <Bell className="h-5 w-5 text-zinc-500" />
         {notifications.length > 0 && <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" />}
       </Button>
@@ -133,7 +142,101 @@ const NotificationButton: React.FC<{ isOpen: boolean; onOpenChange: (open: boole
   </Sheet>
 )
 
-export function Header({ menuItems = [] }: HeaderProps) {
+// Componente de Footer Mobile
+const MobileFooter: React.FC<MobileFooterProps> = ({ menuItems, userData, user, theme, setTheme }) => {
+  const pathname = usePathname();
+  
+  return (
+    <footer className="fixed bottom-0 left-0 right-0 border-t bg-white border-zinc-200 md:hidden z-50">
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center justify-between">
+          <div className="relative w-[60px]">
+            <Logo />
+          </div>
+
+          <nav className="flex items-center justify-center space-x-4">
+            {menuItems.map((item) => (
+              <Link key={item.href} href={item.href}>
+                <Button
+                  variant="ghost"
+                  size="default"
+                  className={cn(
+                    pathname === item.href ? "bg-zinc-100 text-zinc-500 rounded-xl" : "text-zinc-400 hover:text-zinc-500 rounded-xl"
+                  )}
+                >
+                  {item.icon}
+                </Button>
+              </Link>
+            ))}
+          </nav>
+
+          <Link href={`/${user?.userType}/profile`}>
+            <Button variant="ghost" size="default" className="relative text-zinc-400 hover:text-zinc-500 rounded-xl">
+              <User className="h-5 w-5" />
+            </Button>
+          </Link>
+        </div>
+      </div>
+    </footer>
+  );
+};
+
+// Novo componente para o Header Mobile
+const MobileHeader: React.FC<{userData: any; user: any; isOpen: boolean; onOpenChange: (open: boolean) => void; notifications: any[]; removeNotification: (id: string) => void; pageTitle?: string}> = ({ 
+  userData, 
+  user, 
+  isOpen, 
+  onOpenChange, 
+  notifications, 
+  removeNotification,
+  pageTitle = "Home"
+}) => {
+  return (
+    <header className="fixed top-0 left-0 right-0 border-b bg-white border-zinc-200 md:hidden z-50">
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center justify-between">
+
+          <div className="w-1/3 flex justify-start">
+            {/* Avatar e nome do usuário */}
+            <div className="flex items-center space-x-2">
+              <Avatar className="h-8 w-8">
+                <AvatarImage 
+                  src={userData.photoURL || user?.photoURL || undefined} 
+                  alt={userData.displayName || user?.displayName || "User"}
+                  referrerPolicy="no-referrer"
+                />
+                <AvatarFallback>{userData.displayName?.charAt(0) || user?.displayName?.charAt(0) || "U"}</AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium text-zinc-600 max-w-[120px] truncate">
+                {userData.displayName || user?.displayName || user?.email?.split('@')[0] || "Usuário"}
+              </span>
+            </div>
+          </div>
+
+          <div className="w-1/3 flex justify-center">
+            {/* Título da página */}
+            <h1 className="text-lg font-semibold text-zinc-700 text-center">
+              {pageTitle}
+            </h1>
+          </div>
+
+          <div className="w-1/3 flex justify-end">
+            {/* Botão de notificações */}
+            <NotificationButton 
+              isOpen={isOpen}
+              onOpenChange={onOpenChange}
+              notifications={notifications}
+              removeNotification={removeNotification}
+            />
+          </div>
+
+        </div>
+      </div>
+    </header>
+  );
+};
+
+export function Header({ menuItems = [], pageTitle = "Home" }: HeaderProps) {
   const { user } = useAuth()
   const { notifications, removeNotification } = useNotification()
   const [isOpen, setIsOpen] = useState(false)
@@ -144,6 +247,22 @@ export function Header({ menuItems = [] }: HeaderProps) {
     email: "",
     photoURL: "",
   })
+
+  // Determinar o título da página com base na rota atual (se não for fornecido)
+  const determinePageTitle = () => {
+    if (pageTitle !== "Home") return pageTitle;
+    
+    const pathSegments = pathname.split('/').filter(Boolean);
+    if (pathSegments.length > 0) {
+      const lastSegment = pathSegments[pathSegments.length - 1];
+      // Capitalizar a primeira letra e substituir hífens por espaços
+      return lastSegment
+        .split('-')
+        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+        .join(' ');
+    }
+    return "Home";
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -156,7 +275,7 @@ export function Header({ menuItems = [] }: HeaderProps) {
         if (userSnap.exists()) {
           const data = userSnap.data()
           setUserData({
-            displayName: data.name || "",
+            displayName: data.name || data.displayName || "",
             email: data.email || "",
             photoURL: data.photoURL || "",
           })
@@ -214,44 +333,28 @@ export function Header({ menuItems = [] }: HeaderProps) {
         </div>
       </header>
 
-      {/* Mobile Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 border-t bg-white border-zinc-200 md:hidden z-50">
-        <div className="container mx-auto px-4">
-          <div className="flex h-16 items-center justify-between">
-            <div className="relative w-[60px]">
-              <Logo />
-            </div>
+      {/* Mobile Header (Novo) */}
+      <MobileHeader 
+        userData={userData}
+        user={user}
+        isOpen={isOpen}
+        onOpenChange={setIsOpen}
+        notifications={notifications}
+        removeNotification={removeNotification}
+        pageTitle={determinePageTitle()}
+      />
 
-            <nav className="flex items-center space-x-2">
-              {menuItems.map((item) => (
-                <Link key={item.href} href={item.href}>
-                  <Button
-                    variant="ghost"
-                    size="default"
-                    className={cn(pathname === item.href ? "bg-zinc-100 text-zinc-500" : "text-zinc-500")}
-                  >
-                    {item.icon}
-                  </Button>
-                </Link>
-              ))}
-              <NotificationButton 
-                isOpen={isOpen}
-                onOpenChange={setIsOpen}
-                notifications={notifications}
-                removeNotification={removeNotification}
-              />
-            </nav>
-            <div className="relative w-[60px]">
-              <UserDropdown 
-                userData={userData}
-                user={user}
-                theme={theme}
-                setTheme={setTheme}
-                />
-            </div>
-          </div>
-        </div>
-      </footer>
+      {/* Mobile Footer (Refatorado) */}
+      <MobileFooter 
+        menuItems={menuItems}
+        userData={userData}
+        user={user}
+        theme={theme}
+        setTheme={setTheme}
+      />
+      
+      {/* Adicionar espaço para compensar o header e footer fixos no mobile */}
+      <div className="md:hidden pb-16 pt-16" />
     </>
   )
 }

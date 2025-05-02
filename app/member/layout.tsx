@@ -33,7 +33,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
         <EstablishmentProvider>
           <div className="min-h-screen bg-zinc-100">
             <Header menuItems={menuItems} />
-            <main className="py-8">
+            <main className="py-2">
               {children}
             </main>
           </div>
