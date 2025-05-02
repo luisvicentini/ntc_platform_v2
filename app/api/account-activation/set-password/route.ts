@@ -2,7 +2,23 @@ import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
 import { collection, query, where, getDocs, doc, updateDoc } from "firebase/firestore"
 import { auth } from "@/lib/firebase"
-import { updatePassword, sendPasswordResetEmail, getAuth } from "firebase/auth"
+import { 
+  updatePassword, 
+  sendPasswordResetEmail, 
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  EmailAuthProvider,
+  reauthenticateWithCredential,
+  getAuth,
+  signOut, 
+  updateEmail,
+  signInWithCustomToken,
+  signInAnonymously,
+  fetchSignInMethodsForEmail,
+  sendSignInLinkToEmail
+} from "firebase/auth"
+import { getFirebaseAdminApp, auth as adminAuth } from "@/lib/firebase-admin"
+import * as admin from 'firebase-admin'
 
 export async function POST(request: NextRequest) {
   try {
@@ -73,8 +89,10 @@ export async function POST(request: NextRequest) {
     const userDoc = snapshot.docs[0]
     const userData = userDoc.data()
     const userId = userDoc.id
+    const userEmail = userData.email
+    const firebaseUid = userData.uid || userId
     
-    console.log(`Usuário encontrado: ID ${userId}, Email: ${userData.email}`)
+    console.log(`Usuário encontrado: ID ${userId}, Email: ${userEmail}`)
     
     // Verificar se o token expirou
     const expireDate = userData.resetPasswordTokenExpiresAt
@@ -100,20 +118,103 @@ export async function POST(request: NextRequest) {
       console.log("Token não possui data de expiração definida")
     }
     
-    // Atualizar o usuário no Firebase Authentication (se necessário)
-    // Nota: Normalmente seria preciso autenticar o usuário antes de alterar a senha,
-    // mas como estamos lidando com uma situação de ativação, 
-    // vamos usar a opção de reset de senha para definir a senha inicial
+    // Inicializar Firebase Admin SDK
+    getFirebaseAdminApp()
     
+    // Atualizar a senha diretamente usando o Firebase Admin SDK
     try {
-      // Enviar um email de redefinição de senha para o Firebase Auth poder lidar com a definição da senha
-      console.log(`Enviando email de redefinição para: ${userData.email}`)
-      await sendPasswordResetEmail(auth, userData.email)
+      // Verificar se o usuário existe no Firebase Auth
+      try {
+        console.log(`Verificando se o usuário existe no Firebase Auth: ${firebaseUid}`)
+        await adminAuth.getUser(firebaseUid)
+        console.log("Usuário existente no Firebase Auth")
+        
+        // Usuário existe, atualizar a senha
+        await adminAuth.updateUser(firebaseUid, {
+          password: password,
+          emailVerified: true
+        })
+        
+        console.log("Senha atualizada com sucesso no Firebase Auth")
+      } catch (getUserError) {
+        console.error("Erro ao obter usuário do Firebase Auth:", getUserError)
+        
+        // Usuário não existe no Firebase Auth, criar novo usuário
+        console.log("Criando novo usuário no Firebase Auth...")
+        
+        try {
+          const userRecord = await adminAuth.createUser({
+            uid: firebaseUid,
+            email: userEmail,
+            password: password,
+            emailVerified: true
+          })
+          
+          console.log(`Novo usuário criado no Firebase Auth: ${userRecord.uid}`)
+        } catch (createError) {
+          console.error("Erro ao criar usuário:", createError)
+          
+          // Se falhar na criação com UID específico, tentar criar com UID gerado pelo Firebase
+          if (String(createError).includes('already exists')) {
+            console.log("Tentando criar usuário sem especificar UID...")
+            
+            try {
+              // Verificar se o email já está em uso
+              const userByEmail = await adminAuth.getUserByEmail(userEmail)
+              
+              if (userByEmail) {
+                console.log(`Usuário encontrado pelo email: ${userByEmail.uid}`)
+                
+                // Atualizar dados do usuário existente
+                await adminAuth.updateUser(userByEmail.uid, {
+                  password: password,
+                  emailVerified: true
+                })
+                
+                console.log("Senha atualizada para o usuário encontrado pelo email")
+                
+                // Atualizar o UID no documento do Firestore se for diferente
+                if (userByEmail.uid !== firebaseUid) {
+                  await updateDoc(userDoc.ref, {
+                    uid: userByEmail.uid
+                  })
+                  console.log(`UID do usuário atualizado no Firestore: ${userByEmail.uid}`)
+                }
+              }
+            } catch (emailLookupError) {
+              // Email não encontrado, tentativa final de criar usuário com novo UID
+              try {
+                const newUserRecord = await adminAuth.createUser({
+                  email: userEmail,
+                  password: password,
+                  emailVerified: true
+                })
+                
+                console.log(`Usuário criado com novo UID: ${newUserRecord.uid}`)
+                
+                // Atualizar o documento do Firestore com o novo UID
+                await updateDoc(userDoc.ref, {
+                  uid: newUserRecord.uid
+                })
+                
+                console.log(`UID atualizado no Firestore: ${newUserRecord.uid}`)
+              } catch (finalCreateError) {
+                console.error("Erro final ao criar usuário:", finalCreateError)
+                throw new Error("Não foi possível criar ou atualizar o usuário no Firebase Auth")
+              }
+            }
+          } else {
+            throw createError
+          }
+        }
+      }
+    } catch (adminError) {
+      console.error("Erro ao usar Firebase Admin:", adminError)
       
-      console.log(`Email de redefinição de senha enviado para: ${userData.email}`)
-    } catch (firebaseError) {
-      console.error("Erro ao enviar email de redefinição:", firebaseError)
-      // Continuar mesmo se falhar, pois vamos atualizar o Firestore de qualquer forma
+      // Fallback: enviar email de redefinição de senha
+      console.log("Fallback: enviando email de redefinição de senha")
+      await sendPasswordResetEmail(auth, userEmail)
+      console.log(`Email de redefinição de senha enviado para: ${userEmail}`)
     }
     
     // Atualizar o documento do usuário no Firestore para limpar o token e marcar a conta como verificada
