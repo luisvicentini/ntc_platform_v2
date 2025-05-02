@@ -3,11 +3,11 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/auth-context"
-import Benefits from "@/components/homepage/benefits"
+import Benefits from "@/components/global/benefits"
 import Hero from "@/components/homepage/hero"
-import Restaurants from "@/components/homepage/restaurants"
-import About from "@/components/homepage/about"
-import Footer from "@/components/homepage/footer"
+import Restaurants from "@/components/global/restaurants"
+import About from "@/components/global/about"
+import Footer from "@/components/global/footer"
 
 
 export default function HomePage() {

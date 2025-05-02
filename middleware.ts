@@ -13,7 +13,8 @@ const publicRoutes = [
   '/stories',
   '/success',
   '/lastlink-success',
-  '/auth/activate-account'
+  '/auth/activate-account',
+  '/vendas'
 ]
 
 // Mapeia os tipos de usuário para suas rotas permitidas
