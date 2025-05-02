@@ -1,5 +1,4 @@
 import { UnifiedLoginForm } from "@/components/auth/unified-login-form"
-import { useSearchParams } from "next/navigation"
 
 export default function LoginPage() {
   
