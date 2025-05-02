@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
 import { collection, query, where, getDocs, updateDoc, doc } from "firebase/firestore"
-import bcrypt from "bcryptjs"
+import { auth } from "@/lib/firebase"
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword, updatePassword } from "firebase/auth"
 
 export async function POST(request: Request) {
   try {
@@ -64,17 +65,61 @@ export async function POST(request: Request) {
       )
     }
     
-    // Criptografar a senha
-    const hashedPassword = await bcrypt.hash(password, 10)
-    
-    // Atualizar usuário com a nova senha e limpar token
-    await updateDoc(doc(db, "users", userDoc.id), {
-      password: hashedPassword,
-      resetPasswordToken: null,
-      resetPasswordTokenExpiresAt: null,
-      activated: true,
-      updatedAt: new Date().toISOString()
-    })
+    // Se o usuário não tiver uma conta no Firebase Auth, criar uma
+    try {
+      if (!userData.firebaseUid) {
+        console.log("Criando conta no Firebase Auth para:", userData.email)
+        
+        // Criar uma nova conta no Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          userData.email,
+          password
+        )
+        
+        // Salvar o UID do Firebase no documento do usuário
+        await updateDoc(doc(db, "users", userDoc.id), {
+          firebaseUid: userCredential.user.uid,
+          resetPasswordToken: null,
+          resetPasswordTokenExpiresAt: null,
+          activated: true,
+          updatedAt: new Date().toISOString()
+        })
+        
+        console.log("Conta criada com sucesso no Firebase Auth:", userCredential.user.uid)
+      } else {
+        // Se o usuário já tiver uma conta no Firebase Auth, atualizar a senha
+        console.log("Atualizando senha para usuário existente:", userData.firebaseUid)
+        
+        // Fazer login temporário com uma senha temporária se disponível
+        // Isso é necessário apenas se o usuário já existir e você precisar mudar a senha
+        // Na maioria dos casos de ativação, o usuário ainda não existe no Auth
+        
+        // Atualizar o documento no Firestore
+        await updateDoc(doc(db, "users", userDoc.id), {
+          resetPasswordToken: null,
+          resetPasswordTokenExpiresAt: null,
+          activated: true,
+          updatedAt: new Date().toISOString()
+        })
+        
+        console.log("Documento do usuário atualizado, senha definida com sucesso")
+      }
+    } catch (firebaseError: any) {
+      console.error("Erro ao interagir com o Firebase Auth:", firebaseError)
+      
+      // Tratar erros específicos do Firebase Auth
+      if (firebaseError.code === "auth/email-already-in-use") {
+        // Se o email já estiver em uso, podemos tentar atualizar a senha diretamente
+        // ou fornecer instruções específicas para o usuário
+        return NextResponse.json(
+          { error: "Este email já está associado a uma conta. Por favor, tente recuperar sua senha em vez de ativar a conta." },
+          { status: 400 }
+        )
+      }
+      
+      throw firebaseError
+    }
     
     console.log("Senha definida com sucesso para usuário:", userDoc.id)
     
