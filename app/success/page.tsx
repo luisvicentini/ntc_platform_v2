@@ -25,6 +25,9 @@ function SuccessContent() {
     const params = new URLSearchParams(window.location.search)
     return {
       token: params.get('token'),
+      transactionId: params.get('transaction_id') || params.get('transactionId'),
+      paymentId: params.get('payment_id') || params.get('paymentId'),
+      orderId: params.get('order_id') || params.get('orderId'),
       paymentMethod: params.get('paymentMethod'),
       userId: params.get('userId'),
       partnerId: params.get('partnerId'),
@@ -145,20 +148,35 @@ function SuccessContent() {
       const userId = user?.uid || urlParams.userId || storedData?.userId
       const partnerId = urlParams.partnerId || storedData?.partnerId
       const partnerLinkId = urlParams.partnerLinkId || storedData?.partnerLinkId
-      const token = urlParams.token
-      const paymentMethod = urlParams.paymentMethod
+      const token = urlParams.token || undefined
+      const transactionId = urlParams.transactionId || undefined
+      const paymentId = urlParams.paymentId || undefined
+      const orderId = urlParams.orderId || undefined
+      const paymentMethod = urlParams.paymentMethod || undefined
       
-      // Validar dados mínimos
-      if (!token) {
-        throw new Error('Token de pagamento não encontrado')
+      // Validar dados mínimos - usar qualquer identificador disponível
+      const paymentIdentifier = token || transactionId || paymentId || orderId
+      if (!paymentIdentifier) {
+        console.warn('Nenhum identificador de pagamento encontrado nos parâmetros:', urlParams)
+        
+        // Se não temos identificador mas temos informações de parceiro, vamos tentar continuar
+        if (partnerId) {
+          console.log('Continuando com informações de parceiro disponíveis')
+        } else {
+          throw new Error('Identificador de pagamento não encontrado')
+        }
       }
       
+      // Verificar se temos um usuário identificado
       if (!userId) {
         // Se não temos userId mas o usuário não está autenticado, redirecionar para login
         if (!authLoading && !user) {
           console.log('Usuário não autenticado, redirecionando para login')
           localStorage.setItem('payment_pending', JSON.stringify({
             token,
+            transactionId,
+            paymentId,
+            orderId,
             paymentMethod,
             partnerId,
             partnerLinkId,
@@ -168,9 +186,12 @@ function SuccessContent() {
           router.push('/login')
           return
         }
-        throw new Error('ID do usuário não encontrado')
+        
+        // Se não temos userId nem mesmo no Auth, seguir com o fluxo anônimo
+        // isso permitirá enviar o email de ativação
+        console.log('Processando pagamento sem ID de usuário')
       }
-
+      
       // Salvar informações de parceiro para o webhook recuperar posteriormente
       if (partnerId) {
         const pendingId = await savePendingSubscription({
@@ -193,7 +214,10 @@ function SuccessContent() {
       const callbackUrl = new URL('/api/lastlink/callback', window.location.origin)
       
       // Adicionar parâmetros relevantes na URL
-      callbackUrl.searchParams.append('token', token)
+      if (token) callbackUrl.searchParams.append('token', token)
+      if (transactionId) callbackUrl.searchParams.append('transactionId', transactionId)
+      if (paymentId) callbackUrl.searchParams.append('paymentId', paymentId)
+      if (orderId) callbackUrl.searchParams.append('orderId', orderId)
       if (userId) callbackUrl.searchParams.append('userId', userId)
       if (partnerId) callbackUrl.searchParams.append('partnerId', partnerId)
       if (partnerLinkId) callbackUrl.searchParams.append('partnerLinkId', partnerLinkId)
