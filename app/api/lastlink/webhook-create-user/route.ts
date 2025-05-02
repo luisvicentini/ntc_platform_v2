@@ -1,6 +1,46 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
 import { collection, addDoc, query, where, getDocs, doc, updateDoc, increment, serverTimestamp, getDoc, orderBy, limit, deleteDoc, setDoc } from "firebase/firestore"
+import { randomBytes } from "crypto"
+import { createTransport } from "nodemailer"
+
+// Configurar o transporter para envio de emails
+const transporter = createTransport({
+  host: process.env.SMTP_HOST,
+  port: Number(process.env.SMTP_PORT),
+  auth: {
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS,
+  },
+})
+
+// Função para enviar email de ativação
+async function sendActivationEmail(email: string, name: string, token: string) {
+  try {
+    // URL para ativação de conta
+    const activationUrl = `${process.env.NEXT_PUBLIC_APP_URL}/auth/activate-account?token=${token}`
+    
+    await transporter.sendMail({
+      from: process.env.SMTP_FROM,
+      to: email,
+      subject: `Ativação de Conta - ${process.env.NEXT_PUBLIC_APP_PROJECTNAME}`,
+      html: `
+        <h1>Bem-vindo(a) ${name}!</h1>
+        <p>Sua conta na ${process.env.NEXT_PUBLIC_APP_PROJECTNAME} foi criada com sucesso após seu pagamento.</p>
+        <p>Para ativar sua conta e definir sua senha, clique no link abaixo:</p>
+        <p><a href="${activationUrl}" style="background-color: #10b981; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 10px 0;">Ativar minha conta</a></p>
+        <p>Este link é válido por 24 horas.</p>
+        <p>Se você não solicitou esta conta, por favor ignore este email.</p>
+      `
+    })
+    
+    console.log("Email de ativação enviado para:", email)
+    return true
+  } catch (error) {
+    console.error("Erro ao enviar email de ativação:", error)
+    return false
+  }
+}
 
 // Definição do parceiro padrão
 const DEFAULT_PARTNER_ID = "t0daqXpfxg3M1nm6v1vB"
@@ -491,6 +531,41 @@ export async function POST(request: Request) {
     } catch (error) {
       console.error("Erro ao criar/atualizar registro em memberPartners:", error)
       // Não interrompe o fluxo principal em caso de erro
+    }
+    
+    // ADICIONADO: Enviar email de ativação para o usuário
+    try {
+      console.log("Preparando para enviar email de ativação para o usuário:", userEmail)
+      
+      // Gerar token de ativação
+      const resetToken = randomBytes(32).toString("hex")
+      const expiresAt = new Date()
+      expiresAt.setHours(expiresAt.getHours() + 24) // Token válido por 24h
+      
+      // Atualizar o documento do usuário com o token
+      await updateDoc(doc(db, 'users', userId), {
+        resetPasswordToken: resetToken,
+        resetPasswordTokenExpiresAt: expiresAt.toISOString(),
+        updatedAt: now.toISOString()
+      })
+      
+      console.log("Token de ativação gerado:", resetToken.substring(0, 10) + "...")
+      
+      // Enviar o email com o token
+      const emailSent = await sendActivationEmail(
+        userEmail,
+        userName || "Usuário",
+        resetToken
+      )
+      
+      if (emailSent) {
+        console.log("Email de ativação enviado com sucesso para:", userEmail)
+      } else {
+        console.warn("Falha ao enviar email de ativação para:", userEmail)
+      }
+    } catch (emailError) {
+      console.error("Erro ao processar envio de email de ativação:", emailError)
+      // Não interrompe o fluxo principal em caso de erro no email
     }
     
     console.log("========= FIM DO PROCESSAMENTO DO WEBHOOK =========")
