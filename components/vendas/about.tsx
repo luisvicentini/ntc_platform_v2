@@ -22,7 +22,7 @@ export default function About() {
   }
 
   return (
-    <section ref={ref} className="py-32 max-md:pb-0 px-4 max-md:px-0 lg:px-16 bg-gradient-to-l from-red-500 to-red-900 bg-cover bg-no-repeat bg-right relative">
+    <section ref={ref} className="py-32 max-sm:py-12 max-md:pb-0 px-4 max-md:px-0 lg:px-16 bg-gradient-to-l from-zinc-800 to-zinc-950 bg-cover bg-no-repeat bg-right relative">
       <motion.div
         initial={{ opacity: 0, y: 0 }}
         animate={inView ? { opacity: 1, y: 0 } : { opacity: 0, y: 0 }}

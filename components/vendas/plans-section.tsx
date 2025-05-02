@@ -300,7 +300,7 @@ export default function PlansSection() {
           className="mt-12 text-center"
         >
           <p className="text-lg text-zinc-400">
-            Insatisfeito? Cancele quando quiser. Nós garantimos reembolso em até 7 dias.
+            Sem fidelidade! Cancele quando quiser. Nós garantimos reembolso em até 7 dias.
           </p>
         </motion.div>
       </div>

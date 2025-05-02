@@ -75,22 +75,22 @@ export default function HowItWorks() {
             transition={{ duration: 0.7 }}
             className="flex justify-center"
           >
-            <div className="relative w-[280px] md:w-[320px]">
+            <div className="relative w-full max-w-[320px] mx-auto">
               {/* Frame do iPhone */}
-              <div className="relative w-full aspect-[9/19.5] max-h-[600px] bg-black rounded-[40px] p-3 border-4 border-zinc-800 shadow-2xl">
+              <div className="relative w-full aspect-[9/19.5] bg-black rounded-[40px] p-3 border-4 border-zinc-800 shadow-2xl">
                 {/* Notch */}
                 <div className="absolute top-0 left-1/2 transform -translate-x-1/2 w-1/3 h-7 bg-black rounded-b-xl z-20"></div>
                 
                 {/* Tela do iPhone */}
                 <div className="relative w-full h-full rounded-[30px] overflow-hidden bg-zinc-100">
                   {/* Video embedded dentro da tela do celular */}
-                  <div className="w-full h-full">
+                  <div className="relative w-full h-full">
                     <video 
                       autoPlay
                       muted
                       loop
                       playsInline
-                      className="w-full h-full object-cover"
+                      className="absolute inset-0 w-full h-full object-cover"
                     >
                       <source src="/vendas/videos/app-demo.mp4" type="video/mp4" />
                       {/* Fallback para imagem estática caso o vídeo não carregue */}
