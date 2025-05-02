@@ -163,7 +163,7 @@ const NotificationButton: React.FC<{ isOpen: boolean; onOpenChange: (open: boole
         {notifications.length > 0 && <span className="absolute top-0 right-0 h-2 w-2 rounded-full bg-red-500" />}
       </Button>
     </SheetTrigger>
-    <SheetContent className="w-[400px] bg-zinc-100 border-zinc-200 text-zinc-500 overflow-y-auto">
+    <SheetContent className="w-[400px] max-sm:w-[320px] bg-zinc-100 border-zinc-200 text-zinc-500 overflow-y-auto">
       <SheetHeader>
         <SheetTitle className="text-zinc-500">Notificações</SheetTitle>
       </SheetHeader>
@@ -204,7 +204,7 @@ const MobileFooter: React.FC<MobileFooterProps> = ({ menuItems, userData, user, 
           </div>
 
           {/* Menu de navegação */}
-          <div className="w-1/3 flex justify-center">
+          <div className="w-1/3 flex justify-center z-10">
             <nav className="flex items-center justify-center space-x-4">
               {menuItems.map((item) => (
                 <Link key={item.href} href={item.href}>
@@ -221,16 +221,11 @@ const MobileFooter: React.FC<MobileFooterProps> = ({ menuItems, userData, user, 
               ))}
             </nav>
           </div>
-          
-          {/* <Link href={`/${user?.userType}/profile`}>
-            <Button variant="ghost" size="default" className="relative text-zinc-400 hover:text-zinc-500 rounded-xl">
-              <User className="h-5 w-5" />
-            </Button>
-          </Link> */}
 
           {/* Avatar e nome do usuário */}
           <div className="w-1/3 flex justify-end">
             <div className="flex items-center space-x-2">
+              <Link href={`/${user?.userType}/profile`}>
                 <Avatar className="h-10 w-10">
                   <AvatarImage 
                     src={userData.photoURL || user?.photoURL || undefined} 
@@ -239,7 +234,7 @@ const MobileFooter: React.FC<MobileFooterProps> = ({ menuItems, userData, user, 
                   />
                   <AvatarFallback className={`text-xl font-medium ${avatarColorClass}`}>{userData.displayName?.charAt(0) || user?.displayName?.charAt(0) || "U"}</AvatarFallback>
                 </Avatar>
-                
+              </Link>
             </div>
           </div>
 
