@@ -23,6 +23,43 @@ import { cn } from "@/lib/utils/utils"
 import { usePathname } from "next/navigation"
 import { doc, getDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
+import Image from "next/image"
+// Objeto com cores para as letras do alfabeto
+const avatarColors = {
+  A: "bg-red-500 text-white",     // Vermelho
+  B: "bg-blue-500 text-white",    // Azul
+  C: "bg-green-500 text-white",   // Verde
+  D: "bg-yellow-500 text-black",  // Amarelo
+  E: "bg-purple-500 text-white",  // Roxo
+  F: "bg-pink-500 text-white",    // Rosa
+  G: "bg-indigo-500 text-white",  // Índigo
+  H: "bg-orange-500 text-white",  // Laranja
+  I: "bg-teal-500 text-white",    // Teal
+  J: "bg-red-500 text-white",     // Vermelho
+  K: "bg-blue-500 text-white",    // Azul
+  L: "bg-green-500 text-white",   // Verde
+  M: "bg-yellow-500 text-black",  // Amarelo
+  N: "bg-purple-500 text-white",  // Roxo
+  O: "bg-pink-500 text-white",    // Rosa
+  P: "bg-indigo-500 text-white",  // Índigo
+  Q: "bg-orange-500 text-white",  // Laranja
+  R: "bg-teal-500 text-white",    // Teal
+  S: "bg-cyan-500 text-white",    // Ciano
+  T: "bg-lime-500 text-black",    // Lima
+  U: "bg-red-500 text-white",     // Vermelho
+  V: "bg-blue-500 text-white",    // Azul
+  W: "bg-green-500 text-white",   // Verde
+  X: "bg-yellow-500 text-black",  // Amarelo
+  Y: "bg-purple-500 text-white",  // Roxo
+  Z: "bg-pink-500 text-white",    // Rosa
+};
+
+// Função para obter a classe de cor com base na primeira letra do nome
+const getAvatarColorClass = (name: string | undefined | null): string => {
+  if (!name) return "bg-zinc-500 text-white"; // Cor padrão
+  const firstChar = name.charAt(0).toUpperCase() as keyof typeof avatarColors;
+  return avatarColors[firstChar] || "bg-zinc-500 text-white"; // Retorna a cor correspondente ou a cor padrão
+};
 
 interface MenuItem {
   href: string
@@ -67,6 +104,10 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userData, user, theme = "da
     }
   }
   
+  // Obter a cor de fundo do avatar com base no nome
+  const nameForColor = userData.displayName || user?.displayName;
+  const avatarColorClass = getAvatarColorClass(nameForColor);
+  
   return (
     <DropdownMenu>
       <DropdownMenuTrigger>
@@ -77,7 +118,7 @@ const UserDropdown: React.FC<UserDropdownProps> = ({ userData, user, theme = "da
               alt={userData.displayName || user?.displayName || "User"}
               referrerPolicy="no-referrer"
             />
-            <AvatarFallback>{userData.displayName?.charAt(0) || user?.displayName?.charAt(0) || "U"}</AvatarFallback>
+            <AvatarFallback className={avatarColorClass}>{userData.displayName?.charAt(0) || user?.displayName?.charAt(0) || "U"}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
@@ -146,35 +187,62 @@ const NotificationButton: React.FC<{ isOpen: boolean; onOpenChange: (open: boole
 const MobileFooter: React.FC<MobileFooterProps> = ({ menuItems, userData, user, theme, setTheme }) => {
   const pathname = usePathname();
   
+  // Obter a cor de fundo do avatar com base no nome
+  const nameForColor = userData.displayName || user?.displayName;
+  const avatarColorClass = getAvatarColorClass(nameForColor);
+  
   return (
     <footer className="fixed bottom-0 left-0 right-0 border-t bg-white border-zinc-200 md:hidden z-50">
-      <div className="container mx-auto px-4">
+      <div className="container mx-auto px-4 py-2">
         <div className="flex h-16 items-center justify-between">
-          <div className="relative w-[60px]">
-            <Logo />
+
+          {/* Logo */}
+          <div className="w-1/3 flex justify-start">
+            <div className="relative w-[60px]">
+              <Logo />
+            </div>
           </div>
 
-          <nav className="flex items-center justify-center space-x-4">
-            {menuItems.map((item) => (
-              <Link key={item.href} href={item.href}>
-                <Button
-                  variant="ghost"
-                  size="default"
-                  className={cn(
-                    pathname === item.href ? "bg-zinc-100 text-zinc-500 rounded-xl" : "text-zinc-400 hover:text-zinc-500 rounded-xl"
-                  )}
-                >
-                  {item.icon}
-                </Button>
-              </Link>
-            ))}
-          </nav>
-
-          <Link href={`/${user?.userType}/profile`}>
+          {/* Menu de navegação */}
+          <div className="w-1/3 flex justify-center">
+            <nav className="flex items-center justify-center space-x-4">
+              {menuItems.map((item) => (
+                <Link key={item.href} href={item.href}>
+                  <Button
+                    variant="ghost"
+                    size="lg"
+                    className={cn(
+                      pathname === item.href ? "bg-zinc-100 text-zinc-500 rounded-xl text-xl" : "text-zinc-400 hover:text-zinc-500 rounded-xl text-lg"
+                    )}
+                  >
+                    {item.icon}
+                  </Button>
+                </Link>
+              ))}
+            </nav>
+          </div>
+          
+          {/* <Link href={`/${user?.userType}/profile`}>
             <Button variant="ghost" size="default" className="relative text-zinc-400 hover:text-zinc-500 rounded-xl">
               <User className="h-5 w-5" />
             </Button>
-          </Link>
+          </Link> */}
+
+          {/* Avatar e nome do usuário */}
+          <div className="w-1/3 flex justify-end">
+            <div className="flex items-center space-x-2">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage 
+                    src={userData.photoURL || user?.photoURL || undefined} 
+                    alt={userData.displayName || user?.displayName || "User"}
+                    referrerPolicy="no-referrer"
+                  />
+                  <AvatarFallback className={`text-xl font-medium ${avatarColorClass}`}>{userData.displayName?.charAt(0) || user?.displayName?.charAt(0) || "U"}</AvatarFallback>
+                </Avatar>
+                
+            </div>
+          </div>
+
         </div>
       </div>
     </footer>
@@ -197,20 +265,7 @@ const MobileHeader: React.FC<{userData: any; user: any; isOpen: boolean; onOpenC
         <div className="flex h-16 items-center justify-between">
 
           <div className="w-1/3 flex justify-start">
-            {/* Avatar e nome do usuário */}
-            <div className="flex items-center space-x-2">
-              <Avatar className="h-8 w-8">
-                <AvatarImage 
-                  src={userData.photoURL || user?.photoURL || undefined} 
-                  alt={userData.displayName || user?.displayName || "User"}
-                  referrerPolicy="no-referrer"
-                />
-                <AvatarFallback>{userData.displayName?.charAt(0) || user?.displayName?.charAt(0) || "U"}</AvatarFallback>
-              </Avatar>
-              <span className="text-sm font-medium text-zinc-600 max-w-[120px] truncate">
-                {userData.displayName || user?.displayName || user?.email?.split('@')[0] || "Usuário"}
-              </span>
-            </div>
+            
           </div>
 
           <div className="w-1/3 flex justify-center">
@@ -231,6 +286,45 @@ const MobileHeader: React.FC<{userData: any; user: any; isOpen: boolean; onOpenC
           </div>
 
         </div>
+      </div>
+      {/* Faixa laranja com texto branco (frente) */}
+      <div className="absolute -left-[145px] h-8 w-full inset-0 bg-[#F24957] transform -rotate-[30deg] overflow-hidden">
+          <div className="animate-marquee-reverse whitespace-nowrap flex items-center h-full">
+            {/* Versão mobile - 3 imagens */}
+            <div className="flex md:hidden">
+              {Array(3)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={i} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+              {Array(3)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={`duplicate-mobile-${i}`} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+            </div>
+            {/* Versão desktop - 10 imagens */}
+            <div className="hidden md:flex">
+              {Array(10)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={i} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+              {Array(10)
+                .fill(0)
+                .map((_, i) => (
+                  <span key={`duplicate-desktop-${i}`} className="flex items-center">
+                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
+                  </span>
+                ))}
+            </div>
+          </div>
       </div>
     </header>
   );

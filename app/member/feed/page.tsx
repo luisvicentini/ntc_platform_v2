@@ -504,9 +504,9 @@ export default function FeedPage() {
 
   // Renderizar o carrossel por categoria
   const renderCategoryCarousel = (category: string, establishments: FeedEstablishment[]) => (
-    <div key={category} className="mb-12">
-      <div className="flex justify-between items-center mb-4">
-        <h2 className="text-xl font-semibold text-zinc-500">{category}</h2>
+    <div key={category} className="mb-4">
+      <div className="flex justify-between items-center mb-3">
+        <h2 className="text-md font-semibold text-zinc-500">{category}</h2>
         <div className="flex space-x-2">
           <Button 
             variant="outline" 
@@ -528,10 +528,10 @@ export default function FeedPage() {
       </div>
       
       <div 
-        className="relative -mx-4 px-4" // Wrapper para garantir que o carrossel vai até a borda
+        className="relative -mx-8" // Wrapper para garantir que o carrossel vai até a borda
       >
         <div 
-          className="flex overflow-x-auto pb-4 gap-4 scrollbar-hide carousel-container"
+          className="flex overflow-x-auto pb-3 gap-1 scrollbar-hide carousel-container"
           style={{ 
             scrollbarWidth: 'none', 
             msOverflowStyle: 'none',
@@ -544,7 +544,7 @@ export default function FeedPage() {
           {establishments.map(establishment => (
             <div 
               key={establishment.id} 
-              className="carousel-item"
+              className="carousel-item ml-4"
               style={{
                 width: 'calc(80% - 16px)',  // Mobile: 80% da largura com espaço para o próximo card
                 flexShrink: 0,
@@ -603,7 +603,7 @@ export default function FeedPage() {
   });
 
   return (
-    <div className="container md:py-6 sm:py-1">
+    <div className="container md:py-6 sm:pt-1">
       {/* Header da página - Saudação e informações do usuário */}
       <header className="mb-10">
         <div className="mb-2">
@@ -619,11 +619,12 @@ export default function FeedPage() {
       {/* Barra de pesquisa e filtros */}
       <section className="bg-white rounded-xl p-5 shadow-sm border border-zinc-100 mb-8">
         <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center">
-            <h2 className="text-md font-semibold text-zinc-600">Cupons disponíveis</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-md max-sm:text-sm font-semibold text-zinc-600">Cupons disponíveis</h2>
             {filteredEstablishments.length > 0 && (
               <span className="ml-3 px-2.5 py-0.5 bg-zinc-100 text-zinc-600 text-sm rounded-full">
-                {filteredEstablishments.length} {filteredEstablishments.length === 1 ? 'estabelecimento' : 'estabelecimentos'}
+                {filteredEstablishments.length}
+                {/* {filteredEstablishments.length} {filteredEstablishments.length === 1 ? 'voucher' : 'vouchers'} */}
               </span>
             )}
           </div>
@@ -633,7 +634,7 @@ export default function FeedPage() {
             <div className="relative w-full sm:w-[300px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
               <Input
-                placeholder="Pesquisar estabelecimentos..."
+                placeholder="Pesquisar cupons..."
                 className="pl-10 bg-zinc-50 text-zinc-600 rounded-xl border-none focus:ring-2 focus:ring-zinc-200 focus:border-zinc-300"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
@@ -808,7 +809,7 @@ export default function FeedPage() {
       )}
 
       {/* Conteúdo principal */}
-      <main>
+      <main className="pb-10">
         {feedStatus.status === "loading" ? (
           // Skeleton loader para estado de carregamento
           <div className="animate-pulse">

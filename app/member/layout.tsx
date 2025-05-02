@@ -13,17 +13,17 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
   const menuItems = [
     {
       href: "/member/feed",
-      icon: <Home className="h-4 w-4" />,
+      icon: <Home className="h-5 w-5" />,
       label: "Feed"
     },
     {
       href: "/member/coupons",
-      icon: <Ticket className="h-4 w-4" />,
+      icon: <Ticket className="h-5 w-5" />,
       label: "Meus Cupons"
     },
     {
       href: "/member/profile",
-      icon: <User className="h-4 w-4" />,
+      icon: <User className="h-5 w-5" />,
       label: "Perfil"
     }
   ]
