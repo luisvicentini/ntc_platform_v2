@@ -7,11 +7,12 @@ import Restaurants from "@/components/vendas/restaurants"
 import About from "@/components/vendas/about"
 import Footer from "@/components/vendas/footer"
 import Countdown from "@/components/vendas/countdown"
-import BonusSection from "@/components/vendas/bonus-section"
+import Bonus from "@/components/vendas/bonus-section"
 import PlansSection from "@/components/vendas/plans-section"
 import HowItWorks from "@/components/vendas/how-it-works"
 import FAQSection from "@/components/vendas/faq-section"
 import RestaurantsSection from "@/components/vendas/restaurants-section"
+import SavingsCalculator from "@/components/vendas/savings-calculator"
 
 export default function VendasPage() {
   return (
@@ -40,7 +41,10 @@ export default function VendasPage() {
       <Restaurants />
       
       {/* Seção de bônus */}
-      <BonusSection />
+      <Bonus />
+      
+      {/* Calculadora de Economia */}
+      <SavingsCalculator />
       
       {/* Seção de planos e ofertas */}
       <Suspense 
