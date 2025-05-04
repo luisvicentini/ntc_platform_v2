@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { toast } from "sonner"
 import type { UserProfile } from "@/types/user"
 
@@ -20,7 +21,8 @@ export function AddUserModal({ isOpen, onClose, user }: AddUserModalProps) {
     displayName: "",
     email: "",
     userType: "member",
-    status: "active"
+    status: "active",
+    isContentProducer: false
   })
   const [loading, setLoading] = useState(false)
 
@@ -30,14 +32,16 @@ export function AddUserModal({ isOpen, onClose, user }: AddUserModalProps) {
         displayName: user.displayName,
         email: user.email,
         userType: user.userType,
-        status: user.status
+        status: user.status,
+        isContentProducer: user.isContentProducer || false
       })
     } else {
       setFormData({
         displayName: "",
         email: "",
         userType: "member",
-        status: "active"
+        status: "active",
+        isContentProducer: false
       })
     }
   }, [user])
@@ -142,6 +146,23 @@ export function AddUserModal({ isOpen, onClose, user }: AddUserModalProps) {
               </Select>
             </div>
           )}
+
+          {/* Campo de produtor de conteúdo */}
+          <div className="flex items-center space-x-2">
+            <Checkbox 
+              id="isContentProducer" 
+              checked={formData.isContentProducer} 
+              onCheckedChange={(checked) => 
+                handleChange("isContentProducer", checked === true ? "true" : "false")
+              }
+            />
+            <Label 
+              htmlFor="isContentProducer" 
+              className="font-normal cursor-pointer"
+            >
+              Produtor de conteúdo (pode criar Stories)
+            </Label>
+          </div>
         </div>
 
         <DialogFooter>

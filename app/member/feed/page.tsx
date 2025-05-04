@@ -27,6 +27,8 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
+import { StoriesContainer } from "@/components/stories/stories-container"
+import { Story } from "@/components/stories/story-viewer"
 
 interface FeedStatus {
   status: "active" | "pending" | "canceled" | "none" | "loading";
@@ -100,6 +102,8 @@ export default function FeedPage() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false)
   const [establishmentsData, setEstablishmentsData] = useState<FeedEstablishment[]>([])
   const [subscriptionsLoaded, setSubscriptionsLoaded] = useState(false)
+  const [stories, setStories] = useState<Story[]>([])
+  const [loadingStories, setLoadingStories] = useState(true)
   
   // Ref para cada carrossel por categoria
   const carouselRefs = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -607,6 +611,42 @@ export default function FeedPage() {
     categorias: categorizedEstablishments.length
   });
 
+  // Carregar stories
+  useEffect(() => {
+    const fetchStories = async () => {
+      try {
+        setLoadingStories(true)
+        const response = await fetch("/api/stories", {
+          credentials: "include"
+        })
+        
+        if (!response.ok) {
+          throw new Error("Erro ao carregar stories")
+        }
+        
+        const data = await response.json()
+        
+        if (data.stories && Array.isArray(data.stories)) {
+          // Processar as histórias para garantir que todos os campos estejam presentes
+          const processedStories = data.stories.map((story: any) => ({
+            ...story,
+            // Para compatibilidade com stories antigos que usam imageUrl
+            mediaUrl: story.mediaUrl || story.imageUrl,
+            // Para compatibilidade com stories antigos que não têm mediaType
+            mediaType: story.mediaType || "image"
+          }));
+          setStories(processedStories)
+        }
+      } catch (error) {
+        console.error("Erro ao carregar stories:", error)
+      } finally {
+        setLoadingStories(false)
+      }
+    }
+    
+    fetchStories()
+  }, [])
+
   return (
     <div className="container md:py-6 sm:pt-1">
       {/* Header da página - Saudação e informações do usuário */}
@@ -620,6 +660,42 @@ export default function FeedPage() {
           </p>
         </div>
       </header>
+      
+      {/* Seção de Stories - com título, lista e botão */}
+      {/* Ao invés de verificar se há stories OU se o usuário é produtor de conteúdo, sempre exibimos a seção */}
+      <section className="mb-8">
+        <StoriesContainer 
+          stories={stories} 
+          isContentProducer={(user as any)?.isContentProducer || false} 
+          onReloadStories={async () => {
+            try {
+              setLoadingStories(true);
+              const response = await fetch("/api/stories?_=" + new Date().getTime(), {
+                credentials: "include"
+              });
+              
+              if (!response.ok) {
+                throw new Error("Erro ao recarregar stories");
+              }
+              
+              const data = await response.json();
+              
+              if (data.stories && Array.isArray(data.stories)) {
+                const processedStories = data.stories.map((story: any) => ({
+                  ...story,
+                  mediaUrl: story.mediaUrl || story.imageUrl,
+                  mediaType: story.mediaType || "image"
+                }));
+                setStories(processedStories);
+              }
+            } catch (error) {
+              console.error("Erro ao recarregar stories:", error);
+            } finally {
+              setLoadingStories(false);
+            }
+          }}
+        />
+      </section>
 
       {/* Barra de pesquisa e filtros */}
       <section className="bg-white rounded-xl p-5 shadow-sm border border-zinc-100 mb-8">

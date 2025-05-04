@@ -49,3 +49,14 @@ export interface UserListResponse {
   perPage: number
   totalPages: number
 }
+
+export interface User {
+  uid: string
+  email: string | null
+  displayName: string | null
+  photoURL: string | null
+  userType: "member" | "partner" | "admin"
+  isContentProducer?: boolean // Permite que o usuário crie stories
+  // Outros campos...
+  [key: string]: any
+}

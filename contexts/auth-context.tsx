@@ -39,6 +39,7 @@ interface CustomUser extends User {
   createdAt?: string
   updatedAt?: any
   authProvider?: string
+  isContentProducer?: boolean
 }
 
 interface AuthContextType {

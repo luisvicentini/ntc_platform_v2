@@ -84,6 +84,7 @@ export function SubscriptionManagementSidebar({
     status: "",
     pixelId: "", // Facebook Pixel ID
     analyticsId: "", // Google Analytics ID
+    isContentProducer: false, // Campo para identificar produtores de conteúdo
     checkoutOptions: {
       stripeEnabled: true,
       lastlinkEnabled: false,
@@ -128,6 +129,7 @@ export function SubscriptionManagementSidebar({
             status: data.status || "",
             pixelId: data.pixelId || "",
             analyticsId: data.analyticsId || "",
+            isContentProducer: data.isContentProducer || false, // Inicializar o campo isContentProducer
             checkoutOptions
           })
           
@@ -422,6 +424,19 @@ export function SubscriptionManagementSidebar({
                           <SelectItem value="master">Master</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    {/* Novo campo para produtor de conteúdo */}
+                    <div className="flex items-center justify-between space-x-2">
+                      <div className="flex-1">
+                        <Label htmlFor="isContentProducer" className="font-medium">Produtor de Conteúdo</Label>
+                        <p className="text-sm text-zinc-400">Permitir publicação de histórias e conteúdos</p>
+                      </div>
+                      <Switch
+                        id="isContentProducer"
+                        checked={userData.isContentProducer}
+                        onCheckedChange={(checked) => setUserData({ ...userData, isContentProducer: checked })}
+                      />
                     </div>
                   </CardContent>
                 </Card>

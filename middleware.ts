@@ -28,6 +28,17 @@ const userTypeRoutes = {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
+  // Adicionar cabeçalhos CORS para acessar Firebase Storage
+  if (pathname.includes('firebasestorage')) {
+    return NextResponse.next({
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization'
+      }
+    })
+  }
+
   // Permite acesso a recursos estáticos
   if (
     pathname.startsWith('/_next') ||
@@ -54,14 +65,16 @@ export function middleware(request: NextRequest) {
       '/api/auth/session',
       '/api/account-activation/verify',
       '/api/account-activation/set-password',
-      '/api/public/restaurants'
+      '/api/public/restaurants',
+      '/api/stories',
+      '/api/stories/create'
     ]
 
     // Verificar se é uma rota pública
     const isPublicApiRoute = publicApiRoutes.some(route => pathname.startsWith(route));
     
     // Adicionar log para depuração
-    if (pathname.includes('/public/restaurants')) {
+    if (pathname.includes('/public/restaurants') || pathname.includes('/stories')) {
       console.log(`[MIDDLEWARE] Acesso detectado à rota: ${pathname}`);
       console.log(`[MIDDLEWARE] É uma rota pública? ${isPublicApiRoute ? 'SIM' : 'NÃO'}`);
       console.log(`[MIDDLEWARE] Ação: ${isPublicApiRoute ? 'Permitir acesso' : 'Verificar autenticação'}`);
@@ -74,6 +87,19 @@ export function middleware(request: NextRequest) {
       // Verificar se há sessão
       const hasSession = request.cookies.has('__session');
       console.log(`[MIDDLEWARE] Sessão existe? ${hasSession ? 'SIM' : 'NÃO'}`);
+    }
+    
+    // Lidar com requisições OPTIONS para CORS
+    if (request.method === 'OPTIONS') {
+      return new NextResponse(null, {
+        status: 204,
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+          'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-CSRF-Token, X-Requested-With',
+          'Access-Control-Max-Age': '86400'
+        }
+      });
     }
     
     if (isPublicApiRoute) {
