@@ -255,7 +255,11 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             </div>
             <div className="flex items-center text-zinc-500 space-x-2">
               <Phone className="h-4 w-6" />
-              <span>+{establishment.phone.ddi} {establishment.phone.phone}</span>
+              <span>
+                {establishment.phone && typeof establishment.phone === 'object' 
+                  ? `+${establishment.phone.ddi || ''} ${establishment.phone.phone || ''}`
+                  : establishment.phone || ''}
+              </span>
             </div>
           </div>
 

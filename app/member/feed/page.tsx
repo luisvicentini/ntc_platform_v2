@@ -267,6 +267,9 @@ export default function FeedPage() {
         if (data.establishments && Array.isArray(data.establishments)) {
           console.log(`Recebidos ${data.establishments.length} estabelecimentos`);
           
+          // Log do primeiro estabelecimento para debug
+          console.log("Exemplo de estabelecimento recebido da API:", data.establishments[0]);
+          
           // Garantir que todos os estabelecimentos tenham as propriedades necessárias
           const processedEstablishments = data.establishments.map((est: any) => ({
             id: est.id || "",
@@ -277,7 +280,16 @@ export default function FeedPage() {
             partnerId: est.partnerId || "",
             partnerName: est.partnerName || "",
             address: est.address || { city: "Cidade não informada" },
-            type: est.type || { type: "Tipo não informado", category: "Categoria não informada" }
+            type: est.type || { type: "Tipo não informado", category: "Categoria não informada" },
+            // Incluir todos os outros campos necessários
+            phone: est.phone || { ddi: "55", phone: "" },
+            discountValue: est.discountValue || "",
+            voucherDescription: est.voucherDescription || "",
+            voucherExpiration: est.voucherExpiration || "",
+            openingHours: est.openingHours || "",
+            description: est.description || "",
+            discountRules: est.discountRules || "",
+            usageLimit: est.usageLimit || ""
           }));
           
           setEstablishmentsData(processedEstablishments);
@@ -394,32 +406,25 @@ export default function FeedPage() {
       // Se não tiver, mostrar o modal de assinatura
       setShowSubscriptionModal(true);
     } else {
+      // Log para debug
+      console.log("Estabelecimento selecionado antes do processamento:", establishment);
       // Se tiver, mostrar o detalhe do estabelecimento
       // Adicionar propriedades padrão que o EstablishmentSheet espera
       const completeEstablishment = {
         ...establishment,
         // Propriedades de telefone
-        phone: {
+        phone: establishment.phone || {
           ddi: "55", // Valor padrão para Brasil
-          phone: establishment.phone || establishment?.contact?.phone || "",
-          ...establishment.phone
+          phone: establishment?.contact?.phone || ""
         },
-        // Propriedades de descontos e vouchers
-        discountValue: establishment.discountValue || "10%",
-        voucherDescription: establishment.voucherDescription || "Desconto válido para qualquer item",
-        voucherExpiration: establishment.voucherExpiration || "24",
-        openingHours: establishment.openingHours || "Segunda a Domingo, 08:00 às 22:00",
-        description: establishment.description || "Estabelecimento parceiro do clube de benefícios",
-        discountRules: establishment.discountRules || "Válido para pagamentos à vista",
-        usageLimit: establishment.usageLimit || "1 por dia",
         // Garantir que address tenha todas as propriedades necessárias
         address: {
           street: establishment.address?.street || "",
           number: establishment.address?.number || "",
           complement: establishment.address?.complement || "",
           neighborhood: establishment.address?.neighborhood || "",
-          city: establishment.address?.city || "Cidade não informada",
-          state: establishment.address?.state || "UF",
+          city: establishment.address?.city || "",
+          state: establishment.address?.state || "",
           zipcode: establishment.address?.zipcode || "",
           ...establishment.address
         }
