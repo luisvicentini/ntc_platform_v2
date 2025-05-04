@@ -80,10 +80,6 @@ export function StoriesContainer({
   
   return (
     <>
-      <div className="mb-2 flex justify-between items-center">
-        <h2 className="text-lg font-semibold text-zinc-700 px-2">Stories</h2>
-      </div>
-      
       <div className="flex items-center gap-4 overflow-x-auto py-4 px-2 no-scrollbar border-b border-zinc-100 pb-5">
         {/* Botão de criação de story (apenas para produtores de conteúdo) */}
         {isContentProducer && (

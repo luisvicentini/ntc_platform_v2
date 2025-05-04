@@ -8,6 +8,7 @@ import { ptBR } from "date-fns/locale"
 import { AvailableEstablishment } from "@/types/establishment"
 import { EstablishmentSheet } from "@/components/establishment-sheet"
 import { useMediaQuery } from "@/hooks/use-media-query"
+import ReactPlayer from "react-player"
 
 // Objeto com cores para as letras do alfabeto
 const avatarColors = {
@@ -46,7 +47,7 @@ const getAvatarColorClass = (name: string | undefined | null): string => {
   return avatarColors[firstChar] || "bg-zinc-500 text-white"; // Retorna a cor correspondente ou a cor padrão
 };
 
-// Função para verificar se a URL parece válida
+// Função simplificada para verificar se a URL é válida
 const isValidURL = (url: string): boolean => {
   if (!url) return false;
   if (url === 'undefined' || url === 'null') return false;
@@ -107,6 +108,24 @@ const addCacheParam = (url: string, storyId: string): string => {
   return url.includes('?') ? `${url}&_cache=${storyId}` : `${url}?_cache=${storyId}`;
 };
 
+// Função para processar a URL do vídeo e usar o proxy se necessário
+const processVideoUrl = (url: string): string => {
+  if (!url) return "";
+  
+  // Se for URL do Firebase Storage, usar o proxy
+  if (url.includes('firebasestorage.googleapis.com')) {
+    // Obter a base URL atual
+    const baseUrl = typeof window !== 'undefined' 
+      ? `${window.location.protocol}//${window.location.host}`
+      : '';
+    
+    // URL encodeada para o proxy - com URL completa
+    return `${baseUrl}/api/proxy/video?url=${encodeURIComponent(url)}`;
+  }
+  
+  return url;
+};
+
 export interface Story {
   id: string
   userId: string
@@ -132,86 +151,43 @@ export function StoryViewer({
   initialStoryIndex = 0, 
   onClose 
 }: StoryViewerProps) {
-  // Verificar se há stories antes de qualquer processamento
-  if (!stories || stories.length === 0) {
-    console.warn("StoryViewer: Não há stories para exibir");
-    return null; // Retorna nulo se não houver stories para evitar erros
-  }
-
-  const [currentStoryIndex, setCurrentStoryIndex] = useState(
-    initialStoryIndex >= 0 && initialStoryIndex < stories.length ? initialStoryIndex : 0
-  );
+  // Estados básicos
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(initialStoryIndex);
   const [isPaused, setIsPaused] = useState(false);
-  const [showEstablishment, setShowEstablishment] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
-  const [mediaError, setMediaError] = useState(false);
   const [mediaLoading, setMediaLoading] = useState(true);
+  const [mediaError, setMediaError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
+  const [showEstablishment, setShowEstablishment] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const imgRef = useRef<HTMLImageElement>(null);
   
-  // Referência para controlar se o componente está montado
+  // Referência para controlar o estado de montagem do componente
   const isMounted = useRef(true);
-
-  const [videoAttempts, setVideoAttempts] = useState(0);
-  const [videoPlaybackFailed, setVideoPlaybackFailed] = useState(false);
-  const [useIframePlayer, setUseIframePlayer] = useState(false);
-
-  // Garantir que temos um story válido antes de continuar
-  if (currentStoryIndex >= stories.length) {
-    console.error("Índice de story inválido:", currentStoryIndex, "Total de stories:", stories.length);
-    useEffect(() => {
-      onClose();
-    }, []);
+  const playerRef = useRef<ReactPlayer>(null);
+  
+  // Verificar se temos stories válidos
+  if (!stories || stories.length === 0) {
     return null;
   }
-
+  
+  // Obter o story atual
   const currentStory = stories[currentStoryIndex];
-  
-  // Verificar se o story atual existe
   if (!currentStory) {
-    console.error("Story atual é indefinido");
-    useEffect(() => {
-      onClose();
-    }, []);
+    useEffect(() => { onClose(); }, []);
     return null;
   }
-
+  
+  // Determinar tipo de mídia e URL
   const isVideo = currentStory.mediaType === "video";
+  const rawMediaUrl = isValidURL(currentStory.mediaUrl) ? currentStory.mediaUrl : "";
+  // Processar URL para vídeos (usar proxy)
+  const mediaUrl = isVideo ? processVideoUrl(rawMediaUrl) : rawMediaUrl;
   
-  // Use o ID do story para o parâmetro de cache em vez de um timestamp que muda continuamente
-  const mediaUrl = isValidURL(currentStory.mediaUrl) 
-    ? addCacheParam(currentStory.mediaUrl, currentStory.id)
-    : "";
-  
-  // Obter a classe de cor com base no nome do usuário
+  // Obter dados de avatar
   const avatarColorClass = getAvatarColorClass(currentStory.userName);
   const userInitial = currentStory.userName?.charAt(0)?.toUpperCase() || "U";
   
-  // Log para debug dos stories - apenas na primeira renderização deste story
-  useEffect(() => {
-    // Verifica se a URL é uma URL de placeholder
-    const isPlaceholderUrl = currentStory.mediaUrl.includes('placehold.co') || 
-                             currentStory.mediaUrl.includes('placeholder');
-    
-    console.log("StoryViewer - Story atual:", {
-      id: currentStory.id,
-      index: currentStoryIndex,
-      url: currentStory.mediaUrl,
-      isPlaceholder: isPlaceholderUrl,
-      type: currentStory.mediaType,
-      totalStories: stories.length
-    });
-    
-    // Se for placeholder, podemos mostrar um aviso
-    if (isPlaceholderUrl) {
-      console.warn("ATENÇÃO: Este story está usando uma URL de placeholder em vez da URL real da mídia.");
-      console.warn("Isso pode ocorrer quando houve um erro no upload para o Firebase Storage.");
-    }
-  }, [currentStoryIndex]); // Dependência apenas do índice do story, não da URL completa
-  
-  // Formatar a data para "há X tempo atrás"
+  // Formatação de data
   const formattedTime = formatDistanceToNow(
     typeof currentStory.createdAt === 'object' ? 
       currentStory.createdAt : 
@@ -222,7 +198,7 @@ export function StoryViewer({
     }
   );
   
-  // Preparar string de dias restantes
+  // Texto de dias restantes
   const daysRemainingText = (() => {
     if (currentStory.daysRemaining === undefined) return '';
     if (currentStory.daysRemaining === 0) return 'Expira hoje';
@@ -231,38 +207,31 @@ export function StoryViewer({
       : `Expira em ${currentStory.daysRemaining} dias`;
   })();
   
-  // Função para avançar ao próximo story com verificações de segurança
+  // Função para avançar para o próximo story
   const handleNext = useCallback(() => {
-    // Usar setTimeout para evitar o erro de update durante render
-    setTimeout(() => {
-      if (!isMounted.current) return;
-      
-      if (currentStoryIndex < stories.length - 1) {
-        setCurrentStoryIndex(prev => prev + 1);
-        setMediaError(false);
-        setMediaLoading(true);
-        setAvatarError(false);
-      } else {
-        onClose();
-      }
-    }, 0);
+    if (!isMounted.current) return;
+    
+    if (currentStoryIndex < stories.length - 1) {
+      setCurrentStoryIndex(prev => prev + 1);
+      setMediaError(false);
+      setMediaLoading(true);
+    } else {
+      onClose();
+    }
   }, [currentStoryIndex, stories.length, onClose]);
   
-  // Função para voltar ao story anterior com verificações de segurança
+  // Função para voltar ao story anterior
   const handlePrevious = useCallback(() => {
-    // Usar setTimeout para evitar o erro de update durante render
-    setTimeout(() => {
-      if (!isMounted.current) return;
-      
-      if (currentStoryIndex > 0) {
-        setCurrentStoryIndex(prev => prev - 1);
-        setMediaError(false);
-        setMediaLoading(true);
-        setAvatarError(false);
-      }
-    }, 0);
+    if (!isMounted.current) return;
+    
+    if (currentStoryIndex > 0) {
+      setCurrentStoryIndex(prev => prev - 1);
+      setMediaError(false);
+      setMediaLoading(true);
+    }
   }, [currentStoryIndex]);
   
+  // Funções para manipular o estabelecimento
   const handleEstablishmentClick = () => {
     setIsPaused(true);
     setShowEstablishment(true);
@@ -272,234 +241,78 @@ export function StoryViewer({
     setShowEstablishment(false);
     setIsPaused(false);
   };
-
+  
+  // Função para alternar o mudo
   const toggleMute = (e: React.MouseEvent) => {
     e.stopPropagation();
     setIsMuted(!isMuted);
-    if (videoRef.current) {
-      videoRef.current.muted = !isMuted;
-    }
   };
   
+  // Funções para lidar com erros de mídia
   const handleMediaError = useCallback(() => {
     if (!isMounted.current) return;
-    
-    // Log detalhado para ajudar na depuração
-    console.error("Erro ao carregar mídia:", {
-      id: currentStory.id,
-      url: mediaUrl,
-      type: currentStory.mediaType,
-      videoElement: isVideo ? {
-        error: videoRef.current?.error ? {
-          code: videoRef.current.error.code,
-          message: videoRef.current.error.message
-        } : 'Sem erro reportado',
-        networkState: videoRef.current?.networkState,
-        readyState: videoRef.current?.readyState
-      } : 'Não é vídeo'
-    });
-    
-    if (isVideo) {
-      // Marcar como falha apenas após várias tentativas
-      if (videoAttempts >= 2) {
-        // Tentar usar o player de iframe como última opção
-        if (!useIframePlayer) {
-          console.log("Tentando usar player de iframe como último recurso");
-          setUseIframePlayer(true);
-          setVideoAttempts(0);
-          return;
-        }
-        
-        setVideoPlaybackFailed(true);
-        setMediaError(true);
-      } else {
-        // Incrementar contador de tentativas
-        setVideoAttempts(prev => prev + 1);
-        
-        // Tentar carregar novamente após um breve atraso
-        setTimeout(() => {
-          if (isMounted.current && videoRef.current) {
-            console.log(`Tentativa ${videoAttempts + 1} de reproduzir o vídeo`);
-            try {
-              videoRef.current.load();
-            } catch (e) {
-              console.error("Erro ao recarregar vídeo:", e);
-              setMediaError(true);
-            }
-          }
-        }, 1000);
-        
-        return; // Não definir erro ainda
-      }
-    } else {
-      setMediaError(true);
-    }
-    
+    setMediaError(true);
     setMediaLoading(false);
-  }, [currentStory, mediaUrl, isVideo, videoAttempts, useIframePlayer]);
+    
+    console.error("Erro ao carregar mídia:", {
+      id: currentStory.id || 'desconhecido',
+      url: mediaUrl || 'desconhecida',
+      type: currentStory.mediaType || 'desconhecido'
+    });
+  }, [currentStory, mediaUrl]);
   
   const handleMediaLoad = useCallback(() => {
     if (!isMounted.current) return;
-    
-    console.log(`Mídia carregada com sucesso (${currentStory.mediaType}):`, mediaUrl);
     setMediaLoading(false);
     setMediaError(false);
-  }, [currentStory.mediaType, mediaUrl]);
+  }, []);
   
   const handleAvatarError = useCallback(() => {
     if (!isMounted.current) return;
-    
-    console.error("Erro ao carregar avatar:", currentStory.userAvatar);
     setAvatarError(true);
   }, [currentStory.userAvatar]);
   
-  // Marcar componente como desmontado quando for destruído
+  // Marcar componente como montado/desmontado
   useEffect(() => {
     isMounted.current = true;
+    console.log("StoryViewer montado");
+    
     return () => {
+      console.log("StoryViewer desmontado");
       isMounted.current = false;
     };
   }, []);
   
-  // Carregar imagem uma vez quando o componente montar ou quando mudar de story
+  // Resetar estados quando o story muda
   useEffect(() => {
-    if (isVideo || !isValidURL(mediaUrl)) return;
-    
-    // Definir carregando apenas se estiver montado
-    if (isMounted.current) {
-      setMediaLoading(true);
-    }
-    
-    // Esta flag evita atualizações de estado após desmontagem
-    let isEffectActive = true;
-    
-    // Pré-carregar a imagem
-    const img = new Image();
-    img.onload = () => {
-      if (isEffectActive && isMounted.current) {
-        setMediaLoading(false);
-        setMediaError(false);
-      }
-    };
-    img.onerror = () => {
-      if (isEffectActive && isMounted.current) {
-        setMediaLoading(false);
-        setMediaError(true);
-      }
-    };
-    img.src = mediaUrl;
-    
-    return () => {
-      // Limpar event listeners e marcar efeito como inativo
-      img.onload = null;
-      img.onerror = null;
-      isEffectActive = false;
-    };
-  }, [currentStoryIndex, isVideo, mediaUrl]); // Removi mediaUrl da dependência para evitar loops
-  
-  // Resetar contadores quando mudar de story
-  useEffect(() => {
-    setVideoAttempts(0);
-    setVideoPlaybackFailed(false);
     setMediaError(false);
     setMediaLoading(true);
-    setUseIframePlayer(false);
+    setAvatarError(false);
     
-    // Log de diagnóstico para arquivos de vídeo
-    if (stories[currentStoryIndex]?.mediaType === 'video') {
-      const videoUrl = stories[currentStoryIndex].mediaUrl;
-      console.log("Diagnóstico de vídeo:", {
-        url: videoUrl,
-        fileExtension: getFileExtension(videoUrl),
-        mimeType: getMimeType(videoUrl),
-        hasValidExtension: ['mp4', 'webm', 'ogg', 'mov', 'm4v'].includes(getFileExtension(videoUrl))
-      });
-    }
-  }, [currentStoryIndex, stories]);
-
-  // Efeito para reiniciar vídeo quando mudar de story
-  useEffect(() => {
-    if (isVideo && videoRef.current) {
-      // Resetar configurações antes de carregar novo vídeo
-      videoRef.current.currentTime = 0;
-      videoRef.current.muted = isMuted;
-      
-      // Certifique-se de que a fonte é válida antes de tentar carregar
-      if (isValidURL(mediaUrl)) {
-        console.log(`Tentando carregar vídeo (tentativa ${videoAttempts + 1}):`, mediaUrl);
-        
-        try {
-          // Forçar recarregamento do vídeo
-          videoRef.current.load();
-          
-          // Adicionar um evento de um único uso para detectar quando o vídeo estiver pronto
-          const onCanPlay = () => {
-            if (videoRef.current && isMounted.current) {
-              console.log("Vídeo pronto para reprodução:", mediaUrl);
-              
-              // Tentar iniciar a reprodução após confirmação de que está pronto
-              videoRef.current.play()
-                .then(() => {
-                  console.log("Reprodução iniciada com sucesso");
-                  setMediaLoading(false);
-                })
-                .catch(err => {
-                  console.error("Erro ao iniciar reprodução:", err);
-                  
-                  // Tentar novamente com mudo ativado (pode contornar restrições de autoplay)
-                  if (!isMuted && videoRef.current) {
-                    console.log("Tentando reproduzir novamente com mudo ativado");
-                    videoRef.current.muted = true;
-                    setIsMuted(true);
-                    videoRef.current.play()
-                      .then(() => {
-                        console.log("Reprodução iniciada com sucesso (mudo)");
-                        setMediaLoading(false);
-                      })
-                      .catch(err2 => {
-                        console.error("Falha na segunda tentativa:", err2);
-                        handleMediaError();
-                      });
-                  } else {
-                    handleMediaError();
-                  }
-                });
-            }
-            
-            // Remover o ouvinte após uso
-            videoRef.current?.removeEventListener('canplay', onCanPlay);
-          };
-          
-          videoRef.current.addEventListener('canplay', onCanPlay, { once: true });
-          
-          // Timeout de segurança - se o vídeo não carregar em 8 segundos, mostrar erro
-          const timeoutId = setTimeout(() => {
-            if (isMounted.current && mediaLoading) {
-              console.warn("Timeout no carregamento do vídeo:", mediaUrl);
-              handleMediaError();
-            }
-          }, 8000);
-          
-          return () => clearTimeout(timeoutId);
-        } catch (err) {
-          console.error("Erro ao manipular o elemento de vídeo:", err);
-          setMediaError(true);
-          setMediaLoading(false);
+    console.log("Mudando para story:", {
+      id: currentStory.id,
+      mediaType: currentStory.mediaType,
+      mediaUrl
+    });
+    
+    // Para imagens, pré-carregar
+    if (!isVideo && isValidURL(mediaUrl)) {
+      const img = new Image();
+      img.onload = () => {
+        if (isMounted.current) {
+          handleMediaLoad();
         }
-      } else {
-        console.error("URL de vídeo inválida:", mediaUrl);
-        setMediaError(true);
-        setMediaLoading(false);
-      }
+      };
+      img.onerror = () => {
+        if (isMounted.current) {
+          handleMediaError();
+        }
+      };
+      img.src = mediaUrl;
     }
-    
-    // Resetar o estado de erro do avatar quando mudar de story
-    if (isMounted.current) {
-      setAvatarError(false);
-    }
-  }, [currentStoryIndex, isVideo, mediaUrl, isMuted, videoAttempts, handleMediaError, mediaLoading]);
+  }, [currentStoryIndex, isVideo, mediaUrl, handleMediaLoad, handleMediaError]);
   
-  // Manipuladores de eventos para navegação via teclado
+  // Navegação via teclado
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") {
@@ -568,15 +381,17 @@ export function StoryViewer({
       
       {/* Conteúdo do Story */}
       <div 
-        className="relative w-full h-full md:w-[400px] md:h-[calc(100vh-120px)] md:rounded-xl overflow-hidden"
+        className="relative w-full h-full md:w-[400px] md:h-[calc(100vh-120px)] md:rounded-xl overflow-hidden bg-zinc-900"
         onClick={() => !isVideo && handleNext()}
       >
-        {mediaLoading ? (
+        {mediaLoading && (
           // Estado de carregamento
-          <div className="w-full h-full flex items-center justify-center bg-zinc-900">
+          <div className="absolute inset-0 z-10 flex items-center justify-center bg-zinc-900">
             <div className="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
           </div>
-        ) : mediaError || !isValidURL(mediaUrl) ? (
+        )}
+        
+        {mediaError || !isValidURL(mediaUrl) ? (
           // Estado de erro na mídia
           <div className="w-full h-full flex items-center justify-center bg-zinc-900">
             <div className="text-center p-8">
@@ -591,149 +406,136 @@ export function StoryViewer({
             </div>
           </div>
         ) : isVideo ? (
-          // Vídeo
-          <div className="w-full h-full bg-zinc-900 relative">
-            {videoPlaybackFailed ? (
-              // Alternativa quando a reprodução falha completamente
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-4">
-                <div className="bg-black/50 p-6 rounded-xl text-center max-w-[400px]">
-                  <Film className="h-12 w-12 text-white/70 mx-auto mb-3" />
-                  <p className="text-white mb-4">Não foi possível reproduzir este vídeo</p>
-                  <p className="text-white/70 text-sm mb-4">
-                    O vídeo pode estar em um formato não suportado ou houve um problema de conexão.
-                  </p>
-                  <button 
-                    onClick={handleNext}
-                    className="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-lg transition-colors"
-                  >
-                    Pular para o próximo
-                  </button>
-                </div>
-              </div>
-            ) : useIframePlayer ? (
-              // Player alternativo baseado em iframe como último recurso
-              <div className="w-full h-full bg-black flex items-center justify-center">
-                <iframe 
-                  src={`/api/video-player?url=${encodeURIComponent(mediaUrl)}`}
-                  className="w-full h-full"
-                  allow="autoplay; encrypted-media; fullscreen"
-                  allowFullScreen
-                  loading="eager"
-                  onLoad={() => {
-                    if (isMounted.current) {
-                      console.log("Iframe de vídeo carregado");
-                      setMediaLoading(false);
-                    }
-                  }}
-                  onError={() => {
-                    if (isMounted.current) {
-                      console.error("Erro ao carregar iframe de vídeo");
-                      setVideoPlaybackFailed(true);
-                    }
-                  }}
-                />
-              </div>
-            ) : (
-              <>
-                {/* Vídeo primário com múltiplas sources para melhor compatibilidade */}
+          // Vídeo com fallback
+          <div className="w-full h-full relative">
+            {mediaError ? (
+              // Player básico caso o ReactPlayer falhe
+              <div className="w-full h-full">
                 <video
-                  ref={videoRef}
-                  className="w-full h-full object-contain"
-                  onEnded={handleNext}
+                  className="w-full h-full object-contain bg-black"
+                  src={mediaUrl}
+                  controls
                   autoPlay
-                  muted={isMuted}
                   playsInline
-                  controls={false}
-                  controlsList="nodownload noremoteplayback"
-                  crossOrigin="anonymous"
-                  loop={false}
-                  preload="auto"
-                  poster={isValidURL(mediaUrl) ? mediaUrl.replace(/\.(mp4|mov|webm|ogg)$/i, '.jpg') : undefined}
+                  muted={isMuted}
+                  onEnded={handleNext}
                   onLoadStart={() => {
-                    console.log("Vídeo - início do carregamento:", mediaUrl);
-                    if (isMounted.current) setMediaLoading(true);
-                  }}
-                  onLoadedData={() => {
-                    if (isMounted.current) {
-                      console.log("Vídeo - dados carregados:", mediaUrl);
-                    }
-                  }}
-                  onCanPlay={() => {
-                    if (isMounted.current) {
-                      console.log("Vídeo - pode reproduzir:", mediaUrl);
-                    }
+                    console.log("Video nativo - carregando");
+                    setMediaLoading(true);
                   }}
                   onPlaying={() => {
-                    if (isMounted.current) {
-                      console.log("Vídeo - reproduzindo:", mediaUrl);
-                      setMediaLoading(false);
-                    }
+                    console.log("Video nativo - reproduzindo");
+                    setMediaLoading(false);
                   }}
-                  onWaiting={() => {
-                    if (isMounted.current) {
-                      console.log("Vídeo - aguardando buffer:", mediaUrl);
-                      setMediaLoading(true);
-                    }
+                  onError={(e) => {
+                    console.error("Video nativo - erro:", e.currentTarget.error);
+                    setMediaLoading(false);
                   }}
-                  onError={handleMediaError}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    // Pausar/reproduzir ao clicar no vídeo
-                    if (videoRef.current) {
-                      if (videoRef.current.paused) {
-                        videoRef.current.play()
-                          .catch(err => console.error("Erro ao retomar vídeo:", err));
-                        setIsPaused(false);
-                      } else {
-                        videoRef.current.pause();
-                        setIsPaused(true);
-                      }
-                    }
-                  }}
-                >
-                  {/* Múltiplas sources para melhor compatibilidade */}
-                  <source src={mediaUrl} type={getMimeType(mediaUrl)} />
-                  {/* Adicionar source alternativa para MP4 se a extensão original não for MP4 */}
-                  {getFileExtension(mediaUrl) !== 'mp4' && (
-                    <source src={mediaUrl.replace(/\.[^.]+$/, '.mp4')} type="video/mp4" />
-                  )}
-                  {/* Adicionar source alternativa para WEBM se a extensão original não for WEBM */}
-                  {getFileExtension(mediaUrl) !== 'webm' && (
-                    <source src={mediaUrl.replace(/\.[^.]+$/, '.webm')} type="video/webm" />
-                  )}
-                  Seu navegador não suporta a reprodução deste vídeo.
-                </video>
+                />
                 
-                {/* Overlay quando pausado */}
-                {isPaused && !mediaLoading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                    <div className="bg-white/20 p-4 rounded-full">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
-                        <polygon points="5 3 19 12 5 21 5 3" />
-                      </svg>
-                    </div>
+                <div className="absolute inset-0 flex items-center justify-center bg-black/60">
+                  <div className="text-center p-8">
+                    <Film className="h-16 w-16 text-white/50 mx-auto mb-4" />
+                    <p className="text-white mb-3">
+                      Clique para tentar reproduzir o vídeo diretamente
+                    </p>
                   </div>
-                )}
-                
-                {/* Botão de mudo/som */}
-                <button 
-                  onClick={toggleMute}
-                  className="absolute bottom-5 right-5 z-10 bg-black/30 p-2 rounded-full"
-                >
-                  {isMuted ? (
-                    <VolumeX className="h-5 w-5 text-white" />
-                  ) : (
-                    <Volume2 className="h-5 w-5 text-white" />
-                  )}
-                </button>
-              </>
+                </div>
+              </div>
+            ) : (
+              // ReactPlayer - player principal
+              <ReactPlayer
+                ref={playerRef}
+                url={mediaUrl}
+                width="100%"
+                height="100%"
+                playing={!isPaused}
+                muted={isMuted}
+                playsinline
+                controls={false}
+                onEnded={handleNext}
+                onStart={() => {
+                  console.log("ReactPlayer - reprodução iniciada");
+                  setMediaLoading(false);
+                }}
+                onPlay={() => {
+                  console.log("ReactPlayer - reproduzindo");
+                  setMediaLoading(false);
+                }}
+                onPause={() => setIsPaused(true)}
+                onBuffer={() => {
+                  console.log("ReactPlayer - buffering");
+                  setMediaLoading(true);
+                }}
+                onBufferEnd={() => {
+                  console.log("ReactPlayer - buffer concluído");
+                  setMediaLoading(false);
+                }}
+                onReady={() => {
+                  console.log("ReactPlayer - pronto");
+                  setMediaLoading(false);
+                }}
+                onError={(e) => {
+                  console.error("ReactPlayer - erro:", e);
+                  // Log detalhado para diagnóstico
+                  try {
+                    console.error("Detalhes do erro:", JSON.stringify(e, null, 2));
+                  } catch (err) {
+                    console.error("Erro ao serializar detalhes:", err);
+                  }
+                  handleMediaError();
+                }}
+                onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+                  e.stopPropagation();
+                  setIsPaused(!isPaused);
+                }}
+                config={{
+                  file: {
+                    attributes: {
+                      controlsList: "nodownload",
+                      crossOrigin: "anonymous",
+                    },
+                    forceVideo: true,
+                  },
+                  youtube: {
+                    playerVars: { 
+                      modestbranding: 1,
+                      playsinline: 1,
+                      controls: 0
+                    }
+                  }
+                }}
+                style={{ objectFit: "contain", background: "#000" }}
+              />
             )}
+            
+            {/* Overlay quando pausado */}
+            {isPaused && !mediaLoading && !mediaError && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                <div className="bg-white/20 p-4 rounded-full">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-white">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                </div>
+              </div>
+            )}
+            
+            {/* Botão de mudo/som */}
+            <button 
+              onClick={toggleMute}
+              className="absolute bottom-5 right-5 z-10 bg-black/30 p-2 rounded-full"
+            >
+              {isMuted ? (
+                <VolumeX className="h-5 w-5 text-white" />
+              ) : (
+                <Volume2 className="h-5 w-5 text-white" />
+              )}
+            </button>
           </div>
         ) : (
           // Imagem
-          <div className="w-full h-full bg-zinc-900">
+          <div className="w-full h-full">
             <img 
-              ref={imgRef}
               src={mediaUrl} 
               alt={`Story de ${currentStory.userName}`}
               className="w-full h-full object-contain"
@@ -748,8 +550,8 @@ export function StoryViewer({
           <div 
             className="absolute bottom-6 left-0 right-0 px-4"
             onClick={(e) => {
-              e.stopPropagation()
-              handleEstablishmentClick()
+              e.stopPropagation();
+              handleEstablishmentClick();
             }}
           >
             <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 flex items-center gap-3 border border-white/20">
@@ -859,5 +661,5 @@ export function StoryViewer({
         />
       )}
     </div>
-  )
+  );
 } 

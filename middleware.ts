@@ -67,7 +67,8 @@ export function middleware(request: NextRequest) {
       '/api/account-activation/set-password',
       '/api/public/restaurants',
       '/api/stories',
-      '/api/stories/create'
+      '/api/stories/create',
+      '/api/proxy/video'
     ]
 
     // Verificar se é uma rota pública

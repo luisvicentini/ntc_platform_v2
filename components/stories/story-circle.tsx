@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { cn } from "@/lib/utils/utils"
-import { Film, ImageIcon } from "lucide-react"
+import { Film, ImageIcon, PlayCircle, Loader2 } from "lucide-react"
 
 // Objeto com cores para as letras do alfabeto (importado do header.tsx)
 const avatarColors = {
@@ -53,6 +53,24 @@ const isPlaceholderUrl = (url: string): boolean => {
   return url.includes('placehold.co') || url.includes('placeholder');
 };
 
+// Função para processar a URL do vídeo e usar o proxy se necessário
+const processVideoUrl = (url: string): string => {
+  if (!url) return "";
+  
+  // Se for URL do Firebase Storage, usar o proxy
+  if (url.includes('firebasestorage.googleapis.com')) {
+    // Obter a base URL atual
+    const baseUrl = typeof window !== 'undefined' 
+      ? `${window.location.protocol}//${window.location.host}`
+      : '';
+    
+    // URL encodeada para o proxy
+    return `${baseUrl}/api/proxy/video?url=${encodeURIComponent(url)}`;
+  }
+  
+  return url;
+};
+
 interface StoryCircleProps {
   id: string
   userId: string
@@ -92,8 +110,20 @@ export function StoryCircle({
   const avatarColorClass = getAvatarColorClass(userName);
   const userInitial = userName?.charAt(0)?.toUpperCase() || "U";
 
-  // Uso de useEffect para garantir tempo de carregamento máximo
+  // Função simplificada para extrair um frame de vídeo como thumbnail
   useEffect(() => {
+    if (!isVideo || !isValidThumbnail) return;
+    
+    // Para vídeos, agora não precisamos mais gerar thumbnails
+    // já que vamos reproduzir o vídeo diretamente
+    console.log(`StoryCircle ${id} - Carregando preview de vídeo: ${thumbnail.substring(0, 40)}...`);
+  }, [id, thumbnail, isVideo, isValidThumbnail]);
+
+  // Uso de useEffect para garantir tempo de carregamento máximo para imagens
+  useEffect(() => {
+    // Se for vídeo, a lógica agora é diferente
+    if (isVideo) return;
+    
     // Se a URL não for válida, não tentar carregar
     if (!isValidThumbnail) {
       setImageError(true);
@@ -101,49 +131,43 @@ export function StoryCircle({
       return;
     }
     
-    // Apenas para vídeos, iniciar em loading
-    if (isVideo) {
-      setIsLoading(true);
-      
-      // Timeout de segurança para vídeos (3 segundos)
-      const timeoutId = setTimeout(() => {
-        if (isMounted.current && isLoading) {
-          console.log(`StoryCircle ${id} - Timeout para vídeo, mostrando ícone padrão`);
-          setIsLoading(false);
-        }
-      }, 3000);
-      
-      return () => clearTimeout(timeoutId);
-    }
-    
     // Imagens - verificar carregamento
-    if (!isVideo && isValidThumbnail) {
-      const img = new Image();
-      let isActive = true;
-      
-      img.onload = () => {
-        if (isActive && isMounted.current) {
-          setIsLoading(false);
-          setImageError(false);
-        }
-      };
-      
-      img.onerror = () => {
-        if (isActive && isMounted.current) {
-          setIsLoading(false);
-          setImageError(true);
-        }
-      };
-      
-      img.src = thumbnail;
-      
-      return () => {
-        isActive = false;
-        img.onload = null;
-        img.onerror = null;
-      };
-    }
-  }, [id, thumbnail, isValidThumbnail, isPlaceholder, isVideo, isLoading]);
+    setIsLoading(true);
+    const img = new Image();
+    let isActive = true;
+    
+    img.onload = () => {
+      if (isActive && isMounted.current) {
+        setIsLoading(false);
+        setImageError(false);
+      }
+    };
+    
+    img.onerror = () => {
+      if (isActive && isMounted.current) {
+        setIsLoading(false);
+        setImageError(true);
+      }
+    };
+    
+    img.src = thumbnail;
+    
+    // Timeout de segurança para imagens (3 segundos)
+    const timeoutId = setTimeout(() => {
+      if (isMounted.current && isLoading) {
+        console.log(`StoryCircle ${id} - Timeout para imagem`);
+        setIsLoading(false);
+        setImageError(true);
+      }
+    }, 3000);
+    
+    return () => {
+      isActive = false;
+      clearTimeout(timeoutId);
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [id, thumbnail, isValidThumbnail, isVideo, isLoading]);
 
   // Mostrar logs apenas uma vez para debugging
   useEffect(() => {
@@ -170,10 +194,37 @@ export function StoryCircle({
   // Função para lidar com erro ao carregar a thumbnail
   const handleImageError = () => {
     if (!isMounted.current) return;
+    console.error(`StoryCircle ${id} - Erro ao carregar imagem:`, { 
+      thumbnail: thumbnail
+    });
     setImageError(true);
     setIsLoading(false);
   };
   
+  // Função para controlar o tempo de reprodução do vídeo
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    // Se o vídeo passar de 2 segundos, voltar para o início
+    if (video.currentTime > 2) {
+      video.currentTime = 0;
+    }
+  };
+  
+  // Função para lidar com o carregamento do vídeo
+  const handleVideoLoaded = () => {
+    if (!isMounted.current) return;
+    console.log(`StoryCircle ${id} - Vídeo carregado com sucesso`);
+    setIsLoading(false);
+  };
+  
+  // Função para lidar com erro no vídeo
+  const handleVideoError = () => {
+    if (!isMounted.current) return;
+    console.error(`StoryCircle ${id} - Erro ao carregar vídeo`);
+    setImageError(true);
+    setIsLoading(false);
+  };
+
   return (
     <div 
       className="flex flex-col items-center gap-1"
@@ -185,8 +236,8 @@ export function StoryCircle({
         className={cn(
           "w-16 h-16 rounded-full flex items-center justify-center relative cursor-pointer transition-transform",
           isHovered && "transform scale-105",
-          "p-[2px]", // Borda interna
-          hasSeen ? "bg-zinc-300" : "bg-gradient-to-tr from-emerald-500 to-yellow-400"
+          "p-[3px]", // Borda interna
+          hasSeen ? "bg-zinc-300" : "bg-gradient-to-tr from-emerald-200 to-green-500"
         )}
       >
         <div className="w-full h-full overflow-hidden rounded-full bg-white">
@@ -205,22 +256,39 @@ export function StoryCircle({
                   <ImageIcon className="h-8 w-8 text-zinc-400" />
                 )}
               </div>
+            ) : isVideo ? (
+              // Vídeo em loop de 2 segundos para stories de vídeo
+              <div className="w-full h-full overflow-hidden">
+                <video 
+                  key={`video-${id}`}
+                  className="w-full h-full object-cover"
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  onTimeUpdate={handleTimeUpdate}
+                  onLoadedData={handleVideoLoaded}
+                  onError={handleVideoError}
+                  src={processVideoUrl(thumbnail)}
+                />
+                
+                {/* Overlay com ícone de vídeo */}
+                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                  <Film className="h-5 w-5 text-white" />
+                </div>
+              </div>
             ) : (
-              // Imagem carregada com sucesso - para imagens e usando a URL direta para vídeos (possivelmente um frame do vídeo)
+              // Imagem para stories de imagem
               <img 
                 src={thumbnail} 
                 alt={`Story de ${userName}`}
                 className="w-full h-full object-cover"
-                onLoad={() => setIsLoading(false)}
+                onLoad={() => {
+                  console.log(`StoryCircle ${id} - Imagem carregada com sucesso`);
+                  setIsLoading(false);
+                }}
                 onError={handleImageError}
               />
-            )}
-            
-            {/* Indicador de vídeo */}
-            {isVideo && !imageError && isValidThumbnail && !isLoading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black/30">
-                <Film className="h-5 w-5 text-white" />
-              </div>
             )}
           </div>
         </div>
