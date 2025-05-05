@@ -428,13 +428,13 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
           
           {/* Seleção de estabelecimento */}
           <div className="space-y-2">
-            <Label>Vincular estabelecimento (opcional)</Label>
+            <Label>Adicionar um cupom ao story (opcional)</Label>
             <Select onValueChange={(value) => setSelectedEstablishmentId(value)}>
               <SelectTrigger>
-                <SelectValue placeholder="Selecione um estabelecimento" />
+                <SelectValue placeholder="Selecione um cupom" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Nenhum estabelecimento</SelectItem>
+                <SelectItem value="">Nenhum cupom</SelectItem>
                 {establishments.map((est) => (
                   <SelectItem key={est.id} value={est.id}>
                     {est.name}

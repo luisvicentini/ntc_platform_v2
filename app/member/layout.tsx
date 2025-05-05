@@ -5,7 +5,7 @@ import { EstablishmentProvider } from "@/contexts/EstablishmentContext"
 import { SubscriptionProvider } from "@/contexts/subscription-context"
 import { Header } from "@/components/header"
 import { useAuth } from "@/contexts/auth-context"
-import { Home, User, Ticket } from "lucide-react"
+import { Home, User, Ticket, MessageSquareText } from "lucide-react"
 
 export default function MemberLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
@@ -25,6 +25,11 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
       href: "/member/profile",
       icon: <User className="h-5 w-5" />,
       label: "Perfil"
+    },
+    {
+      href: "https://chat.whatsapp.com/J1Y6dRhjik96YQOsOH0rjr",
+      icon: <MessageSquareText className="h-5 w-5" />,
+      label: "Comunidade"
     }
   ]
   return (

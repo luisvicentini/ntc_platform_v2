@@ -21,7 +21,7 @@ export function ProfileForm({ user }: ProfileFormProps) {
     name: user.displayName || "",
     email: user.email || "",
     phone: user.phoneNumber || "",
-    city: ""
+    city: user.city || ""
   })
 
   const handleSave = async () => {

@@ -96,7 +96,7 @@ export default function ProfilePage() {
 
   return (
     <div className="container max-w-6xl py-6">
-      <Tabs defaultValue="subscription" className="space-y-4">
+      <Tabs defaultValue="profile" className="space-y-4">
         <TabsList className="bg-white p-1 rounded-xl border border-zinc-200 gap-1">
           <TabsTrigger className="hover:bg-zinc-100 text-zinc-500 rounded-lg" value="profile">Perfil</TabsTrigger>
           <TabsTrigger className="hover:bg-zinc-100 text-zinc-500 rounded-lg" value="subscription">Gestão de Assinatura</TabsTrigger>

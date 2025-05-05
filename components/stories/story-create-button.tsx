@@ -22,10 +22,10 @@ export function StoryCreateButton({ onClick }: StoryCreateButtonProps) {
         className={cn(
           "w-16 h-16 rounded-full flex items-center justify-center cursor-pointer transition-transform",
           isHovered && "transform scale-105",
-          "border-2 border-dashed border-emerald-500"
+          "border-2 border-dashed border-zinc-400"
         )}
       >
-        <PlusIcon className="h-7 w-7 text-emerald-500" />
+        <PlusIcon className="h-7 w-7 text-zinc-400" />
       </button>
       
       <span className="text-xs text-center text-zinc-600">

@@ -297,7 +297,7 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
   return (
     <>  
       <CardHeader className="pt-4 pb-4 pr-0 pl-0">
-        <CardTitle className="text-zinc-500">Minha Assinatura Lastlink</CardTitle>
+        <CardTitle className="text-zinc-500 text-lg">Minha Assinatura Lastlink</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         {error ? (
@@ -309,7 +309,7 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
               <div className="mb-8">
                 <div className="bg-white border border-zinc-200 rounded-xl p-6">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-xl font-semibold text-zinc-500">
+                    <h3 className="text-md font-semibold text-zinc-500">
                       Assinatura Ativa
                     </h3>
                     <div className="flex items-center gap-2">
@@ -324,12 +324,12 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
                   <div className="space-y-4 text-[#b5b6c9]">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <h4 className="text-sm font-sm text-zinc-400 mb-1">Plano</h4>
-                        <p className="text-zinc-600">{activeSubscription.planName}</p>
+                        <h4 className="text-sm font-xs text-zinc-400 mb-1">Plano</h4>
+                        <p className="text-zinc-600 text-sm">{activeSubscription.planName}</p>
                       </div>
                       <div>
-                        <h4 className="text-sm font-sm text-zinc-400 mb-1">Valor</h4>
-                        <p className="text-zinc-600">
+                        <h4 className="text-sm font-xs text-zinc-400 mb-1">Valor</h4>
+                        <p className="text-zinc-600 text-sm">
                           {formatAmount(activeSubscription.amount || 0)}
                           /{getInterval(activeSubscription)}
                         </p>
@@ -338,15 +338,15 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <h4 className="text-sm font-sm text-zinc-400 mb-1">Período Atual</h4>
-                        <p className="text-zinc-600">
+                        <h4 className="text-sm font-xs text-zinc-400 mb-1">Período Atual</h4>
+                        <p className="text-zinc-600 text-sm">
                           {formatDate(activeSubscription.currentPeriodStart)} - 
                           {formatDate(activeSubscription.currentPeriodEnd)}
                         </p>
                       </div>
                       <div>
-                        <h4 className="text-sm font-sm text-zinc-400 mb-1">Data de Adesão</h4>
-                        <p className="text-zinc-600">
+                        <h4 className="text-sm font-xs text-zinc-400 mb-1">Data de Adesão</h4>
+                        <p className="text-zinc-600 text-sm">
                           {formatDate(activeSubscription.created)}
                         </p>
                       </div>
@@ -375,7 +375,7 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
                       <div className="flex flex-col items-left gap-2 bg-purple-100 p-3 rounded-xl justify-between md:w-[55%] sm:max-w-[100%]">
                         <p className="text-zinc-600">
                           <span className="bg-white px-2 rounded-md font-medium text-purple-500">Lastlink</span>
-                          <span className="font-medium ml-2">ID do pedido: {activeSubscription.orderId?.substring(0, 8)}...</span>
+                          <span className="font-medium ml-2 text-sm"> {activeSubscription.orderId}</span>
                         </p>
                       </div>
                     </div>
@@ -435,38 +435,34 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="text-zinc-300">Data</TableHead>
-                        <TableHead className="text-zinc-300">Descrição</TableHead>
-                        <TableHead className="text-zinc-300">Valor</TableHead>
-                        <TableHead className="text-zinc-300">Status</TableHead>
-                        <TableHead className="text-zinc-300">ID</TableHead>
+                        <TableHead className="text-zinc-300 text-xs w-[20%]">Data</TableHead>
+                        <TableHead className="text-zinc-300 text-xs w-[50%]">Descrição</TableHead>
+                        <TableHead className="text-zinc-300 text-xs w-[20%]">Valor</TableHead>
+                        <TableHead className="text-zinc-300 text-xs w-[20%]">Status</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {displayTransactions.map((transaction) => (
                         <TableRow key={transaction.id} className="bg-white">
-                          <TableCell className="text-zinc-600 font-medium">
+                          <TableCell className="text-zinc-600 font-medium text-xs">
                             {formatDate(transaction.created)}
                           </TableCell>
-                          <TableCell className="text-zinc-600">
+                          <TableCell className="text-zinc-600 text-xs">
                             {transaction.description || `Assinatura ${transaction.planName || 'Premium'}`}
                           </TableCell>
                           <TableCell className="text-zinc-600 font-medium">
                             {formatAmount(transaction.amount)}
                           </TableCell>
-                          <TableCell className="text-zinc-600">
+                          <TableCell className="text-zinc-600 text-xs">
                             <Badge 
                               className={
                                 transaction.status === 'succeeded' || transaction.status === 'active' 
-                                ? 'bg-green-500' 
-                                : 'bg-yellow-500'
+                                ? 'bg-green-500 text-sm' 
+                                : 'bg-yellow-500 text-sm'
                               }
                             >
                               {transaction.status === 'succeeded' ? 'Concluído' : getFormattedStatus({ status: transaction.status } as LastlinkSubscription).label}
                             </Badge>
-                          </TableCell>
-                          <TableCell className="text-zinc-500 font-mono text-xs">
-                            {transaction.orderId ? transaction.orderId.substring(0, 8) : transaction.id.substring(0, 8)}...
                           </TableCell>
                         </TableRow>
                       ))}

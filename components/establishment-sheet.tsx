@@ -161,18 +161,17 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent className="w-[400px] sm:w-[540px] bg-white border-l-zinc-200 flex flex-col p-0 overflow-y-auto">
-        <div className="p-6 border-b border-zinc-200">
-          <SheetHeader>
+      <SheetContent className="w-[400px] sm:w-[540px] bg-white border-l-zinc-200 flex flex-col p-0 overflow-y-auto space-y-0">
+        <div className="border-b border-zinc-200 space-y-4 -mb-8">
+          <SheetHeader className="pt-4 space-y-0">
             <SheetTitle className="text-zinc-500">{establishment.name}</SheetTitle>
             <SheetDescription className="text-zinc-400">
               {establishment.type.type} • {establishment.address.city}
             </SheetDescription>
           </SheetHeader>
-        </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          <div className="relative aspect-video rounded-lg overflow-hidden">
+          {/* Carrossel de imagens */}
+          <div className="relative aspect-video overflow-hidden">
             {establishment.images.map((image, index) => (
               <img
                 key={index}
@@ -186,7 +185,7 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             <Button
               variant="ghost"
               size="icon"
-              className="absolute left-2 top-1/2 -translate-y-1/2 text-white bg-black/0 hover:bg-black/80"
+              className="absolute left-2 top-1/2 -translate-y-1/2 text-white bg-black/0 hover:bg-black/80 hover:text-white"
               onClick={prevImage}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -194,14 +193,14 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-2 top-1/2 -translate-y-1/2 text-white bg-black/0 hover:bg-black/80"
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-white bg-black/0 hover:bg-black/80 hover:text-white"
               onClick={nextImage}
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
             
             {/* Indicadores */}
-            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-2">
+            <div className="absolute bottom-[30px] left-0 right-0 flex justify-center gap-2">
               {establishment.images.map((_, index) => (
                 <button
                   key={index}
@@ -215,6 +214,7 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
               ))}
             </div>
 
+            {/* Avaliação e badge de destaque */}
             <div className="absolute top-2 left-2 flex flex-col space-y-2 items-start">
               <div className="bg-black/75 text-white pl-2 pr-1 py-1 rounded-full text-sm flex items-center space-x-2">
                 <svg
@@ -236,6 +236,10 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             </div>
           </div>
 
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 bg-white rounded-t-xl z-50 ">
+          {/* Descrição do cupom */}
           <div className="bg-emerald-50 border border-emerald-200 p-4 rounded-lg flex items-center space-x-4">
             <Ticket className="h-8 w-8 text-emerald-500" />
             <div>
@@ -244,18 +248,19 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             </div>
           </div>
 
+          {/* Endereço e horários */}
           <div className="space-y-4">
             <div className="flex items-center text-zinc-500 space-x-2">
               <MapPin className="h-6 w-6" />
-              <span>{establishment.address.street}, {establishment.address.number} - {establishment.address.neighborhood}, {establishment.address.city}/{establishment.address.state}</span>
+              <span className="text-sm">{establishment.address.street}, {establishment.address.number} - {establishment.address.neighborhood}, {establishment.address.city}/{establishment.address.state}</span>
             </div>
             <div className="flex items-center text-zinc-500 space-x-2">
               <Clock className="h-4 w-6" />
-              <span>{establishment.openingHours}</span>
+              <span className="text-sm">{establishment.openingHours}</span>
             </div>
             <div className="flex items-center text-zinc-500 space-x-2">
               <Phone className="h-4 w-6" />
-              <span>
+              <span className="text-sm">
                 {establishment.phone && typeof establishment.phone === 'object' 
                   ? `+${establishment.phone.ddi || ''} ${establishment.phone.phone || ''}`
                   : establishment.phone || ''}
@@ -263,24 +268,27 @@ export function EstablishmentSheet({ establishment, isOpen, onClose }: Establish
             </div>
           </div>
 
+          {/* Descrição do estabelecimento */}
           <div className="space-y-2">
             <h3 className="font-semibold text-zinc-500">Descrição</h3>
-            <p className="text-zinc-400">{establishment.description}</p>
+            <p className="text-zinc-400 text-sm">{establishment.description}</p>
           </div>
 
+          {/* Regras do cupom */}
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-3">
-            <p className="text-amber-700 font-medium flex items-center gap-2">
-              <CircleAlert />
+            <p className="text-amber-700 text-sm font-medium flex items-center gap-4">
+              <CircleAlert className="h-6 w-8" />
               {establishment.discountRules}
             </p>
-            <p className="text-amber-700 font-medium flex items-center gap-2">
-              <Siren />
+            <p className="text-amber-700 text-sm font-medium flex items-center gap-4">
+              <Siren className="h-6 w-6" />
               Limite de uso: {establishment.usageLimit}
             </p>
           </div>
         </div>
 
-        <div className="p-6 border-t border-zinc-200 mt-auto">
+        {/* Botão de geração de voucher */}
+        <div className="p-6 border-t border-zinc-200">
           {!currentVoucher ? (
             <div className="space-y-2">
               <Button 

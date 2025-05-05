@@ -597,7 +597,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Se não houver dados de checkout ou não for Lastlink, seguir o fluxo normal
     switch (userType) {
       case 'member':
-        window.location.href = '/member/profile'
+        window.location.href = '/member/feed'
         break
       case 'partner':
         window.location.href = '/partner/dashboard'

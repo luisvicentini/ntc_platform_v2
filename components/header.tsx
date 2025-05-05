@@ -183,6 +183,62 @@ const NotificationButton: React.FC<{ isOpen: boolean; onOpenChange: (open: boole
   </Sheet>
 )
 
+
+
+// Novo componente para o Header Mobile
+const MobileHeader: React.FC<{userData: any; user: any; isOpen: boolean; onOpenChange: (open: boolean) => void; notifications: any[]; removeNotification: (id: string) => void; pageTitle?: string}> = ({ 
+  userData, 
+  user, 
+  isOpen, 
+  onOpenChange, 
+  notifications, 
+  removeNotification,
+  theme,
+  setTheme,
+  pageTitle = "Home"
+}) => {
+  return (
+    <header className="fixed top-0 left-0 right-0 border-b bg-white border-zinc-200 md:hidden z-50">
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center justify-between">
+           
+          {/* Logo */}
+          <div className="w-1/3 flex justify-start">
+            <div className="relative w-[60px]">
+              <Logo />
+            </div>
+          </div> 
+
+          <div className="w-1/3 flex justify-center">
+            {/* Título da página */}
+            <h1 className="text-lg font-semibold text-zinc-700 text-center">
+              {pageTitle}
+            </h1>
+          </div>
+
+          {/* Avatar e nome do usuário */}
+          <div className="w-1/3 flex justify-end space-x-2">
+            <NotificationButton 
+              isOpen={isOpen}
+              onOpenChange={onOpenChange}
+              notifications={notifications}
+              removeNotification={removeNotification}
+            />
+
+            <UserDropdown 
+              userData={userData}
+              user={user}
+              theme={theme}
+              setTheme={setTheme}
+            />
+          </div>
+
+        </div>
+      </div>
+    </header>
+  );
+};
+
 // Componente de Footer Mobile
 const MobileFooter: React.FC<MobileFooterProps> = ({ menuItems, userData, user, theme, setTheme }) => {
   const pathname = usePathname();
@@ -196,132 +252,28 @@ const MobileFooter: React.FC<MobileFooterProps> = ({ menuItems, userData, user, 
       <div className="container mx-auto px-4 py-2">
         <div className="flex h-16 items-center justify-between">
 
-          {/* Logo */}
-          <div className="w-1/3 flex justify-start">
-            <div className="relative w-[60px]">
-              <Logo />
-            </div>
-          </div>
-
           {/* Menu de navegação */}
-          <div className="w-1/3 flex justify-center z-10">
-            <nav className="flex items-center justify-center space-x-4">
+          <div className="w-full flex justify-center z-10">
+            <nav className="flex items-center justify-center space-x-1">
               {menuItems.map((item) => (
                 <Link key={item.href} href={item.href}>
                   <Button
                     variant="ghost"
-                    size="lg"
                     className={cn(
-                      pathname === item.href ? "bg-zinc-100 text-zinc-500 rounded-xl text-xl" : "text-zinc-400 hover:text-zinc-500 rounded-xl text-lg"
+                      pathname === item.href ? "bg-zinc-100 text-zinc-500 rounded-xl text-xl" : "text-zinc-400 hover:text-zinc-500 rounded-xl text-lg flex flex-row items-center"
                     )}
                   >
                     {item.icon}
+                    <span className="text-[8px]">{item.label}</span>
                   </Button>
                 </Link>
               ))}
             </nav>
           </div>
 
-          {/* Avatar e nome do usuário */}
-          <div className="w-1/3 flex justify-end">
-            <div className="flex items-center space-x-2">
-              <Link href={`/${user?.userType}/profile`}>
-                <Avatar className="h-10 w-10">
-                  <AvatarImage 
-                    src={userData.photoURL || user?.photoURL || undefined} 
-                    alt={userData.displayName || user?.displayName || "User"}
-                    referrerPolicy="no-referrer"
-                  />
-                  <AvatarFallback className={`text-xl font-medium ${avatarColorClass}`}>{userData.displayName?.charAt(0) || user?.displayName?.charAt(0) || "U"}</AvatarFallback>
-                </Avatar>
-              </Link>
-            </div>
-          </div>
-
         </div>
       </div>
     </footer>
-  );
-};
-
-// Novo componente para o Header Mobile
-const MobileHeader: React.FC<{userData: any; user: any; isOpen: boolean; onOpenChange: (open: boolean) => void; notifications: any[]; removeNotification: (id: string) => void; pageTitle?: string}> = ({ 
-  userData, 
-  user, 
-  isOpen, 
-  onOpenChange, 
-  notifications, 
-  removeNotification,
-  pageTitle = "Home"
-}) => {
-  return (
-    <header className="fixed top-0 left-0 right-0 border-b bg-white border-zinc-200 md:hidden z-50">
-      <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
-
-          <div className="w-1/3 flex justify-start">
-            
-          </div>
-
-          <div className="w-1/3 flex justify-center">
-            {/* Título da página */}
-            <h1 className="text-lg font-semibold text-zinc-700 text-center">
-              {pageTitle}
-            </h1>
-          </div>
-
-          <div className="w-1/3 flex justify-end">
-            {/* Botão de notificações */}
-            <NotificationButton 
-              isOpen={isOpen}
-              onOpenChange={onOpenChange}
-              notifications={notifications}
-              removeNotification={removeNotification}
-            />
-          </div>
-
-        </div>
-      </div>
-      {/* Faixa laranja com texto branco (frente) */}
-      <div className="absolute -left-[145px] h-8 w-full inset-0 bg-[#F24957] transform -rotate-[30deg] overflow-hidden">
-          <div className="animate-marquee-reverse whitespace-nowrap flex items-center h-full">
-            {/* Versão mobile - 3 imagens */}
-            <div className="flex md:hidden">
-              {Array(3)
-                .fill(0)
-                .map((_, i) => (
-                  <span key={i} className="flex items-center">
-                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
-                  </span>
-                ))}
-              {Array(3)
-                .fill(0)
-                .map((_, i) => (
-                  <span key={`duplicate-mobile-${i}`} className="flex items-center">
-                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
-                  </span>
-                ))}
-            </div>
-            {/* Versão desktop - 10 imagens */}
-            <div className="hidden md:flex">
-              {Array(10)
-                .fill(0)
-                .map((_, i) => (
-                  <span key={i} className="flex items-center">
-                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
-                  </span>
-                ))}
-              {Array(10)
-                .fill(0)
-                .map((_, i) => (
-                  <span key={`duplicate-desktop-${i}`} className="flex items-center">
-                    <Image src="/homepage/naotemchef-text.svg" alt="Não Tem Chef" width={200} height={200} />
-                  </span>
-                ))}
-            </div>
-          </div>
-      </div>
-    </header>
   );
 };
 
@@ -422,7 +374,7 @@ export function Header({ menuItems = [], pageTitle = "Home" }: HeaderProps) {
         </div>
       </header>
 
-      {/* Mobile Header (Novo) */}
+      {/* Mobile Header*/}
       <MobileHeader 
         userData={userData}
         user={user}
@@ -433,7 +385,7 @@ export function Header({ menuItems = [], pageTitle = "Home" }: HeaderProps) {
         pageTitle={determinePageTitle()}
       />
 
-      {/* Mobile Footer (Refatorado) */}
+      {/* Mobile Footer */}
       <MobileFooter 
         menuItems={menuItems}
         userData={userData}
@@ -443,7 +395,7 @@ export function Header({ menuItems = [], pageTitle = "Home" }: HeaderProps) {
       />
       
       {/* Adicionar espaço para compensar o header e footer fixos no mobile */}
-      <div className="md:hidden pb-16 pt-16" />
+      <div className="md:hidden pb-0 pt-16" />
     </>
   )
 }

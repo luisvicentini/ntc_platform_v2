@@ -309,7 +309,7 @@ function SuccessContent() {
       // Aguardar 3 segundos e redirecionar para o perfil
       setTimeout(() => {
         if (user?.userType === 'member') {
-          router.push('/member/profile')
+          router.push('/member/feed')
         } else if (user) {
           router.push('/')
         }

@@ -21,7 +21,7 @@ export default function PaymentSuccessPage() {
         </p>
         
         <Button asChild className="bg-emerald-600 hover:bg-emerald-700 w-full py-6">
-          <Link href="/member/profile">
+          <Link href="/member/feed">
             Ir para minha conta
           </Link>
         </Button>

@@ -648,22 +648,10 @@ export default function FeedPage() {
   }, [])
 
   return (
-    <div className="container md:py-6 sm:pt-1">
-      {/* Header da página - Saudação e informações do usuário */}
-      <header className="mb-10">
-        <div className="mb-2">
-          <h1 className="text-2xl font-bold text-zinc-700">
-            {getGreeting()}, {getUserName()}!
-          </h1>
-          <p className="text-zinc-500 mt-2">
-            Confira os cupons disponíveis hoje para você nos melhores restaurantes.
-          </p>
-        </div>
-      </header>
+    <div className="container md:py-6 sm:pt-0">
       
-      {/* Seção de Stories - com título, lista e botão */}
-      {/* Ao invés de verificar se há stories OU se o usuário é produtor de conteúdo, sempre exibimos a seção */}
-      <section className="mb-8">
+      {/* Seção de Stories - com título, lista e botão */}      
+      <section className="mb-2">
         <StoriesContainer 
           stories={stories} 
           isContentProducer={(user as any)?.isContentProducer || false} 
@@ -697,10 +685,23 @@ export default function FeedPage() {
         />
       </section>
 
+      {/* Header da página - Saudação e informações do usuário */}
+      <header className="mb-2">
+        <div className="mb-2">
+          <h1 className="text-2xl font-bold text-zinc-700">
+            {getGreeting()}, {getUserName()}!
+          </h1>
+          <p className="text-zinc-500 mt-2">
+            Confira os cupons disponíveis hoje para você nos melhores restaurantes.
+          </p>
+        </div>
+      </header>
+      
+
       {/* Barra de pesquisa e filtros */}
       <section className="bg-white rounded-xl p-5 shadow-sm border border-zinc-100 mb-8">
         <div className="flex flex-col space-y-4 md:space-y-0 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between w-full">
             <h2 className="text-md max-sm:text-sm font-semibold text-zinc-600">Cupons disponíveis</h2>
             {filteredEstablishments.length > 0 && (
               <span className="ml-3 px-2.5 py-0.5 bg-zinc-100 text-zinc-600 text-sm rounded-full">
@@ -716,7 +717,7 @@ export default function FeedPage() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
               <Input
                 placeholder="Pesquisar cupons..."
-                className="pl-10 bg-zinc-50 text-zinc-600 rounded-xl border-none focus:ring-2 focus:ring-zinc-200 focus:border-zinc-300"
+                className="pl-10 bg-zinc-50 text-zinc-600 rounded-xl border border-zinc-100 focus:ring-2 focus:ring-zinc-200 focus:border-zinc-300"
                 value={searchTerm}
                 onChange={(e) => handleSearch(e.target.value)}
               />
@@ -727,7 +728,7 @@ export default function FeedPage() {
               <SheetTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="hover:bg-zinc-100 hover:text-zinc-700 rounded-xl"
+                  className="hover:bg-zinc-100 hover:text-zinc-700 rounded-xl border border-zinc-100"
                 >
                   <Filter className="h-4 w-4" />
                 </Button>
