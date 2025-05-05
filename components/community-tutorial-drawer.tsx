@@ -129,23 +129,54 @@ function CommunityDrawerContent({ open, onOpenChange }: CommunityDrawerContentPr
     };
   }, []);
 
-  const handleScroll = () => {
-    if (carouselRef.current) {
-      const scrollLeft = carouselRef.current.scrollLeft;
-      const itemWidth = carouselRef.current.offsetWidth * (isMobile ? 0.8 : 0.3);
-      const newIndex = Math.round(scrollLeft / itemWidth);
-      setCurrentIndex(newIndex);
-    }
+  // Funções auxiliares para o carrossel
+  const getItemWidth = () => {
+    if (!carouselRef.current) return 0;
+    return isMobile ? 320 : carouselRef.current.offsetWidth * 0.32; // Tamanho fixo no mobile
   };
 
   const scrollToIndex = (index: number) => {
-    if (carouselRef.current) {
-      const itemWidth = carouselRef.current.offsetWidth * (isMobile ? 0.8 : 0.3);
-      carouselRef.current.scrollTo({
-        left: itemWidth * index,
-        behavior: "smooth"
-      });
+    if (!carouselRef.current) return;
+    
+    const itemWidth = getItemWidth();
+    const containerWidth = carouselRef.current.offsetWidth;
+    const maxScrollLeft = carouselRef.current.scrollWidth - containerWidth;
+    
+    // Se for o último item, scroll total até o fim
+    let targetScrollLeft = itemWidth * index;
+    
+    // Garantir que o último item seja completamente visível
+    if (index === tutorialSteps.length - 1) {
+      targetScrollLeft = maxScrollLeft;
     }
+    
+    // Garantir que não ultrapasse os limites
+    targetScrollLeft = Math.max(0, Math.min(targetScrollLeft, maxScrollLeft));
+    
+    carouselRef.current.scrollTo({
+      left: targetScrollLeft,
+      behavior: "smooth"
+    });
+    
+    setCurrentIndex(index);
+  };
+
+  const handleScroll = () => {
+    if (!carouselRef.current) return;
+    
+    const scrollLeft = carouselRef.current.scrollLeft;
+    const itemWidth = getItemWidth();
+    const containerWidth = carouselRef.current.offsetWidth;
+    const maxScrollLeft = carouselRef.current.scrollWidth - containerWidth;
+    
+    // Se estiver próximo do final, considerar como último item
+    if (Math.abs(scrollLeft - maxScrollLeft) < 20) {
+      setCurrentIndex(tutorialSteps.length - 1);
+      return;
+    }
+    
+    const newIndex = Math.round(scrollLeft / itemWidth);
+    setCurrentIndex(newIndex);
   };
 
   // Funções para o drag do carrossel
@@ -205,11 +236,25 @@ function CommunityDrawerContent({ open, onOpenChange }: CommunityDrawerContentPr
     // Se a diferença for significativa, mover para o próximo ou anterior slide
     if (Math.abs(diff) > 50) {
       const direction = diff > 0 ? 1 : -1; // 1 para próximo, -1 para anterior
+      
+      // Prevenir navegação além dos limites
       const newIndex = Math.min(
         Math.max(currentIndex + direction, 0),
         tutorialSteps.length - 1
       );
-      scrollToIndex(newIndex);
+      
+      // Caso especial para o último item
+      if (newIndex === tutorialSteps.length - 1) {
+        // Forçar scroll até o final
+        const maxScrollLeft = carouselRef.current.scrollWidth - carouselRef.current.offsetWidth;
+        carouselRef.current.scrollTo({
+          left: maxScrollLeft,
+          behavior: "smooth"
+        });
+        setCurrentIndex(newIndex);
+      } else {
+        scrollToIndex(newIndex);
+      }
     } else {
       // Se o movimento foi muito pequeno, voltar para o slide atual
       scrollToIndex(currentIndex);
@@ -228,14 +273,40 @@ function CommunityDrawerContent({ open, onOpenChange }: CommunityDrawerContentPr
     const carousel = carouselRef.current;
     if (carousel) {
       carousel.addEventListener('scroll', handleScroll);
+      
+      // Garantir que o carrossel tenha espaço após o último item no mobile
+      if (isMobile) {
+        const lastItem = carousel.children[carousel.children.length - 1] as HTMLElement;
+        if (lastItem) {
+          const observer = new ResizeObserver(() => {
+            const containerWidth = carousel.offsetWidth;
+            const lastItemRight = lastItem.offsetLeft + lastItem.offsetWidth;
+            
+            // Se o último item não estiver completamente visível ao alcançar o fim do scroll
+            if (lastItemRight > carousel.scrollWidth) {
+              // Adicionar padding adequado depois do último item
+              carousel.style.paddingRight = `${containerWidth - (carousel.scrollWidth - lastItemRight)}px`;
+            }
+          });
+          
+          observer.observe(carousel);
+          observer.observe(lastItem);
+          
+          return () => {
+            observer.disconnect();
+            carousel.removeEventListener('scroll', handleScroll);
+          };
+        }
+      }
+      
       return () => carousel.removeEventListener('scroll', handleScroll);
     }
-  }, [isMobile]);
+  }, [isMobile, tutorialSteps.length]);
 
   return (
     <>
       <Drawer open={open} onOpenChange={onOpenChange}>
-        <DrawerContent className="h-[85vh] max-h-[90vh]">
+        <DrawerContent className="h-[90vh] max-h-[90vh]">
           <DrawerHeader className="text-center">
             <DrawerTitle className="text-xl md:text-2xl font-bold">
               Tutorial da Comunidade
@@ -243,17 +314,18 @@ function CommunityDrawerContent({ open, onOpenChange }: CommunityDrawerContentPr
           </DrawerHeader>
 
           {/* Carrossel */}
-          <div className="relative px-2 md:px-6 py-4 flex-1 overflow-hidden">
+          <div className="relative px-1 md:px-6 py-2 flex-1 overflow-hidden">
             {/* Container do carrossel */}
             <div 
               ref={carouselRef}
-              className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 select-none"
+              className="flex overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-0 select-none carousel-container"
               style={{ 
                 scrollbarWidth: 'none',
                 msOverflowStyle: 'none',
                 scrollBehavior: 'smooth',
                 WebkitOverflowScrolling: 'touch',
-                cursor: 'grab'
+                cursor: 'grab',
+                paddingRight: isMobile ? '40px' : '0' // Adiciona padding no fim para garantir scroll completo no mobile
               }}
               onMouseDown={handleMouseDown}
               onMouseMove={handleMouseMove}
@@ -270,7 +342,7 @@ function CommunityDrawerContent({ open, onOpenChange }: CommunityDrawerContentPr
                   className={cn(
                     "flex-shrink-0 snap-center transition-all duration-300",
                     isMobile 
-                      ? "w-3/4 pr-5" // Mobile: 1 item + pequena porção do próximo
+                      ? "w-80 pr-5" // Mobile: 1 item + pequena porção do próximo
                       : "w-[32%] md:pr-[1%]" // Desktop: mostra vários itens com espaçamento menor
                   )}
                 >
@@ -291,7 +363,7 @@ function CommunityDrawerContent({ open, onOpenChange }: CommunityDrawerContentPr
                         </div>
                       )}
                     </div>
-                    <h3 className="font-bold text-base md:text-lg mb-2">{step.title}</h3>
+                    <h3 className="font-bold text-base md:text-lg mb-2"><span className="text-primary">Passo {index + 1}:</span> {step.title}</h3>
                     <p className="text-zinc-600 text-xs md:text-sm flex-1">{step.description}</p>
                   </div>
                 </div>
@@ -350,10 +422,18 @@ function CommunityDrawerContent({ open, onOpenChange }: CommunityDrawerContentPr
         /* Centralizar o slide atual */
         .snap-x {
           scroll-snap-type: x mandatory;
+          scroll-padding-left: 1rem;
+          scroll-padding-right: 1rem;
         }
         
         .snap-center {
           scroll-snap-align: center;
+          scroll-snap-stop: always;
+        }
+        
+        /* Garantir que o último item seja visível ao fim do carrossel */
+        .carousel-container {
+          padding-right: env(safe-area-inset-right, 40px);
         }
         
         /* Melhorar o desempenho */
