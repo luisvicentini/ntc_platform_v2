@@ -13,7 +13,7 @@ const bonusTiers = [
     icon: <Timer className="w-6 h-6" />,
     items: [
       "Vaga no curso da Alexandra Corvo",
-      "Tábua de corte com Abridor de mão da empresa XXX",
+      "Tábua de corte com Abridor de mão da Axt Wood & Steel",
       "Experiência gastronômica com o Leo (1 assinante por vez, serão 10 programas)",
       "Kit Wessel",
       "Churrascada com o Leo (todos os assinantes juntos)",

@@ -12,7 +12,7 @@ const faqs = [
   },
   {
     question: "Como utilizo os descontos nos restaurantes?",
-    answer: "É simples! Após se tornar membro, você terá acesso ao aplicativo do Clube Não Tem Chef. Lá você poderá ver todos os restaurantes parceiros, as ofertas disponíveis e fazer sua reserva. Ao chegar no restaurante, basta informar que você é membro do clube e aproveitar o desconto."
+    answer: "É simples! Após se tornar membro, você terá acesso ao aplicativo(acho melhor plataforma) do Clube Não Tem Chef. Lá você poderá ver todos os restaurantes parceiros, as ofertas disponíveis e fazer sua reserva. Ao chegar no restaurante, basta informar que você é membro do clube e aproveitar o desconto."
   },
   {
     question: "Preciso reservar com antecedência?",
@@ -28,7 +28,7 @@ const faqs = [
   },
   {
     question: "Os descontos são válidos para quantas pessoas?",
-    answer: "Na maioria dos restaurantes, os descontos são válidos para mesas de até 4 pessoas quando acompanhadas pelo membro do clube. Alguns restaurantes podem ter políticas diferentes, que estarão claramente informadas no aplicativo."
+    answer: "Na maioria dos restaurantes, os descontos são válidos para o membro do clube e mais um acompanhante. Alguns restaurantes podem ter políticas diferentes, que estarão claramente informadas no aplicativo."
   },
   {
     question: "Como são selecionados os restaurantes parceiros?",
@@ -111,7 +111,7 @@ export default function FAQSection() {
         >
           <p className="text-zinc-400">
             Não encontrou a resposta para sua pergunta?{" "}
-            <a href="#" className="text-[#F24957] font-bold">
+            <a href="https://wa.me/5519982240767?text=Ol%C3%A1,%20gostaria%20de%20saber%20mais%20sobre%20o%20N%C3%A3o%20Tem%20Chef." className="text-[#F24957] font-bold">
               Entre em contato
             </a>
           </p>

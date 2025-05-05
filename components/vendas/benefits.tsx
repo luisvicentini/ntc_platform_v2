@@ -11,37 +11,37 @@ const benefits = [
     number: 1,
     title: "Desconto de até 50% em restaurantes avaliados pelo Leo pra você usar toda semana",
     description: "",
-    image: "/homepage/tipos-restaurantes/hamburgueria.jpg"
+    image: "/homepage/vantagens/descontos.jpg"
   },
   {
     number: 2,
     title: "Sorteios exclusivos todos os meses para participardas experiências com o Leo na faixa!",
     description: "",
-    image: "/homepage/tipos-restaurantes/hamburgueria.jpg"
+    image: "/homepage/vantagens/sorteios.jpg"
   },
   {
     number: 3,
     title: "Comunidade Exclusiva no WhatsApp com descontos extras, dicas, indicações e sorteios",
     description: "",
-    image: "/homepage/tipos-restaurantes/hamburgueria.jpg"
+    image: "/homepage/vantagens/comunidade.jpg"
   },
   {
     number: 4,
     title: "Descontos em Parceiros, Carnes, Bebidas, Empórios, etc",
     description: "",
-    image: "/homepage/tipos-restaurantes/hamburgueria.jpg"
+    image: "/homepage/vantagens/parceiros.jpg"
   },
   {
     number: 5,
     title: "Produtos Exclusivos da Grife Não Tem Chef",
     description: "",
-    image: "/homepage/tipos-restaurantes/hamburgueria.jpg"
+    image: "/homepage/vantagens/produtos.jpg"
   },
   {
     number: 6,
     title: "Descontos nos melhores cursos do ramo gastronômico do Brasil",
     description: "",
-    image: "/homepage/tipos-restaurantes/hamburgueria.jpg"
+    image: "/homepage/vantagens/cursos.jpg"
   }
 ]
 
