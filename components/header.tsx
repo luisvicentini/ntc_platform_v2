@@ -66,11 +66,13 @@ interface MenuItem {
   icon: React.ReactNode
   label: string
   isActive?: boolean
+  onClick?: () => void
 }
 
 interface HeaderProps {
   menuItems?: MenuItem[]
   pageTitle?: string;
+  rightContent?: React.ReactNode;
 }
 
 interface UserDropdownProps {
@@ -186,7 +188,18 @@ const NotificationButton: React.FC<{ isOpen: boolean; onOpenChange: (open: boole
 
 
 // Novo componente para o Header Mobile
-const MobileHeader: React.FC<{userData: any; user: any; isOpen: boolean; onOpenChange: (open: boolean) => void; notifications: any[]; removeNotification: (id: string) => void; pageTitle?: string}> = ({ 
+const MobileHeader: React.FC<{
+  userData: any; 
+  user: any; 
+  isOpen: boolean; 
+  onOpenChange: (open: boolean) => void; 
+  notifications: any[]; 
+  removeNotification: (id: string) => void; 
+  pageTitle?: string;
+  rightContent?: React.ReactNode;
+  theme?: string;
+  setTheme?: (theme: string) => void;
+}> = ({ 
   userData, 
   user, 
   isOpen, 
@@ -195,7 +208,8 @@ const MobileHeader: React.FC<{userData: any; user: any; isOpen: boolean; onOpenC
   removeNotification,
   theme,
   setTheme,
-  pageTitle = "Home"
+  pageTitle = "Home",
+  rightContent
 }) => {
   return (
     <header className="fixed top-0 left-0 right-0 border-b bg-white border-zinc-200 md:hidden z-50">
@@ -218,6 +232,9 @@ const MobileHeader: React.FC<{userData: any; user: any; isOpen: boolean; onOpenC
 
           {/* Avatar e nome do usuário */}
           <div className="w-1/3 flex justify-end space-x-2">
+            {rightContent && (
+              <div className="mr-2">{rightContent}</div>
+            )}
             <NotificationButton 
               isOpen={isOpen}
               onOpenChange={onOpenChange}
@@ -229,7 +246,7 @@ const MobileHeader: React.FC<{userData: any; user: any; isOpen: boolean; onOpenC
               userData={userData}
               user={user}
               theme={theme}
-              setTheme={setTheme}
+              setTheme={setTheme || (() => {})}
             />
           </div>
 
@@ -256,17 +273,31 @@ const MobileFooter: React.FC<MobileFooterProps> = ({ menuItems, userData, user, 
           <div className="w-full flex justify-center z-10">
             <nav className="flex items-center justify-center space-x-1">
               {menuItems.map((item) => (
-                <Link key={item.href} href={item.href}>
+                item.onClick ? (
                   <Button
+                    key={item.href}
                     variant="ghost"
                     className={cn(
                       pathname === item.href ? "bg-zinc-100 text-zinc-500 rounded-xl text-xl" : "text-zinc-400 hover:text-zinc-500 rounded-xl text-lg flex flex-row items-center"
                     )}
+                    onClick={item.onClick}
                   >
                     {item.icon}
                     <span className="text-[8px]">{item.label}</span>
                   </Button>
-                </Link>
+                ) : (
+                  <Link key={item.href} href={item.href}>
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        pathname === item.href ? "bg-zinc-100 text-zinc-500 rounded-xl text-xl" : "text-zinc-400 hover:text-zinc-500 rounded-xl text-lg flex flex-row items-center"
+                      )}
+                    >
+                      {item.icon}
+                      <span className="text-[8px]">{item.label}</span>
+                    </Button>
+                  </Link>
+                )
               ))}
             </nav>
           </div>
@@ -277,7 +308,7 @@ const MobileFooter: React.FC<MobileFooterProps> = ({ menuItems, userData, user, 
   );
 };
 
-export function Header({ menuItems = [], pageTitle = "Home" }: HeaderProps) {
+export function Header({ menuItems = [], pageTitle = "Home", rightContent }: HeaderProps) {
   const { user } = useAuth()
   const { notifications, removeNotification } = useNotification()
   const [isOpen, setIsOpen] = useState(false)
@@ -339,30 +370,53 @@ export function Header({ menuItems = [], pageTitle = "Home" }: HeaderProps) {
 
             <nav className="flex-1 flex justify-center space-x-1">
               {menuItems.map((item) => (
-                <Link key={item.href} href={item.href}>
+                item.onClick ? (
                   <Button
+                    key={item.href}
                     variant="ghost"
                     className={cn(
                       "flex items-center space-x-2",
                       pathname === item.href
-                        ? "bg-zinc-100 text-zinc-500"
-                        : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-500",
+                        ? "bg-zinc-100 text-zinc-500 rounded-xl"
+                        : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-500 hover:rounded-xl",
                     )}
+                    onClick={item.onClick}
                   >
                     {item.icon}
                     <span>{item.label}</span>
                   </Button>
-                </Link>
+                ) : (
+                  <Link key={item.href} href={item.href}>
+                    <Button
+                      variant="ghost"
+                      className={cn(
+                        "flex items-center space-x-2",
+                        pathname === item.href
+                          ? "bg-zinc-100 text-zinc-500 rounded-xl"
+                          : "text-zinc-500 hover:bg-zinc-100 hover:text-zinc-500 hover:rounded-xl",
+                      )}
+                    >
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </Button>
+                  </Link>
+                )
               ))}
             </nav>
 
             <div className="flex items-center space-x-4">
+              {/* Botão para entrar na comunidade */}
+              {rightContent && (
+                <div className="mr-2">{rightContent}</div>
+              )}
+
               <NotificationButton 
                 isOpen={isOpen}
                 onOpenChange={setIsOpen}
                 notifications={notifications}
                 removeNotification={removeNotification}
               />
+              
               <UserDropdown 
                 userData={userData}
                 user={user}
@@ -383,6 +437,9 @@ export function Header({ menuItems = [], pageTitle = "Home" }: HeaderProps) {
         notifications={notifications}
         removeNotification={removeNotification}
         pageTitle={determinePageTitle()}
+        rightContent={rightContent}
+        theme={theme}
+        setTheme={setTheme}
       />
 
       {/* Mobile Footer */}

@@ -6,10 +6,27 @@ import { SubscriptionProvider } from "@/contexts/subscription-context"
 import { Header } from "@/components/header"
 import { useAuth } from "@/contexts/auth-context"
 import { Home, User, Ticket, MessageSquareText } from "lucide-react"
+import { CommunityDrawerProvider, useCommunityDrawer } from "@/components/community-tutorial-drawer"
 
 export default function MemberLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuth()
 
+  return (
+    <RouteGuard allowedUserType="member">
+      <SubscriptionProvider>
+        <EstablishmentProvider>
+          <CommunityDrawerProvider>
+            <MemberLayoutContent>{children}</MemberLayoutContent>
+          </CommunityDrawerProvider>
+        </EstablishmentProvider>
+      </SubscriptionProvider>
+    </RouteGuard>
+  )
+}
+
+function MemberLayoutContent({ children }: { children: React.ReactNode }) {
+  const { openDrawer } = useCommunityDrawer();
+  
   const menuItems = [
     {
       href: "/member/feed",
@@ -27,23 +44,19 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
       label: "Perfil"
     },
     {
-      href: "https://chat.whatsapp.com/J1Y6dRhjik96YQOsOH0rjr",
+      href: "#",
       icon: <MessageSquareText className="h-5 w-5" />,
-      label: "Comunidade"
+      label: "Comunidade",
+      onClick: openDrawer
     }
   ]
+  
   return (
-    <RouteGuard allowedUserType="member">
-      <SubscriptionProvider>
-        <EstablishmentProvider>
-          <div className="min-h-screen bg-zinc-100 pb-14">
-            <Header menuItems={menuItems} />
-            <main className="py-2">
-              {children}
-            </main>
-          </div>
-        </EstablishmentProvider>
-      </SubscriptionProvider>
-    </RouteGuard>
+    <div className="min-h-screen bg-zinc-100 pb-14">
+      <Header menuItems={menuItems} />
+      <main className="py-2">
+        {children}
+      </main>
+    </div>
   )
 }
