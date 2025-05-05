@@ -1,17 +1,20 @@
 "use client"
 
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Edit, Star } from "lucide-react"
 import type { Establishment } from "@/types/establishment"
 import { FeaturedBadge } from "@/components/featured-badge"
+import { ReactNode } from "react"
 
 interface EstablishmentCardProps {
   establishment: Establishment
   onEdit: () => void
+  footer?: ReactNode
+  actions?: ReactNode
 }
 
-export function EstablishmentCard({ establishment, onEdit }: EstablishmentCardProps) {
+export function EstablishmentCard({ establishment, onEdit, footer, actions }: EstablishmentCardProps) {
   return (
     <Card className="bg-zinc-100 border-zinc-200 overflow-hidden">
       <div className="relative h-48">
@@ -20,22 +23,6 @@ export function EstablishmentCard({ establishment, onEdit }: EstablishmentCardPr
           alt={establishment.name}
           className="w-full h-full object-cover"
         />
-        {establishment.isFeatured && (
-          <div className="absolute top-2 right-2">
-            <FeaturedBadge />
-          </div>
-        )}
-        <div className="absolute top-2 right-2 bg-zinc-100 px-2 py-1 rounded-full flex items-center gap-1">
-          <Star className="h-4 w-4 text-yellow-400" />
-          <span className="text-sm text-zinc-500">
-            {establishment.rating?.toFixed(1) || "Novo"}
-          </span>
-          {establishment.totalRatings > 0 && (
-            <span className="text-xs text-zinc-400">
-              ({establishment.totalRatings})
-            </span>
-          )}
-        </div>
       </div>
       <CardHeader className="p-4">
         <div className="flex justify-between items-start">
@@ -57,17 +44,27 @@ export function EstablishmentCard({ establishment, onEdit }: EstablishmentCardPr
           <div className="text-sm text-zinc-400">
             {establishment.type?.category} • {establishment.type?.type}
           </div>
-          <Button
-            onClick={onEdit}
-            variant="outline"
-            size="sm"
-            className="bg-zinc-100 border-zinc-200 hover:bg-zinc-100 hover:text-zinc-500"
-          >
-            <Edit className="h-4 w-4 mr-1" />
-            Editar
-          </Button>
+          {actions ? (
+            actions
+          ) : (
+            <Button
+              onClick={onEdit}
+              variant="outline"
+              size="sm"
+              className="bg-zinc-100 border-zinc-200 hover:bg-zinc-100 hover:text-zinc-500"
+            >
+              <Edit className="h-4 w-4 mr-1" />
+              Editar
+            </Button>
+          )}
         </div>
       </CardContent>
+      
+      {footer && (
+        <CardFooter className="px-4 pb-4 pt-0 border-t border-zinc-200 mt-2">
+          {footer}
+        </CardFooter>
+      )}
     </Card>
   )
 }

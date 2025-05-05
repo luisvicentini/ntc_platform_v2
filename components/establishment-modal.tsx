@@ -73,23 +73,61 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
       setFormData({
         name: "",
         description: "",
-        address: "",
-        phone: "",
-        businessUserId: "",
+        phone: { phone: "", ddi: "55" },
+        openingHours: "",
+        voucherDescription: "",
+        discountValue: "",
+        discountRules: "",
+        usageLimit: "",
+        voucherAvailability: "unlimited",
+        voucherQuantity: 0,
+        voucherCooldown: 24,
         images: [],
-        voucherAvailability: false
+        type: { type: "", category: "" },
+        address: {
+          cep: "",
+          street: "",
+          number: "",
+          complement: "",
+          neighborhood: "",
+          city: "",
+          state: ""
+        },
+        voucherExpiration: 48,
+        lastVoucherGenerated: {},
+        businessUserId: ""
       })
       setImageFiles([])
       setCurrentTab("details")
     } else if (establishment) {
+      const businessUserId = "";
+      
       setFormData({
         name: establishment.name || "",
         description: establishment.description || "",
-        address: establishment.address || "",
-        phone: establishment.phone || "",
-        businessUserId: establishment.businessUserId || "",
+        phone: establishment.phone || { phone: "", ddi: "55" },
+        openingHours: establishment.openingHours || "",
+        voucherDescription: establishment.voucherDescription || "",
+        discountValue: establishment.discountValue || "",
+        discountRules: establishment.discountRules || "",
+        usageLimit: establishment.usageLimit || "",
+        voucherAvailability: establishment.voucherAvailability || "unlimited",
+        voucherQuantity: establishment.voucherQuantity || 0,
+        voucherCooldown: establishment.voucherCooldown || 24,
         images: establishment.images || [],
-        voucherAvailability: establishment.voucherAvailability || false
+        type: establishment.type || { type: "", category: "" },
+        address: establishment.address || {
+          cep: "",
+          street: "",
+          number: "",
+          complement: "",
+          neighborhood: "",
+          city: "",
+          state: ""
+        },
+        voucherExpiration: establishment.voucherExpiration || 48,
+        lastVoucherGenerated: establishment.lastVoucherGenerated || {},
+        businessUserId: businessUserId
       })
       setImageFiles([])
     }
@@ -129,11 +167,29 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
     setFormData({
       name: "",
       description: "",
-      address: "",
-      phone: "",
-      businessUserId: "",
+      phone: { phone: "", ddi: "55" },
+      openingHours: "",
+      voucherDescription: "",
+      discountValue: "",
+      discountRules: "",
+      usageLimit: "",
+      voucherAvailability: "unlimited",
+      voucherQuantity: 0,
+      voucherCooldown: 24,
       images: [],
-      voucherAvailability: false
+      type: { type: "", category: "" },
+      address: {
+        cep: "",
+        street: "",
+        number: "",
+        complement: "",
+        neighborhood: "",
+        city: "",
+        state: ""
+      },
+      voucherExpiration: 48,
+      lastVoucherGenerated: {},
+      businessUserId: ""
     })
     setImageFiles([])
     setCurrentTab("details")
@@ -152,13 +208,15 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
         console.log("URLs das imagens:", imageUrls)
       }
 
+      const { businessUserId, ...establishmentData } = formData
+
       const finalData = {
-        ...formData,
+        ...establishmentData,
         images: imageUrls
       }
 
-      if (formData.businessUserId) {
-        const response = await fetch(`/api/users/${formData.businessUserId}`, {
+      if (businessUserId) {
+        const response = await fetch(`/api/users/${businessUserId}`, {
           method: "PATCH",
           headers: {
             "Content-Type": "application/json",
@@ -198,7 +256,7 @@ export function EstablishmentModal({ isOpen, onClose, establishment }: Establish
       try {
         const uploadTask = uploadBytesResumable(storageRef, file)
         
-        return new Promise((resolve, reject) => {
+        return new Promise<string>((resolve, reject) => {
           uploadTask.on(
             "state_changed",
             (snapshot) => {

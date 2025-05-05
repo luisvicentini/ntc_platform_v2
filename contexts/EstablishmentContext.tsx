@@ -226,20 +226,24 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-session-token": localStorage.getItem("session_token") || ""
         },
         body: JSON.stringify({ isFeatured: !establishment.isFeatured }),
         credentials: "include"
       })
 
       if (!response.ok) {
-        throw new Error("Erro ao atualizar destaque")
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro ao atualizar destaque")
       }
 
       setEstablishments((prev) => 
         prev.map((est) => (est.id === id ? { ...est, isFeatured: !est.isFeatured } : est))
       )
     } catch (error: any) {
+      console.error("Erro ao atualizar destaque:", error);
       toast.error(error.message)
+      throw error;
     }
   }, [establishments])
 

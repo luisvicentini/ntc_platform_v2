@@ -10,6 +10,15 @@ export async function PATCH(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Garantir que params.id está disponível
+    const id = params.id
+    if (!id) {
+      return NextResponse.json(
+        { error: "ID do estabelecimento não fornecido" },
+        { status: 400 }
+      )
+    }
+
     const body = await request.json()
     const sessionToken = request.headers.get("x-session-token")
     
@@ -24,7 +33,7 @@ export async function PATCH(
     const session = jwtDecode<SessionToken>(sessionToken)
 
     // Verificar se o estabelecimento existe
-    const establishmentRef = doc(db, "establishments", params.id)
+    const establishmentRef = doc(db, "establishments", id)
     const establishmentSnap = await getDoc(establishmentRef)
 
     if (!establishmentSnap.exists()) {
@@ -36,8 +45,8 @@ export async function PATCH(
 
     const establishmentData = establishmentSnap.data()
 
-    // Verificar se o usuário é o dono do estabelecimento ou é master
-    if (session.userType !== "master" && establishmentData.partnerId !== session.uid) {
+    // Verificar permissões: qualquer usuário partner ou master pode gerenciar estabelecimentos
+    if (session.userType !== "master" && session.userType !== "partner") {
       return NextResponse.json(
         { error: "Sem permissão para editar este estabelecimento" },
         { status: 403 }
@@ -53,7 +62,7 @@ export async function PATCH(
     await updateDoc(establishmentRef, updateData)
 
     return NextResponse.json({
-      id: params.id,
+      id,
       ...establishmentData,
       ...updateData
     })
@@ -72,6 +81,15 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Garantir que params.id está disponível
+    const id = params.id
+    if (!id) {
+      return NextResponse.json(
+        { error: "ID do estabelecimento não fornecido" },
+        { status: 400 }
+      )
+    }
+    
     const sessionToken = request.headers.get("x-session-token")
     
     if (!sessionToken) {
@@ -85,7 +103,7 @@ export async function DELETE(
     const session = jwtDecode<SessionToken>(sessionToken)
 
     // Verificar se o estabelecimento existe
-    const establishmentRef = doc(db, "establishments", params.id)
+    const establishmentRef = doc(db, "establishments", id)
     const establishmentSnap = await getDoc(establishmentRef)
 
     if (!establishmentSnap.exists()) {
@@ -97,8 +115,8 @@ export async function DELETE(
 
     const establishmentData = establishmentSnap.data()
 
-    // Verificar se o usuário é o dono do estabelecimento ou é master
-    if (session.userType !== "master" && establishmentData.partnerId !== session.uid) {
+    // Verificar permissões: qualquer usuário partner ou master pode gerenciar estabelecimentos
+    if (session.userType !== "master" && session.userType !== "partner") {
       return NextResponse.json(
         { error: "Sem permissão para excluir este estabelecimento" },
         { status: 403 }
@@ -121,3 +139,6 @@ export async function DELETE(
     )
   }
 }
+
+// Adicionar configuração dinâmica para Next.js
+export const dynamic = 'force-dynamic'

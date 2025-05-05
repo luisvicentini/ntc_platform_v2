@@ -10,6 +10,15 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
+    // Garantir que params.id está disponível
+    const id = params.id
+    if (!id) {
+      return NextResponse.json(
+        { error: "ID do estabelecimento não fornecido" },
+        { status: 400 }
+      )
+    }
+
     const { isFeatured } = await request.json()
     const sessionToken = request.headers.get("x-session-token")
     
@@ -22,17 +31,15 @@ export async function POST(
 
     // Decodificar o token
     const session = jwtDecode<SessionToken>(sessionToken)
-
-    // Apenas usuários master podem marcar estabelecimentos como destaque
-    if (session.userType !== "master") {
-      return NextResponse.json(
-        { error: "Apenas administradores podem marcar estabelecimentos como destaque" },
-        { status: 403 }
-      )
-    }
+    
+    // Logs de diagnóstico
+    console.log("Dados da sessão:", {
+      uid: session.uid,
+      userType: session.userType
+    })
 
     // Verificar se o estabelecimento existe
-    const establishmentRef = doc(db, "establishments", params.id)
+    const establishmentRef = doc(db, "establishments", id)
     const establishmentSnap = await getDoc(establishmentRef)
 
     if (!establishmentSnap.exists()) {
@@ -43,6 +50,17 @@ export async function POST(
     }
 
     const establishmentData = establishmentSnap.data()
+    
+    // Verificar permissões: qualquer usuário partner ou master pode marcar/desmarcar destaque
+    if (session.userType !== "master" && session.userType !== "partner") {
+      return NextResponse.json(
+        { 
+          error: "Sem permissão para alterar o destaque deste estabelecimento", 
+          details: "Apenas administradores e parceiros podem alterar o destaque" 
+        },
+        { status: 403 }
+      )
+    }
 
     // Atualizar estabelecimento
     await updateDoc(establishmentRef, {
@@ -51,7 +69,7 @@ export async function POST(
     })
 
     return NextResponse.json({
-      id: params.id,
+      id,
       ...establishmentData,
       isFeatured
     })
@@ -64,3 +82,6 @@ export async function POST(
     )
   }
 }
+
+// Adicionar configuração dinâmica para Next.js
+export const dynamic = 'force-dynamic'
