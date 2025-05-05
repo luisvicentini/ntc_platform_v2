@@ -18,6 +18,7 @@ interface EstablishmentContextType {
   toggleFeatured: (id: string) => Promise<void>
   refreshEstablishments: (forceRefresh?: boolean) => Promise<void>
   updateEstablishmentRating: (establishmentId: string, newRating: number) => Promise<boolean>
+  copyEstablishment: (id: string) => Promise<void>
 }
 
 const EstablishmentContext = createContext<EstablishmentContextType | undefined>(undefined)
@@ -116,6 +117,7 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "x-session-token": localStorage.getItem("session_token") || ""
         },
         body: JSON.stringify(updatedFields),
         credentials: "include"
@@ -292,6 +294,43 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [])
 
+  const copyEstablishment = useCallback(async (id: string) => {
+    try {
+      const establishment = establishments.find(e => e.id === id)
+      if (!establishment) {
+        throw new Error("Estabelecimento não encontrado")
+      }
+
+      // Criando uma cópia do estabelecimento com um novo nome
+      const {
+        id: _id,
+        partnerId: _partnerId,
+        status: _status,
+        createdAt: _createdAt,
+        updatedAt: _updatedAt,
+        rating: _rating,
+        totalRatings: _totalRatings,
+        isFeatured: _isFeatured,
+        ...copyData
+      } = establishment
+
+      // Adicionando "(Cópia)" ao nome e definindo status como "inactive"
+      const newEstablishmentData = {
+        ...copyData,
+        name: `${establishment.name} (Cópia)`,
+        status: "inactive" // Garantir que o estabelecimento seja criado desativado
+      }
+
+      // Chamando a função de adicionar estabelecimento com os dados copiados
+      await addEstablishment(newEstablishmentData)
+      
+      toast.success("Estabelecimento copiado com sucesso!")
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao copiar estabelecimento")
+      throw error
+    }
+  }, [establishments, addEstablishment])
+
   return (
     <EstablishmentContext.Provider
       value={{
@@ -304,7 +343,8 @@ export const EstablishmentProvider: React.FC<{ children: React.ReactNode }> = ({
         getNextVoucherTime,
         toggleFeatured,
         refreshEstablishments,
-        updateEstablishmentRating
+        updateEstablishmentRating,
+        copyEstablishment
       }}
     >
       {children}

@@ -6,7 +6,7 @@ import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Switch } from "@/components/ui/switch"
-import { Award, ChevronDown, Plus, Power, Search, Star, Trash2, Edit, Filter, X } from "lucide-react"
+import { Award, ChevronDown, Plus, Power, Search, Star, Trash2, Edit, Filter, X, RefreshCw } from "lucide-react"
 import { EstablishmentCard } from "@/components/establishment-card"
 import { EstablishmentModal } from "@/components/establishment-modal"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -32,18 +32,87 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
 import { Slider } from "@/components/ui/slider"
 import { Card, CardContent } from "@/components/ui/card"
 
+// Componente para o Modal de Confirmação de Exclusão
+function DeleteConfirmationModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  establishmentName,
+  isBulkDelete = false,
+  bulkCount = 0
+}) {
+  const [confirmText, setConfirmText] = useState("")
+  const expectedText = "EXCLUIR_ESTABELECIMENTO"
+  const isConfirmEnabled = confirmText === expectedText
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="text-red-500">Confirmação de Exclusão</DialogTitle>
+          <DialogDescription>
+            {isBulkDelete 
+              ? `Você está prestes a excluir permanentemente ${bulkCount} estabelecimento(s).` 
+              : `Você está prestes a excluir permanentemente o estabelecimento "${establishmentName}".`}
+            <p className="mt-2 font-semibold">Esta ação não pode ser desfeita!</p>
+          </DialogDescription>
+        </DialogHeader>
+        <div className="mt-4">
+          <p className="text-sm mb-2">
+            Para confirmar, digite <span className="font-bold">{expectedText}</span> no campo abaixo:
+          </p>
+          <Input
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={expectedText}
+            className="w-full"
+            autoFocus
+          />
+        </div>
+        <DialogFooter className="mt-4">
+          <Button variant="outline" onClick={onClose}>
+            Cancelar
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={onConfirm} 
+            disabled={!isConfirmEnabled}
+          >
+            Confirmar Exclusão
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export default function EstablishmentsPage() {
-  const { establishments, toggleFeatured, updateEstablishment, refreshEstablishments } = useEstablishment()
+  const { 
+    establishments, 
+    toggleFeatured, 
+    updateEstablishment, 
+    refreshEstablishments, 
+    copyEstablishment 
+  } = useEstablishment()
   const auth = useAuth()
   const [searchTerm, setSearchTerm] = useState("")
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedEstablishment, setSelectedEstablishment] = useState<Establishment | AvailableEstablishment | null>(null)
   const [selectedItems, setSelectedItems] = useState<string[]>([])
   const [processingItems, setProcessingItems] = useState<boolean>(false)
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false)
   
   // Estados para os filtros
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "inactive">("all")
@@ -52,6 +121,10 @@ export default function EstablishmentsPage() {
   const [cityFilter, setCityFilter] = useState<string | null>(null)
   const [minRatingFilter, setMinRatingFilter] = useState<number>(0)
   const [showFilters, setShowFilters] = useState(false)
+  
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false)
+  const [establishmentToDelete, setEstablishmentToDelete] = useState<string | null>(null)
+  const [bulkDeleteMode, setBulkDeleteMode] = useState(false)
   
   // Extrair listas de valores únicos para os seletores de filtro
   const categories = establishments
@@ -220,6 +293,26 @@ export default function EstablishmentsPage() {
     }
   }
 
+  const handleCopyEstablishments = async () => {
+    try {
+      setProcessingItems(true)
+      for (const id of selectedItems) {
+        const establishment = establishments.find((e) => e.id === id)
+        if (establishment && canManageEstablishments()) {
+          await copyEstablishment(id)
+        }
+      }
+      setSelectedItems([])
+      await refreshEstablishments(true) // Garantir que a listagem seja atualizada com os novos estabelecimentos
+      toast.success("Estabelecimentos copiados com sucesso")
+    } catch (error) {
+      console.error("Erro ao copiar estabelecimentos:", error)
+      toast.error("Erro ao copiar estabelecimentos")
+    } finally {
+      setProcessingItems(false)
+    }
+  }
+
   const handleBulkDisable = async () => {
     try {
       setProcessingItems(true)
@@ -243,29 +336,144 @@ export default function EstablishmentsPage() {
     }
   }
 
+  // Função para abrir o modal de exclusão de um único estabelecimento
+  const openDeleteModal = (id: string) => {
+    setEstablishmentToDelete(id)
+    setBulkDeleteMode(false)
+    setDeleteModalOpen(true)
+  }
+
+  // Função para abrir o modal de exclusão em lote
+  const openBulkDeleteModal = () => {
+    setBulkDeleteMode(true)
+    setDeleteModalOpen(true)
+  }
+
+  // Função para excluir um único estabelecimento
+  const handleDeleteEstablishment = async (id: string) => {
+    try {
+      if (!canManageEstablishments()) return
+      
+      const sessionToken = localStorage.getItem("session_token") || "";
+      console.log("Token de sessão para exclusão:", sessionToken.substring(0, 10) + "...");
+      
+      // Chamar o endpoint DELETE diretamente
+      console.log(`Iniciando requisição DELETE para /api/establishments/${id}`);
+      
+      const response = await fetch(`/api/establishments/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          "x-session-token": sessionToken
+        },
+        credentials: "include"
+      })
+      
+      // Log da resposta para debugging
+      console.log(`Status da resposta de exclusão: ${response.status}`);
+      
+      try {
+        const responseData = await response.json();
+        console.log("Resposta detalhada:", responseData);
+        
+        if (!response.ok) {
+          throw new Error(responseData.error || "Erro ao excluir estabelecimento");
+        }
+        
+        await refreshEstablishments(true);
+        toast.success("Estabelecimento excluído permanentemente com sucesso");
+      } catch (parseError) {
+        console.error("Erro ao processar resposta:", parseError);
+        toast.error("Erro ao processar resposta do servidor");
+      }
+    } catch (error: any) {
+      console.error("Erro ao excluir estabelecimento:", error);
+      toast.error(error.message || "Erro ao excluir estabelecimento");
+    }
+  }
+
+  // Função para excluir vários estabelecimentos
   const handleBulkDelete = async () => {
-    if (!confirm("Tem certeza que deseja excluir os estabelecimentos selecionados? Esta ação não pode ser desfeita.")) return;
-    
     try {
       setProcessingItems(true)
+      
+      const sessionToken = localStorage.getItem("session_token") || "";
+      console.log("Token de sessão para exclusão em lote:", sessionToken.substring(0, 10) + "...");
+      
+      const deleteResults = [];
+      
       for (const id of selectedItems) {
-        const establishment = establishments.find((e) => e.id === id)
-        if (establishment && canManageEstablishments()) {
-          // No Firestore, estamos usando soft delete (marcando como inativo)
-          await updateEstablishment(id, {
-            ...establishment,
-            status: "inactive"
-          })
+        if (canManageEstablishments()) {
+          // Chamar o endpoint DELETE diretamente para cada item
+          console.log(`Iniciando requisição DELETE para /api/establishments/${id}`);
+          
+          const response = await fetch(`/api/establishments/${id}`, {
+            method: "DELETE",
+            headers: {
+              "Content-Type": "application/json",
+              "x-session-token": sessionToken
+            },
+            credentials: "include"
+          });
+          
+          console.log(`Status da resposta de exclusão do item ${id}: ${response.status}`);
+          
+          try {
+            const responseData = await response.json();
+            deleteResults.push({
+              id,
+              success: response.ok,
+              status: response.status,
+              data: responseData
+            });
+            
+            if (!response.ok) {
+              console.error(`Erro ao excluir estabelecimento ${id}:`, responseData);
+            }
+          } catch (parseError) {
+            console.error(`Erro ao processar resposta para ${id}:`, parseError);
+            deleteResults.push({
+              id,
+              success: false,
+              status: response.status,
+              error: "Erro ao processar resposta"
+            });
+          }
         }
       }
-      setSelectedItems([])
-      await refreshEstablishments(true)
-      toast.success("Estabelecimentos excluídos com sucesso")
-    } catch (error) {
-      console.error("Erro ao excluir estabelecimentos:", error)
-      toast.error("Erro ao excluir estabelecimentos")
+      
+      console.log("Resultados da exclusão em lote:", deleteResults);
+      
+      setSelectedItems([]);
+      await refreshEstablishments(true);
+      
+      const successCount = deleteResults.filter(r => r.success).length;
+      const errorCount = deleteResults.length - successCount;
+      
+      if (errorCount === 0) {
+        toast.success(`${successCount} estabelecimentos excluídos permanentemente com sucesso`);
+      } else if (successCount > 0) {
+        toast.success(`${successCount} estabelecimentos excluídos permanentemente com sucesso, ${errorCount} com erros`);
+      } else {
+        toast.error(`Erro ao excluir estabelecimentos: nenhum foi excluído com sucesso`);
+      }
+    } catch (error: any) {
+      console.error("Erro ao excluir estabelecimentos:", error);
+      toast.error(error.message || "Erro ao excluir estabelecimentos");
     } finally {
-      setProcessingItems(false)
+      setProcessingItems(false);
+    }
+  }
+
+  // Função para confirmar a exclusão (individual ou em lote)
+  const confirmDelete = async () => {
+    setDeleteModalOpen(false)
+    
+    if (bulkDeleteMode) {
+      await handleBulkDelete()
+    } else if (establishmentToDelete) {
+      await handleDeleteEstablishment(establishmentToDelete)
+      setEstablishmentToDelete(null)
     }
   }
 
@@ -282,6 +490,34 @@ export default function EstablishmentsPage() {
       const establishment = establishments.find(e => e.id === id)
       return establishment?.isFeatured
     })
+
+  // Função para atualizar a listagem de estabelecimentos
+  const handleRefreshList = async () => {
+    try {
+      setIsRefreshing(true)
+      await refreshEstablishments(true)
+      toast.success("Listagem atualizada com sucesso")
+    } catch (error) {
+      console.error("Erro ao atualizar listagem:", error)
+      toast.error("Erro ao atualizar listagem")
+    } finally {
+      setIsRefreshing(false)
+    }
+  }
+
+  // Função para copiar um único estabelecimento
+  const handleCopyEstablishment = async (id: string) => {
+    try {
+      if (!canManageEstablishments()) return
+      
+      await copyEstablishment(id)
+      await refreshEstablishments(true) // Atualiza a listagem após copiar
+      toast.success("Estabelecimento copiado com sucesso")
+    } catch (error) {
+      console.error("Erro ao copiar estabelecimento:", error)
+      toast.error("Erro ao copiar estabelecimento")
+    }
+  }
 
   const clubName = process.env.NEXT_PUBLIC_APP_PROJECTNAME
 
@@ -438,6 +674,16 @@ export default function EstablishmentsPage() {
                 </div>
               </PopoverContent>
             </Popover>
+            
+            <Button 
+              variant="outline" 
+              className="flex items-center gap-2"
+              onClick={handleRefreshList}
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              {isRefreshing ? 'Atualizando...' : 'Atualizar'}
+            </Button>
           </div>
           
           <div className="flex gap-2">
@@ -462,13 +708,20 @@ export default function EstablishmentsPage() {
                       <Award className="mr-2 h-4 w-4" /> Desmarcar destaque
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem onClick={handleCopyEstablishments}>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4">
+                      <rect x="8" y="8" width="12" height="12" rx="2" ry="2" />
+                      <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2" />
+                    </svg> 
+                    Copiar
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleBulkDisable}>
                     <Power className="mr-2 h-4 w-4" /> Desabilitar
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem 
-                    onClick={handleBulkDelete}
+                    onClick={openBulkDeleteModal}
                     className="text-red-500 focus:text-red-500"
                   >
                     <Trash2 className="mr-2 h-4 w-4" /> Excluir
@@ -605,18 +858,36 @@ export default function EstablishmentsPage() {
                           {establishment.status === "active" ? "Ativo" : "Inativo"}
                         </span>
                       </div>
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleOpenModal(establishment);
-                        }}
-                        variant="outline"
-                        size="sm"
-                        className="bg-zinc-100 border-zinc-200 hover:bg-zinc-100 hover:text-zinc-500"
-                      >
-                        <Edit className="h-4 w-4 mr-1" />
-                        Editar
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="bg-zinc-100 border-zinc-200 hover:bg-zinc-100 hover:text-zinc-500"
+                          >
+                            Ações <ChevronDown className="ml-1 h-3 w-3" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleOpenModal(establishment)}>
+                            <Edit className="mr-2 h-4 w-4" /> Editar
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleCopyEstablishment(establishment.id)}>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4">
+                              <rect x="8" y="8" width="12" height="12" rx="2" ry="2" />
+                              <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h2" />
+                            </svg>
+                            Copiar
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />                          
+                          <DropdownMenuItem 
+                            onClick={() => openDeleteModal(establishment.id)}
+                            className="text-red-500 focus:text-red-500"
+                          >
+                            <Trash2 className="mr-2 h-4 w-4" /> Excluir
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   )
                 }
@@ -633,6 +904,20 @@ export default function EstablishmentsPage() {
           setSelectedEstablishment(null)
         }}
         establishment={selectedEstablishment}
+      />
+
+      {/* Modal de confirmação de exclusão */}
+      <DeleteConfirmationModal
+        isOpen={deleteModalOpen}
+        onClose={() => setDeleteModalOpen(false)}
+        onConfirm={confirmDelete}
+        establishmentName={
+          establishmentToDelete
+            ? establishments.find(e => e.id === establishmentToDelete)?.name || ""
+            : ""
+        }
+        isBulkDelete={bulkDeleteMode}
+        bulkCount={selectedItems.length}
       />
     </div>
   )

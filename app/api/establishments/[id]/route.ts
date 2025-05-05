@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { doc, getDoc, updateDoc } from "firebase/firestore"
+import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 
 import type { SessionToken } from "@/types/session"
@@ -9,70 +9,108 @@ export async function PATCH(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  console.log("Iniciando processo de atualização de estabelecimento");
+  console.log("Parâmetros recebidos:", params);
+  
   try {
-    // Garantir que params.id está disponível
-    const id = params.id
+    // Verificação segura de ID
+    const id = params?.id;
+    console.log("ID do estabelecimento:", id);
+    
     if (!id) {
+      console.log("Erro: ID do estabelecimento não fornecido");
       return NextResponse.json(
         { error: "ID do estabelecimento não fornecido" },
         { status: 400 }
-      )
+      );
     }
 
-    const body = await request.json()
-    const sessionToken = request.headers.get("x-session-token")
+    const body = await request.json();
+    console.log("Dados recebidos para atualização:", Object.keys(body));
+    
+    // Verificação de autenticação
+    const sessionToken = request.headers.get("x-session-token");
+    console.log("Token recebido:", sessionToken ? "Presente" : "Ausente");
     
     if (!sessionToken) {
+      console.log("Erro: Sessão inválida - Token não fornecido");
       return NextResponse.json(
         { error: "Sessão inválida" },
         { status: 403 }
-      )
+      );
     }
-
+    
     // Decodificar o token
-    const session = jwtDecode<SessionToken>(sessionToken)
-
-    // Verificar se o estabelecimento existe
-    const establishmentRef = doc(db, "establishments", id)
-    const establishmentSnap = await getDoc(establishmentRef)
-
-    if (!establishmentSnap.exists()) {
+    let session;
+    try {
+      session = jwtDecode<SessionToken>(sessionToken);
+      console.log("Sessão decodificada:", {
+        uid: session.uid,
+        userType: session.userType
+      });
+    } catch (tokenError: any) {
+      console.error("Erro ao decodificar token:", tokenError);
       return NextResponse.json(
-        { error: "Estabelecimento não encontrado" },
-        { status: 404 }
-      )
-    }
-
-    const establishmentData = establishmentSnap.data()
-
-    // Verificar permissões: qualquer usuário partner ou master pode gerenciar estabelecimentos
-    if (session.userType !== "master" && session.userType !== "partner") {
-      return NextResponse.json(
-        { error: "Sem permissão para editar este estabelecimento" },
+        { error: "Token de sessão inválido" },
         { status: 403 }
-      )
+      );
     }
-
-    // Atualizar estabelecimento
-    const updateData = {
-      ...body,
-      updatedAt: new Date().toISOString()
+    
+    // Verificação do estabelecimento
+    try {
+      const establishmentRef = doc(db, "establishments", id);
+      const establishmentSnap = await getDoc(establishmentRef);
+      
+      if (!establishmentSnap.exists()) {
+        console.log(`Erro: Estabelecimento ID ${id} não encontrado`);
+        return NextResponse.json(
+          { error: "Estabelecimento não encontrado" },
+          { status: 404 }
+        );
+      }
+      
+      const establishmentData = establishmentSnap.data();
+      console.log(`Estabelecimento encontrado: ${establishmentData.name || 'Nome não disponível'}`);
+      
+      // Verificação de permissões
+      if (session.userType !== "master" && session.userType !== "partner") {
+        console.log(`Erro: Usuário do tipo ${session.userType} sem permissão para editar estabelecimento`);
+        return NextResponse.json(
+          { error: "Sem permissão para editar este estabelecimento" },
+          { status: 403 }
+        );
+      }
+      
+      // Atualizar estabelecimento
+      console.log("Atualizando estabelecimento...");
+      const updateData = {
+        ...body,
+        updatedAt: new Date().toISOString()
+      };
+      
+      await updateDoc(establishmentRef, updateData);
+      console.log(`Estabelecimento ID ${id} atualizado com sucesso`);
+      
+      return NextResponse.json({
+        id,
+        ...establishmentData,
+        ...updateData
+      });
+      
+    } catch (dbError: any) {
+      console.error("Erro ao acessar banco de dados:", dbError);
+      return NextResponse.json(
+        { error: "Erro ao acessar o banco de dados", details: dbError.message },
+        { status: 500 }
+      );
     }
-
-    await updateDoc(establishmentRef, updateData)
-
-    return NextResponse.json({
-      id,
-      ...establishmentData,
-      ...updateData
-    })
-
-  } catch (error) {
-    console.error("Erro ao atualizar estabelecimento:", error)
+    
+  } catch (error: any) {
+    console.error("Erro geral ao atualizar estabelecimento:", error);
     return NextResponse.json(
-      { error: "Erro ao atualizar estabelecimento" },
+      { error: "Erro ao atualizar estabelecimento", details: error.message },
       { status: 500 }
-    )
+    );
   }
 }
 
@@ -80,65 +118,102 @@ export async function DELETE(
   request: Request,
   { params }: { params: { id: string } }
 ) {
+  console.log("Iniciando processo de exclusão permanente de estabelecimento");
+  console.log("Parâmetros recebidos:", params);
+  
   try {
-    // Garantir que params.id está disponível
-    const id = params.id
+    // Verificação segura de ID
+    const id = params?.id;
+    console.log("ID do estabelecimento:", id);
+    
     if (!id) {
+      console.log("Erro: ID do estabelecimento não fornecido");
       return NextResponse.json(
         { error: "ID do estabelecimento não fornecido" },
         { status: 400 }
-      )
+      );
     }
     
-    const sessionToken = request.headers.get("x-session-token")
+    // Verificação de autenticação
+    const sessionToken = request.headers.get("x-session-token");
+    console.log("Token recebido:", sessionToken ? "Presente" : "Ausente");
     
     if (!sessionToken) {
+      console.log("Erro: Sessão inválida - Token não fornecido");
       return NextResponse.json(
         { error: "Sessão inválida" },
         { status: 403 }
-      )
+      );
     }
-
+    
     // Decodificar o token
-    const session = jwtDecode<SessionToken>(sessionToken)
-
-    // Verificar se o estabelecimento existe
-    const establishmentRef = doc(db, "establishments", id)
-    const establishmentSnap = await getDoc(establishmentRef)
-
-    if (!establishmentSnap.exists()) {
+    let session;
+    try {
+      session = jwtDecode<SessionToken>(sessionToken);
+      console.log("Sessão decodificada:", {
+        uid: session.uid,
+        userType: session.userType
+      });
+    } catch (tokenError: any) {
+      console.error("Erro ao decodificar token:", tokenError);
       return NextResponse.json(
-        { error: "Estabelecimento não encontrado" },
-        { status: 404 }
-      )
-    }
-
-    const establishmentData = establishmentSnap.data()
-
-    // Verificar permissões: qualquer usuário partner ou master pode gerenciar estabelecimentos
-    if (session.userType !== "master" && session.userType !== "partner") {
-      return NextResponse.json(
-        { error: "Sem permissão para excluir este estabelecimento" },
+        { error: "Token de sessão inválido" },
         { status: 403 }
-      )
+      );
     }
-
-    // Em vez de excluir, marcar como inativo
-    await updateDoc(establishmentRef, {
-      status: "inactive",
-      updatedAt: new Date().toISOString()
-    })
-
-    return NextResponse.json({ message: "Estabelecimento excluído com sucesso" })
-
-  } catch (error) {
-    console.error("Erro ao excluir estabelecimento:", error)
+    
+    // Verificação do estabelecimento
+    try {
+      const establishmentRef = doc(db, "establishments", id);
+      const establishmentSnap = await getDoc(establishmentRef);
+      
+      if (!establishmentSnap.exists()) {
+        console.log(`Erro: Estabelecimento ID ${id} não encontrado`);
+        return NextResponse.json(
+          { error: "Estabelecimento não encontrado" },
+          { status: 404 }
+        );
+      }
+      
+      const establishmentData = establishmentSnap.data();
+      console.log(`Estabelecimento encontrado: ${establishmentData.name || 'Nome não disponível'}`);
+      
+      // Verificação de permissões
+      if (session.userType !== "master" && session.userType !== "partner") {
+        console.log(`Erro: Usuário do tipo ${session.userType} sem permissão para excluir estabelecimento`);
+        return NextResponse.json(
+          { error: "Sem permissão para excluir este estabelecimento" },
+          { status: 403 }
+        );
+      }
+      
+      // Excluir permanentemente o estabelecimento
+      console.log(`Excluindo permanentemente o estabelecimento ID ${id}...`);
+      await deleteDoc(establishmentRef);
+      
+      console.log(`Estabelecimento ID ${id} excluído permanentemente com sucesso`);
+      return NextResponse.json({ 
+        message: "Estabelecimento excluído permanentemente com sucesso",
+        deleted: true
+      });
+      
+    } catch (dbError: any) {
+      console.error("Erro ao acessar banco de dados:", dbError);
+      return NextResponse.json(
+        { error: "Erro ao acessar o banco de dados", details: dbError.message },
+        { status: 500 }
+      );
+    }
+    
+  } catch (error: any) {
+    console.error("Erro geral ao excluir estabelecimento:", error);
     return NextResponse.json(
-      { error: "Erro ao excluir estabelecimento" },
+      { error: "Erro ao excluir estabelecimento", details: error.message },
       { status: 500 }
-    )
+    );
   }
 }
 
-// Adicionar configuração dinâmica para Next.js
+// Atualizar a configuração dinâmica para Next.js
 export const dynamic = 'force-dynamic'
+export const dynamicParams = true

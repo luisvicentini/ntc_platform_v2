@@ -10,8 +10,9 @@ export async function POST(
   { params }: { params: { id: string } }
 ) {
   try {
-    // Garantir que params.id está disponível
-    const id = params.id
+    // Lidar com os parâmetros dinamicamente
+    const id = params?.id
+
     if (!id) {
       return NextResponse.json(
         { error: "ID do estabelecimento não fornecido" },
@@ -83,5 +84,6 @@ export async function POST(
   }
 }
 
-// Adicionar configuração dinâmica para Next.js
+// Atualizar a configuração dinâmica para Next.js
 export const dynamic = 'force-dynamic'
+export const dynamicParams = true
