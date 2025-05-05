@@ -308,7 +308,7 @@ function CommunityDrawerContent({ open, onOpenChange }: CommunityDrawerContentPr
       <Drawer open={open} onOpenChange={onOpenChange}>
         <DrawerContent className="h-[90vh] max-h-[90vh]">
           <DrawerHeader className="text-center">
-            <DrawerTitle className="text-xl md:text-2xl font-bold">
+            <DrawerTitle className="text-md md:text-2xl font-bold">
               Tutorial da Comunidade
             </DrawerTitle>
           </DrawerHeader>
@@ -346,7 +346,7 @@ function CommunityDrawerContent({ open, onOpenChange }: CommunityDrawerContentPr
                       : "w-[32%] md:pr-[1%]" // Desktop: mostra vários itens com espaçamento menor
                   )}
                 >
-                  <div className="bg-zinc-50 rounded-lg p-4 h-full flex flex-col shadow-sm hover:shadow-md transition-shadow">
+                  <div className="bg-zinc-50 rounded-lg p-2 h-full flex flex-col shadow-sm hover:shadow-md transition-shadow">
                     <div className="relative h-96 md:h-96 w-full mb-4 rounded-lg overflow-hidden flex items-center justify-center bg-gray-100">
                       {step.image ? (
                         <Image 
@@ -363,7 +363,7 @@ function CommunityDrawerContent({ open, onOpenChange }: CommunityDrawerContentPr
                         </div>
                       )}
                     </div>
-                    <h3 className="font-bold text-base md:text-lg mb-2"><span className="text-primary">Passo {index + 1}:</span> {step.title}</h3>
+                    <h3 className="font-bold text-sm md:text-lg mb-2"><span className="text-primary">Passo {index + 1}:</span> {step.title}</h3>
                     <p className="text-zinc-600 text-xs md:text-sm flex-1">{step.description}</p>
                   </div>
                 </div>
