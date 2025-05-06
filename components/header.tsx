@@ -353,7 +353,6 @@ export function Header({ menuItems = [], pageTitle = "Home", rightContent }: Hea
           })
         }
       } catch (error) {
-        console.error("Erro ao buscar dados do usuário:", error)
       }
     }
 

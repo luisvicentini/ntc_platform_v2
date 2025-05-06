@@ -146,7 +146,7 @@ export default function Restaurants() {
           onClick={scrollToPlans}
           className="bg-[#4CAF50] hover:bg-[#45a049] text-white font-bold py-3 px-8 rounded-xl text-1xl hover:scale-105 transition-all"
         >
-          Fazer minha pré-reserva para o Clube
+          Quero fazer parte do Clube
         </button>
       </motion.div>
 

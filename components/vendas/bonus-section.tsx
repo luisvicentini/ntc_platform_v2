@@ -10,50 +10,50 @@ const bonusTiers = [
     title: "5 Primeiros",
     titleColor: "#F24957", // Vermelho
     borderColor: "#F24957",
-    icon: <Timer className="w-6 h-6" />,
+    icon: "🔥",
     items: [
-      "Vaga no curso da Alexandra Corvo",
-      "Tábua de corte com Abridor de mão da Axt Wood & Steel",
-      "Experiência gastronômica com o Leo (1 assinante por vez, serão 10 programas)",
-      "Kit Wessel",
-      "Churrascada com o Leo (todos os assinantes juntos)",
-      "Camiseta",
-      "Kit Imperio (a definir)"
+      "Vaga no curso de vinhos da Alexandra Corvo",
+      "Tábua de corte + Abridor da Axt Wood & Steel",
+      "Experiência gastronômica comigo, Léo Corvo (um por vez, 10 encontros exclusivos)",
+      "Kit de Carnes Wessel",
+      "Churrascada comigo",
+      "Camiseta exclusiva do clube",
+      "Kit Cerveja Império"
     ]
   },
   {
     title: "10 Primeiros",
     titleColor: "#FFD700", // Dourado
     borderColor: "#FFD700",
-    icon: <Award className="w-6 h-6" />,
+    icon: "🥇",
     items: [
-      "Experiência gastronômica com o Leo (1 assinante por vez, serão 10 programas)",
-      "Kit Wessel",
-      "Churrascada com o Leo (todos os assinantes juntos)",
-      "Camiseta",
-      "Kit Imperio (a definir)"
+      "Experiência gastronômica comigo, Léo Corvo (um por vez, 10 encontros exclusivos)",
+      "Kit de Carnes Wessel",
+      "Churrascada comigo",
+      "Camiseta exclusiva do clube",
+      "Kit Cerveja Império"
     ]
   },
   {
     title: "25 Primeiros",
     titleColor: "#CD7F32", // Bronze
     borderColor: "#CD7F32",
-    icon: <Gift className="w-6 h-6" />,
+    icon: "🎁",
     items: [
-      "Kit Wessel",
-      "Churrascada com o Leo (todos os assinantes juntos)",
-      "Camiseta",
-      "Kit Imperio (a definir)"
+      "Kit de Carnes Wessel",
+      "Churrascada comigo",
+      "Camiseta exclusiva do clube",
+      "Kit Cerveja Império"
     ]
   },
   {
     title: "50 Primeiros",
     titleColor: "#C0C0C0", // Prata
     borderColor: "#C0C0C0",
-    icon: <Users className="w-6 h-6" />,
+    icon: "👥",
     items: [
-      "Camiseta",
-      "Kit Imperio (a definir)"
+      "Camiseta exclusiva do clube",
+      "Kit Cerveja Império"
     ]
   }
 ]
@@ -136,8 +136,8 @@ export default function BonusSection() {
           transition={{ duration: 0.6, delay: 0.5 }}
           className="mt-12 text-center"
         >
-          <p className="text-lg text-zinc-300 font-semibold">
-            Esses bônus estão disponíveis apenas para os primeiros assinantes.
+          <p className="text-lg text-zinc-300 font-normal">
+            E os <span className="font-bold text-white">100 primeiros</span> assinantes vão ganhar uma Camiseta Exclusiva do Clube.
             <br />
             <span className="text-[#F24957] font-bold">Não perca essa oportunidade!</span>
           </p>
