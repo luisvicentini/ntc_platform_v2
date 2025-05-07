@@ -47,10 +47,19 @@ export async function GET(request: NextRequest) {
     // Verificar cookie de sessão para obter ID do usuário
     if (!userId && sessionCookie?.value) {
       try {
-        const sessionData = JSON.parse(sessionCookie.value);
-        if (sessionData.user && (sessionData.user.uid || sessionData.user.id)) {
-          userId = sessionData.user.uid || sessionData.user.id;
-          console.log("ID do usuário obtido do cookie de sessão:", userId);
+        // Verifica se o valor parece um token JWT (começa com "ey")
+        if (sessionCookie.value.startsWith('ey')) {
+          // É um token JWT, não um objeto JSON
+          console.log("Cookie de sessão contém um token JWT");
+          // Para stories, apenas registrar, não precisamos autenticar totalmente
+          userId = 'user_from_jwt';
+        } else {
+          // Tenta processar como JSON
+          const sessionData = JSON.parse(sessionCookie.value);
+          if (sessionData.user && (sessionData.user.uid || sessionData.user.id)) {
+            userId = sessionData.user.uid || sessionData.user.id;
+            console.log("ID do usuário obtido do cookie de sessão:", userId);
+          }
         }
       } catch (error) {
         console.warn("Erro ao analisar cookie de sessão:", error);

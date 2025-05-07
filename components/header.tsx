@@ -270,33 +270,39 @@ const MobileFooter: React.FC<MobileFooterProps> = ({ menuItems, userData, user, 
         <div className="flex h-16 items-center justify-between">
 
           {/* Menu de navegação */}
-          <div className="w-full flex justify-center z-10">
-            <nav className="flex items-center justify-center space-x-1">
+          <div className="w-full justify-between z-10">
+            <nav className="flex justify-between space-x-2"> 
               {menuItems.map((item) => (
                 item.onClick ? (
-                  <Button
-                    key={item.href}
-                    variant="ghost"
-                    className={cn(
-                      pathname === item.href ? "bg-zinc-100 text-zinc-500 rounded-xl text-xl" : "text-zinc-400 hover:text-zinc-500 rounded-xl text-lg flex flex-row items-center"
-                    )}
-                    onClick={item.onClick}
-                  >
-                    {item.icon}
-                    <span className="text-[8px]">{item.label}</span>
-                  </Button>
-                ) : (
-                  <Link key={item.href} href={item.href}>
+                  <div className="flex flex-col items-center">
                     <Button
+                      key={item.href}
                       variant="ghost"
+                      size="default"
                       className={cn(
-                        pathname === item.href ? "bg-zinc-100 text-zinc-500 rounded-xl text-xl" : "text-zinc-400 hover:text-zinc-500 rounded-xl text-lg flex flex-row items-center"
+                        pathname === item.href ? "bg-zinc-100 text-zinc-500 rounded-xl text-xl flex flex-col items-center justify-center" : "text-zinc-400 hover:text-zinc-500 rounded-xl text-lg flex flex-col items-center justify-center"
                       )}
+                      onClick={item.onClick}
                     >
                       {item.icon}
-                      <span className="text-[8px]">{item.label}</span>
-                    </Button>
-                  </Link>
+                      </Button>
+                      <span className="text-[8px] text-zinc-400">{item.label}</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center">
+                    <Link key={item.href} href={item.href}>
+                      <Button
+                        variant="ghost"
+                        size="default"
+                        className={cn(
+                          pathname === item.href ? "bg-zinc-100 text-zinc-500 rounded-xl text-xl flex flex-col items-center justify-between" : "text-zinc-400 hover:text-zinc-500 rounded-xl text-lg flex flex-col items-center justify-center"
+                        )}
+                      >
+                        {item.icon}
+                      </Button>
+                    </Link>
+                    <span className="text-[8px] text-zinc-400">{item.label}</span>
+                  </div>
                 )
               ))}
             </nav>

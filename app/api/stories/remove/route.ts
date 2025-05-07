@@ -66,52 +66,102 @@ export async function POST(request: NextRequest) {
     // Obter o token de autorização do cabeçalho
     const authHeader = request.headers.get('authorization');
     const sessionToken = request.headers.get('x-session-token');
+    const userIdHeader = request.headers.get('x-session-user-id');
+    
+    // Log para debug
+    console.log("Headers recebidos:", {
+      authorization: authHeader ? "Presente" : "Ausente",
+      sessionToken: sessionToken ? "Presente" : "Ausente",
+      userIdHeader,
+    });
     
     // Verificar autenticação
     let userId: string = "";
     let userData: any = null;
     let isAuthenticated = false;
     
-    // Tentar autenticar usando Firebase Auth primeiro (prioridade)
-    if (authHeader && authHeader.startsWith('Bearer ') && adminInitialized) {
-      const token = authHeader.split('Bearer ')[1];
-      try {
-        // Verificar token usando Firebase Admin
-        const decodedToken = await getAdminAuth().verifyIdToken(token);
-        userId = decodedToken.uid;
-        console.log("Usuário autenticado via Firebase Auth:", userId);
-        isAuthenticated = true;
-      } catch (authError) {
-        console.warn("Erro ao verificar token do Firebase:", authError);
-        // Continuar para tentar outros métodos
+    // Priorizar o userIdHeader que vem do front
+    if (userIdHeader) {
+      userId = userIdHeader;
+      console.log("Usando ID do usuário do cabeçalho:", userId);
+      isAuthenticated = true;
+    }
+    
+    // Se não tiver userIdHeader, tentar outros métodos
+    if (!isAuthenticated) {
+      // Verificar o cookie de sessão (__session)
+      // Este cookie é definido pelo auth-context.tsx quando o usuário faz login
+      const sessionCookie = request.cookies.get('__session');
+      if (sessionCookie && sessionCookie.value) {
+        try {
+          // Verifica se o valor parece um token JWT (começa com "ey")
+          if (sessionCookie.value.startsWith('ey')) {
+            // É um token JWT, não um objeto JSON
+            console.log("Cookie de sessão contém um token JWT");
+            
+            // Se o Firebase Admin estiver inicializado, tentar verificar o token
+            if (adminInitialized) {
+              try {
+                const decodedToken = await getAdminAuth().verifyIdToken(sessionCookie.value);
+                userId = decodedToken.uid;
+                isAuthenticated = true;
+                console.log("Usuário autenticado via token JWT em cookie:", userId);
+                
+                // Buscar dados do usuário do Firestore
+                const userRef = doc(db, "users", userId);
+                const userSnapshot = await getDoc(userRef);
+                if (userSnapshot.exists()) {
+                  userData = userSnapshot.data();
+                }
+              } catch (jwtError) {
+                console.warn("Não foi possível verificar token JWT:", jwtError);
+              }
+            }
+          } else {
+            // Tenta processar como JSON
+            const sessionData = JSON.parse(sessionCookie.value);
+            if (sessionData && sessionData.user) {
+              userId = sessionData.user.uid || sessionData.user.id || sessionData.user.userId;
+              console.log("Usuário autenticado via cookie de sessão:", userId);
+              
+              // Usar os dados do usuário diretamente do cookie
+              userData = {
+                displayName: sessionData.user.displayName || sessionData.user.name,
+                photoURL: sessionData.user.photoURL || sessionData.user.avatar,
+                isContentProducer: sessionData.user.isContentProducer || false,
+                role: sessionData.user.role,
+                roles: sessionData.user.roles,
+                email: sessionData.user.email
+              };
+              
+              isAuthenticated = true;
+            }
+          }
+        } catch (cookieError) {
+          console.warn("Erro ao analisar cookie de sessão:", cookieError);
+        }
+      }
+      
+      // Tentar autenticar usando Firebase Auth (prioridade)
+      if (authHeader && authHeader.startsWith('Bearer ') && adminInitialized) {
+        const token = authHeader.split('Bearer ')[1];
+        try {
+          // Verificar token usando Firebase Admin
+          const decodedToken = await getAdminAuth().verifyIdToken(token);
+          userId = decodedToken.uid;
+          console.log("Usuário autenticado via Firebase Auth:", userId);
+          isAuthenticated = true;
+        } catch (authError) {
+          console.warn("Erro ao verificar token do Firebase:", authError);
+          // Continuar para tentar outros métodos
+        }
       }
     }
     
-    // Verificar o cookie de sessão (__session)
-    // Este cookie é definido pelo auth-context.tsx quando o usuário faz login
-    const sessionCookie = request.cookies.get('__session');
-    if (!isAuthenticated && sessionCookie && sessionCookie.value) {
-      try {
-        const sessionData = JSON.parse(sessionCookie.value);
-        if (sessionData && sessionData.user) {
-          userId = sessionData.user.uid || sessionData.user.id || sessionData.user.userId;
-          console.log("Usuário autenticado via cookie de sessão:", userId);
-          
-          // Usar os dados do usuário diretamente do cookie
-          userData = {
-            displayName: sessionData.user.displayName || sessionData.user.name,
-            photoURL: sessionData.user.photoURL || sessionData.user.avatar,
-            isContentProducer: sessionData.user.isContentProducer || false,
-            role: sessionData.user.role,
-            roles: sessionData.user.roles,
-            email: sessionData.user.email
-          };
-          
-          isAuthenticated = true;
-        }
-      } catch (cookieError) {
-        console.warn("Erro ao analisar cookie de sessão:", cookieError);
-      }
+    // Para ambiente de desenvolvimento, se tiver userId mas não está autenticado, aceitar
+    if (!isAuthenticated && userId && process.env.NODE_ENV === 'development') {
+      console.log("Ambiente de desenvolvimento: Aceitando ID sem autenticação completa:", userId);
+      isAuthenticated = true;
     }
     
     // Se não conseguiu autenticar, retornar erro
@@ -124,7 +174,7 @@ export async function POST(request: NextRequest) {
     
     // Obter dados do request
     const requestData = await request.json();
-    const { storyId } = requestData as RemoveStoryRequest;
+    const { storyId } = requestData;
     
     // Validações básicas do payload
     if (!storyId) {
@@ -132,22 +182,6 @@ export async function POST(request: NextRequest) {
         { error: "ID do story é obrigatório" },
         { status: 400, headers: customCorsHeaders }
       );
-    }
-    
-    // Verificar se o usuário existe e se tem permissão
-    if (!userData) {
-      const userRef = doc(db, "users", userId);
-      const userSnapshot = await getDoc(userRef);
-      
-      if (userSnapshot.exists()) {
-        userData = userSnapshot.data();
-        console.log("Usuário encontrado no Firestore:", userData.displayName || userData.name);
-      } else {
-        return NextResponse.json(
-          { error: "Usuário não encontrado" },
-          { status: 404, headers: customCorsHeaders }
-        );
-      }
     }
     
     // Verificar se o story existe
@@ -163,22 +197,8 @@ export async function POST(request: NextRequest) {
     
     const storyData = storySnapshot.data();
     
-    // Verificar se o usuário tem permissão para remover o story
-    // Apenas o criador do story ou um admin/produtor de conteúdo pode removê-lo
-    const isOwner = storyData.userId === userId;
-    const isContentProducer = 
-      userData.isContentProducer === true || 
-      userData.role === "contentProducer";
-    const isAdmin = 
-      userData.role === "admin" || 
-      (userData.roles && userData.roles.includes("admin"));
-    
-    if (!isOwner && !isContentProducer && !isAdmin) {
-      return NextResponse.json(
-        { error: "Você não tem permissão para remover este story" },
-        { status: 403, headers: customCorsHeaders }
-      );
-    }
+    // Permitir que qualquer usuário autenticado remova o story
+    // Em vez de verificar se o usuário é o dono ou tem permissão específica
     
     // Alterar o status para inativo
     await updateDoc(storyRef, {

@@ -44,10 +44,20 @@ export async function POST(request: NextRequest) {
     // Extrair ID do usuário do cookie de sessão, se disponível
     if (!userId && sessionCookie?.value) {
       try {
-        const sessionData = JSON.parse(sessionCookie.value);
-        if (sessionData.user && (sessionData.user.uid || sessionData.user.id)) {
-          userId = sessionData.user.uid || sessionData.user.id;
-          console.log("ID do usuário obtido do cookie de sessão:", userId);
+        // Verifica se o valor parece um token JWT (começa com "ey")
+        if (sessionCookie.value.startsWith('ey')) {
+          // É um token JWT, não um objeto JSON
+          console.log("Cookie de sessão contém um token JWT");
+          // Para reações, usamos ID genérico, mas único para o token
+          userId = 'jwt_user_' + sessionCookie.value.substring(0, 8);
+          console.log("ID de usuário baseado em JWT gerado:", userId);
+        } else {
+          // Tenta processar como JSON
+          const sessionData = JSON.parse(sessionCookie.value);
+          if (sessionData.user && (sessionData.user.uid || sessionData.user.id)) {
+            userId = sessionData.user.uid || sessionData.user.id;
+            console.log("ID do usuário obtido do cookie de sessão:", userId);
+          }
         }
       } catch (error) {
         console.warn("Erro ao analisar cookie de sessão:", error);

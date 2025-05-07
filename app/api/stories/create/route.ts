@@ -7,6 +7,15 @@ import { v4 as uuidv4 } from "uuid"
 import admin from "firebase-admin"
 import { getAuth as getAdminAuth } from 'firebase-admin/auth'
 
+// Configuração para aumentar o limite de tamanho da requisição
+export const config = {
+  api: {
+    bodyParser: {
+      sizeLimit: '20mb' // Aumentar o limite para 20MB
+    }
+  }
+}
+
 // Verificar se Firebase Admin já está inicializado
 let adminInitialized = false;
 let adminApp;
@@ -96,22 +105,54 @@ export async function POST(request: NextRequest) {
     // Verificar o cookie de sessão (__session)
     // Este cookie é definido pelo auth-context.tsx quando o usuário faz login
     const sessionCookie = request.cookies.get('__session');
+    
+    if (authHeader && authHeader.startsWith('Bearer ') && adminInitialized) {
+      // ... existing code ...
+    } 
+    
+    // Verificar o cookie de sessão
     if (!isAuthenticated && sessionCookie && sessionCookie.value) {
       try {
-        const sessionData = JSON.parse(sessionCookie.value);
-        if (sessionData && sessionData.user) {
-          userId = sessionData.user.uid || sessionData.user.id || sessionData.user.userId;
-          console.log("Usuário autenticado via cookie de sessão:", userId);
+        // Verifica se o valor parece um token JWT (começa com "ey")
+        if (sessionCookie.value.startsWith('ey')) {
+          // É um token JWT, não um objeto JSON
+          console.log("Cookie de sessão contém um token JWT");
           
-          // Usar os dados do usuário diretamente do cookie
-          userData = {
-            displayName: sessionData.user.displayName || sessionData.user.name,
-            photoURL: sessionData.user.photoURL || sessionData.user.avatar,
-            isContentProducer: sessionData.user.isContentProducer || false,
-            email: sessionData.user.email
-          };
-          
-          isAuthenticated = true;
+          // Se o Firebase Admin estiver inicializado, tentar verificar o token
+          if (adminInitialized) {
+            try {
+              const decodedToken = await getAdminAuth().verifyIdToken(sessionCookie.value);
+              userId = decodedToken.uid;
+              isAuthenticated = true;
+              console.log("Usuário autenticado via token JWT em cookie:", userId);
+              
+              // Buscar dados do usuário do Firestore
+              const userRef = doc(db, "users", userId);
+              const userSnapshot = await getDoc(userRef);
+              if (userSnapshot.exists()) {
+                userData = userSnapshot.data();
+              }
+            } catch (jwtError) {
+              console.warn("Não foi possível verificar token JWT:", jwtError);
+            }
+          }
+        } else {
+          // Tenta processar como JSON
+          const sessionData = JSON.parse(sessionCookie.value);
+          if (sessionData && sessionData.user) {
+            userId = sessionData.user.uid || sessionData.user.id || sessionData.user.userId;
+            console.log("Usuário autenticado via cookie de sessão:", userId);
+            
+            // Usar os dados do usuário diretamente do cookie
+            userData = {
+              displayName: sessionData.user.displayName || sessionData.user.name,
+              photoURL: sessionData.user.photoURL || sessionData.user.avatar,
+              isContentProducer: sessionData.user.isContentProducer || false,
+              email: sessionData.user.email
+            };
+            
+            isAuthenticated = true;
+          }
         }
       } catch (cookieError) {
         console.warn("Erro ao analisar cookie de sessão:", cookieError);
@@ -242,14 +283,21 @@ export async function POST(request: NextRequest) {
           // Se ainda não encontrou o usuário, usar dados do cookie de sessão
           if (!userData && sessionCookie?.value) {
             try {
-              const sessionData = JSON.parse(sessionCookie.value);
-              if (sessionData.user) {
-                userData = {
-                  displayName: sessionData.user.displayName || sessionData.user.name,
-                  photoURL: sessionData.user.photoURL || sessionData.user.avatar,
-                  isContentProducer: true
-                };
-                console.log("Usuário encontrado no cookie de sessão:", userData.displayName);
+              // Verifica se o valor parece um token JWT (começa com "ey")
+              if (sessionCookie.value.startsWith('ey')) {
+                // É um token JWT, não precisamos processar pois já tratamos acima
+                console.log("Cookie JWT já processado anteriormente");
+              } else {
+                // Tenta processar como JSON
+                const sessionData = JSON.parse(sessionCookie.value);
+                if (sessionData.user) {
+                  userData = {
+                    displayName: sessionData.user.displayName || sessionData.user.name,
+                    photoURL: sessionData.user.photoURL || sessionData.user.avatar,
+                    isContentProducer: true
+                  };
+                  console.log("Usuário encontrado no cookie de sessão:", userData.displayName);
+                }
               }
             } catch (error) {
               console.warn("Erro ao processar cookie de sessão:", error);

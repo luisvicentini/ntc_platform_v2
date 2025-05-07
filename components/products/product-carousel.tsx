@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, TouchEvent } from "react"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, Ticket } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { Card } from "@/components/ui/card"
@@ -208,11 +208,11 @@ export function ProductCarousel({ products, onProductClick, hasActiveSubscriptio
             </div>
             
             {/* Informações sobrepostas na imagem para mobile */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-3 text-white">
-              <h3 className="font-medium text-sm truncate">{product.name}</h3>
-              <p className="text-xs opacity-80 mt-1">
-                Cupom: {maskVoucherCode(product.voucher)}
-              </p>
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-5 pt-16 text-white">
+              <h3 className="font-medium text-md truncate">{product.name}</h3>
+              <div className="flex items-center gap-2 text-sm opacity-80 mt-1">
+                <Ticket className="w-4 h-4" /> CUPOM: {maskVoucherCode(product.voucher).toUpperCase()}
+              </div>
             </div>
           </div>
           

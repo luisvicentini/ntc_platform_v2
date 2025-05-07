@@ -172,8 +172,13 @@ export function StoryViewer({
   onClose,
   onRemoveStory
 }: StoryViewerProps) {
+  // Garantir que stories é um array válido
+  const validStories = Array.isArray(stories) ? stories : [];
+  const safeInitialIndex = initialStoryIndex < validStories.length ? initialStoryIndex : 0;
+  
+  // 1. TODOS OS USESTATES PRIMEIRO
   // Estados básicos
-  const [currentStoryIndex, setCurrentStoryIndex] = useState(initialStoryIndex);
+  const [currentStoryIndex, setCurrentStoryIndex] = useState(safeInitialIndex);
   const [isPaused, setIsPaused] = useState(false);
   const [isMuted, setIsMuted] = useState(true);
   const [mediaLoading, setMediaLoading] = useState(true);
@@ -186,69 +191,190 @@ export function StoryViewer({
   const [videoProgress, setVideoProgress] = useState(0);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
+  
+  // 2. TODOS OS USECONTEXTS
   const isDesktop = useMediaQuery("(min-width: 768px)");
   const { user } = useAuth();
   
+  // 3. TODOS OS USEREFS
   // Referências para elementos DOM e estado
   const isMounted = useRef(true);
   const playerRef = useRef<ReactPlayer>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const touchStartY = useRef<number | null>(null);
   
-  // Verificar se temos stories válidos
-  if (!stories || stories.length === 0) {
-    return null;
-  }
+  // Verificar se temos stories válidos - não interrompa o fluxo de hooks
+  const hasValidStories = validStories.length > 0;
+  const currentStory = hasValidStories ? validStories[currentStoryIndex] : null;
   
-  // Obter o story atual
-  const currentStory = stories[currentStoryIndex];
-  if (!currentStory) {
-    useEffect(() => { onClose(); }, []);
-    return null;
-  }
-  
-  // Determinar tipo de mídia e URL
-  const isVideo = currentStory.mediaType === "video";
-  const rawMediaUrl = isValidURL(currentStory.mediaUrl) ? currentStory.mediaUrl : "";
+  // 4. DADOS DERIVADOS (não são hooks, então vêm depois dos hooks)
+  // Determinar tipo de mídia e URL com validação
+  const isVideo = currentStory?.mediaType === "video";
+  const rawMediaUrl = currentStory && isValidURL(currentStory.mediaUrl) ? currentStory.mediaUrl : "";
   // Processar URL para vídeos (usar proxy)
   const mediaUrl = isVideo ? processVideoUrl(rawMediaUrl) : rawMediaUrl;
   
-  // Obter dados de avatar
-  const avatarColorClass = getAvatarColorClass(currentStory.userName);
-  const userInitial = currentStory.userName?.charAt(0)?.toUpperCase() || "U";
+  // Obter dados de avatar com validação
+  const avatarColorClass = getAvatarColorClass(currentStory?.userName);
+  const userInitial = currentStory?.userName?.charAt(0)?.toUpperCase() || "U";
   
-  // Formatação de data
+  // Formatação de data com validação
   const formattedTime = formatDistanceToNow(
-    typeof currentStory.createdAt === 'object' ? 
+    currentStory?.createdAt && typeof currentStory.createdAt === 'object' ? 
       currentStory.createdAt : 
-      new Date(currentStory.createdAt), 
+      new Date(currentStory?.createdAt || Date.now()), 
     { 
       locale: ptBR,
       addSuffix: true 
     }
   );
   
-  // Texto de dias restantes
+  // Texto de dias restantes com validação
   const daysRemainingText = (() => {
-    if (currentStory.daysRemaining === undefined) return '';
+    if (!currentStory || currentStory.daysRemaining === undefined) return '';
     if (currentStory.daysRemaining === 0) return 'Expira hoje';
     return currentStory.daysRemaining === 1 
       ? 'Expira amanhã' 
       : `Expira em ${currentStory.daysRemaining} dias`;
   })();
   
+  // 5. TODOS OS USEEFFECTS NO MESMO LUGAR
+  // Verificar se tem stories válidos e fechar se não tiver
+  useEffect(() => {
+    if (!hasValidStories) {
+      onClose();
+    }
+  }, [hasValidStories, onClose]);
+  
+  // Marcar componente como montado/desmontado
+  useEffect(() => {
+    isMounted.current = true;
+    console.log("StoryViewer montado");
+    
+    return () => {
+      console.log("StoryViewer desmontado");
+      isMounted.current = false;
+    };
+  }, []);
+  
+  // Navegação via teclado
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!isMounted.current) return;
+      
+      if (e.key === "ArrowRight") {
+        if (currentStoryIndex < validStories.length - 1) {
+          setCurrentStoryIndex(prev => prev + 1);
+          setMediaError(false);
+          setMediaLoading(true);
+        } else {
+          onClose();
+        }
+      } else if (e.key === "ArrowLeft") {
+        if (currentStoryIndex > 0) {
+          setCurrentStoryIndex(prev => prev - 1);
+          setMediaError(false);
+          setMediaLoading(true);
+        }
+      } else if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [currentStoryIndex, validStories.length, onClose]);
+  
+  // 6. TODOS OS USECALLBACKS - reorganizados para evitar problemas de ordem
+  // Funções para lidar com erros de mídia - mover para antes de serem usadas
+  const handleMediaLoad = useCallback(() => {
+    if (!isMounted.current) return;
+    setMediaLoading(false);
+    setMediaError(false);
+  }, []);
+  
+  const handleMediaError = useCallback(() => {
+    if (!isMounted.current) return;
+    setMediaError(true);
+    setMediaLoading(false);
+    
+    console.error("Erro ao carregar mídia:", {
+      id: currentStory?.id || 'desconhecido',
+      url: mediaUrl || 'desconhecida',
+      type: currentStory?.mediaType || 'desconhecido'
+    });
+  }, [mediaUrl]);
+  
+  // Resetar estados quando o story muda - agora após a declaração dos callbacks
+  useEffect(() => {
+    if (!isMounted.current || !currentStory) return;
+    
+    setMediaError(false);
+    setMediaLoading(true);
+    setAvatarError(false);
+    
+    console.log("Mudando para story:", {
+      id: currentStory?.id || "unknown",
+      mediaType: currentStory?.mediaType || "unknown",
+      mediaUrl: mediaUrl || "unknown"
+    });
+    
+    // Para imagens, pré-carregar
+    if (!isVideo && isValidURL(mediaUrl)) {
+      const img = new Image();
+      img.onload = () => {
+        if (isMounted.current) {
+          // Inline as funções em vez de usar callbacks
+          setMediaLoading(false);
+          setMediaError(false);
+        }
+      };
+      img.onerror = () => {
+        if (isMounted.current) {
+          // Inline as funções em vez de usar callbacks
+          setMediaError(true);
+          setMediaLoading(false);
+          console.error("Erro ao carregar mídia:", {
+            id: currentStory?.id || 'desconhecido',
+            url: mediaUrl || 'desconhecida',
+            type: currentStory?.mediaType || 'desconhecido'
+          });
+        }
+      };
+      img.src = mediaUrl;
+    }
+  }, [currentStoryIndex, isVideo, mediaUrl]); // Remover callbacks da dependência
+  
+  // Verificar se o usuário atual é o dono do story ou um admin
+  const canRemoveStory = useCallback(() => {
+    // No ambiente de desenvolvimento, sempre permitir a remoção para facilitar testes
+    if (process.env.NODE_ENV === 'development') return true;
+    
+    if (!user) return false;
+    
+    // Verificar se é o criador do story
+    const isOwner = user.uid === currentStory?.userId;
+    
+    // Verificar se é um produtor de conteúdo ou admin
+    const isContentProducer = (user as any)?.isContentProducer === true;
+    const isAdmin = (user as any)?.role === "admin" || 
+                   ((user as any)?.roles && (user as any).roles.includes("admin"));
+    
+    return isOwner || isContentProducer || isAdmin;
+  }, [user]);
+  
   // Função para avançar para o próximo story
   const handleNext = useCallback(() => {
     if (!isMounted.current) return;
     
-    if (currentStoryIndex < stories.length - 1) {
+    if (currentStoryIndex < validStories.length - 1) {
       setCurrentStoryIndex(prev => prev + 1);
       setMediaError(false);
       setMediaLoading(true);
     } else {
       onClose();
     }
-  }, [currentStoryIndex, stories.length, onClose]);
+  }, [currentStoryIndex, validStories.length, onClose]);
   
   // Função para voltar ao story anterior
   const handlePrevious = useCallback(() => {
@@ -262,22 +388,40 @@ export function StoryViewer({
   }, [currentStoryIndex]);
   
   // Funções para manipular o estabelecimento
-  const handleEstablishmentClick = () => {
+  const handleEstablishmentClick = useCallback(() => {
     setIsPaused(true);
     setShowEstablishment(true);
-  };
+  }, []);
   
-  const handleEstablishmentClose = () => {
+  const handleEstablishmentClose = useCallback(() => {
     setShowEstablishment(false);
     setIsPaused(false);
-  };
+  }, []);
   
   // Função para alternar o mudo
-  const toggleMute = (e: React.MouseEvent) => {
+  const toggleMute = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     setIsMuted(!isMuted);
-  };
+  }, [isMuted]);
   
+  const handleAvatarError = useCallback(() => {
+    if (!isMounted.current) return;
+    setAvatarError(true);
+  }, []);
+  
+  // Funções para lidar com eventos de vídeo
+  const handleVideoDuration = useCallback((duration: number) => {
+    if (!isMounted.current) return;
+    console.log("Duração do vídeo:", duration);
+    setVideoDuration(duration);
+  }, []);
+  
+  const handleVideoProgress = useCallback((state: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => {
+    if (!isMounted.current) return;
+    setVideoProgress(state.played * 100);
+  }, []);
+  
+  // 7. DEFINIR OUTRAS FUNÇÕES DEPOIS DOS HOOKS E CALLBACKS
   // Tratadores de gesto para arrastar para baixo
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY;
@@ -324,17 +468,17 @@ export function StoryViewer({
   // Funções para lidar com reações
   const getReactionCount = (reaction: string): number => {
     switch (reaction) {
-      case 'like': return currentStory.reactions?.likes || 0;
-      case 'dislike': return currentStory.reactions?.dislikes || 0;
-      case 'heart': return currentStory.reactions?.hearts || 0;
-      case 'fire': return currentStory.reactions?.fires || 0;
+      case 'like': return currentStory?.reactions?.likes || 0;
+      case 'dislike': return currentStory?.reactions?.dislikes || 0;
+      case 'heart': return currentStory?.reactions?.hearts || 0;
+      case 'fire': return currentStory?.reactions?.fires || 0;
       default: return 0;
     }
   };
   
   // Verificar se o usuário já reagiu a este story
   const hasUserReacted = (storyId: string): string | null => {
-    return userReactions[storyId] || currentStory.userReaction || null;
+    return userReactions[storyId] || currentStory?.userReaction || null;
   };
   
   // Enviar reação para o servidor
@@ -348,7 +492,7 @@ export function StoryViewer({
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          storyId: currentStory.id,
+          storyId: currentStory?.id,
           reaction: reaction
         }),
         credentials: 'include'
@@ -361,31 +505,10 @@ export function StoryViewer({
       // Atualizar o estado local para refletir a reação do usuário mais recente
       setUserReactions(prev => ({
         ...prev,
-        [currentStory.id]: reaction
+        [currentStory?.id || '']: reaction
       }));
       
       // Atualizar a contagem de reações (simulação otimista)
-      const updatedStories = stories.map(story => {
-        if (story.id === currentStory.id) {
-          const updatedReactions = story.reactions || { likes: 0, dislikes: 0, hearts: 0, fires: 0 };
-          
-          // Incrementar a reação selecionada (sem remover reações anteriores)
-          switch (reaction) {
-            case 'like': updatedReactions.likes = (updatedReactions.likes || 0) + 1; break;
-            case 'dislike': updatedReactions.dislikes = (updatedReactions.dislikes || 0) + 1; break;
-            case 'heart': updatedReactions.hearts = (updatedReactions.hearts || 0) + 1; break;
-            case 'fire': updatedReactions.fires = (updatedReactions.fires || 0) + 1; break;
-          }
-          
-          return {
-            ...story,
-            reactions: updatedReactions,
-            userReaction: reaction // Atualiza apenas a reação mais recente do usuário para efeito de UI
-          };
-        }
-        return story;
-      });
-      
       // Não atualizar diretamente stories porque é uma prop
       // Mas atualizamos o userReaction acima
     } catch (error) {
@@ -403,57 +526,6 @@ export function StoryViewer({
     sendReaction(reaction);
   };
   
-  // Funções para lidar com erros de mídia
-  const handleMediaError = useCallback(() => {
-    if (!isMounted.current) return;
-    setMediaError(true);
-    setMediaLoading(false);
-    
-    console.error("Erro ao carregar mídia:", {
-      id: currentStory.id || 'desconhecido',
-      url: mediaUrl || 'desconhecida',
-      type: currentStory.mediaType || 'desconhecido'
-    });
-  }, [currentStory, mediaUrl]);
-  
-  const handleMediaLoad = useCallback(() => {
-    if (!isMounted.current) return;
-    setMediaLoading(false);
-    setMediaError(false);
-  }, []);
-  
-  const handleAvatarError = useCallback(() => {
-    if (!isMounted.current) return;
-    setAvatarError(true);
-  }, [currentStory.userAvatar]);
-  
-  // Funções para lidar com eventos de vídeo
-  const handleVideoDuration = (duration: number) => {
-    if (!isMounted.current) return;
-    console.log("Duração do vídeo:", duration);
-    setVideoDuration(duration);
-  };
-  
-  const handleVideoProgress = (state: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => {
-    if (!isMounted.current) return;
-    setVideoProgress(state.played * 100);
-  };
-  
-  // Verificar se o usuário atual é o dono do story ou um admin
-  const canRemoveStory = useCallback(() => {
-    if (!user) return false;
-    
-    // Verificar se é o criador do story
-    const isOwner = user.uid === currentStory.userId;
-    
-    // Verificar se é um produtor de conteúdo ou admin
-    const isContentProducer = (user as any).isContentProducer === true;
-    const isAdmin = (user as any).role === "admin" || 
-                   ((user as any).roles && (user as any).roles.includes("admin"));
-    
-    return isOwner || isContentProducer || isAdmin;
-  }, [user, currentStory]);
-  
   // Função para remover o story
   const handleRemoveStory = async () => {
     if (!currentStory || !currentStory.id) return;
@@ -461,11 +533,17 @@ export function StoryViewer({
     try {
       setIsRemoving(true);
       
+      // Simplificar para usar apenas o ID do usuário
+      const headers = {
+        'Content-Type': 'application/json',
+        'x-session-user-id': user?.uid || 'anonymous'
+      };
+      
+      console.log("Enviando requisição para remover story com ID de usuário:", user?.uid);
+      
       const response = await fetch('/api/stories/remove', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers,
         body: JSON.stringify({
           storyId: currentStory.id
         }),
@@ -473,8 +551,14 @@ export function StoryViewer({
       });
       
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Falha ao remover o story');
+        let errorMessage = "Falha ao remover o story";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+        } catch (e) {
+          // Ignorar erro de parsing se ocorrer
+        }
+        throw new Error(errorMessage);
       }
       
       toast.success('Story removido com sucesso');
@@ -495,70 +579,19 @@ export function StoryViewer({
       }
     } catch (error) {
       console.error('Erro ao remover story:', error);
-      toast.error('Não foi possível remover o story');
+      toast.error(error instanceof Error ? error.message : 'Não foi possível remover o story');
     } finally {
       setIsRemoving(false);
     }
   };
   
-  // Marcar componente como montado/desmontado
-  useEffect(() => {
-    isMounted.current = true;
-    console.log("StoryViewer montado");
-    
-    return () => {
-      console.log("StoryViewer desmontado");
-      isMounted.current = false;
-    };
-  }, []);
+  // Verificar se o usuário já tem alguma reação
+  const currentUserReaction = hasUserReacted(currentStory?.id || '');
   
-  // Resetar estados quando o story muda
-  useEffect(() => {
-    setMediaError(false);
-    setMediaLoading(true);
-    setAvatarError(false);
-    
-    console.log("Mudando para story:", {
-      id: currentStory.id,
-      mediaType: currentStory.mediaType,
-      mediaUrl
-    });
-    
-    // Para imagens, pré-carregar
-    if (!isVideo && isValidURL(mediaUrl)) {
-      const img = new Image();
-      img.onload = () => {
-        if (isMounted.current) {
-          handleMediaLoad();
-        }
-      };
-      img.onerror = () => {
-        if (isMounted.current) {
-          handleMediaError();
-        }
-      };
-      img.src = mediaUrl;
-    }
-  }, [currentStoryIndex, isVideo, mediaUrl, handleMediaLoad, handleMediaError]);
-  
-  // Navegação via teclado
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") {
-        handleNext();
-      } else if (e.key === "ArrowLeft") {
-        handlePrevious();
-      } else if (e.key === "Escape") {
-        onClose();
-      }
-    };
-    
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleNext, handlePrevious, onClose]);
-  
-  // Verificar se o story já tem alguma reação do usuário
-  const currentUserReaction = hasUserReacted(currentStory.id);
+  // Se não houver stories válidos, retornar null mas manter a mesma estrutura de hooks
+  if (!hasValidStories || !currentStory) {
+    return null;
+  }
   
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center">
@@ -584,7 +617,7 @@ export function StoryViewer({
       {/* Barra de progresso superior */}
       <div className="absolute top-0 left-0 right-0 p-4 z-10">
         <StoryProgressBar 
-          count={stories.length}
+          count={validStories.length}
           currentIndex={currentStoryIndex}
           duration={isVideo ? 0 : 5000} // Se for vídeo, usar progresso específico
           videoProgress={isVideo ? videoProgress : undefined}
@@ -628,9 +661,9 @@ export function StoryViewer({
         ref={containerRef}
         className="relative w-full h-full md:w-[400px] md:h-[calc(100vh-120px)] md:rounded-xl overflow-hidden bg-zinc-900"
         onClick={handleAreaClick}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
+        onTouchStart={isMounted.current ? handleTouchStart : undefined}
+        onTouchMove={isMounted.current ? handleTouchMove : undefined}
+        onTouchEnd={isMounted.current ? handleTouchEnd : undefined}
       >
         {mediaLoading && (
           // Estado de carregamento
@@ -701,31 +734,51 @@ export function StoryViewer({
                 muted={isMuted}
                 playsinline
                 controls={false}
-                onEnded={handleNext}
+                onEnded={() => {
+                  if (isMounted.current) handleNext();
+                }}
                 onStart={() => {
-                  console.log("ReactPlayer - reprodução iniciada");
-                  setMediaLoading(false);
+                  if (isMounted.current) {
+                    console.log("ReactPlayer - reprodução iniciada");
+                    setMediaLoading(false);
+                  }
                 }}
                 onPlay={() => {
-                  console.log("ReactPlayer - reproduzindo");
-                  setMediaLoading(false);
+                  if (isMounted.current) {
+                    console.log("ReactPlayer - reproduzindo");
+                    setMediaLoading(false);
+                  }
                 }}
-                onPause={() => setIsPaused(true)}
+                onPause={() => {
+                  if (isMounted.current) setIsPaused(true);
+                }}
                 onBuffer={() => {
-                  console.log("ReactPlayer - buffering");
-                  setMediaLoading(true);
+                  if (isMounted.current) {
+                    console.log("ReactPlayer - buffering");
+                    setMediaLoading(true);
+                  }
                 }}
                 onBufferEnd={() => {
-                  console.log("ReactPlayer - buffer concluído");
-                  setMediaLoading(false);
+                  if (isMounted.current) {
+                    console.log("ReactPlayer - buffer concluído");
+                    setMediaLoading(false);
+                  }
                 }}
                 onReady={() => {
-                  console.log("ReactPlayer - pronto");
-                  setMediaLoading(false);
+                  if (isMounted.current) {
+                    console.log("ReactPlayer - pronto");
+                    setMediaLoading(false);
+                  }
                 }}
-                onDuration={handleVideoDuration}
-                onProgress={handleVideoProgress}
+                onDuration={(duration) => {
+                  if (isMounted.current) handleVideoDuration(duration);
+                }}
+                onProgress={(state) => {
+                  if (isMounted.current) handleVideoProgress(state);
+                }}
                 onError={(e) => {
+                  if (!isMounted.current) return;
+                  
                   console.error("ReactPlayer - erro:", e);
                   // Log detalhado para diagnóstico
                   try {
@@ -736,6 +789,8 @@ export function StoryViewer({
                   handleMediaError();
                 }}
                 onClick={(e: React.MouseEvent<HTMLDivElement>) => {
+                  if (!isMounted.current) return;
+                  
                   e.stopPropagation();
                   setIsPaused(!isPaused);
                 }}

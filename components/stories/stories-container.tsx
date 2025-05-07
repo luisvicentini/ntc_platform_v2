@@ -86,12 +86,24 @@ export function StoriesContainer({
   
   // Handler para quando um story é removido
   const handleStoryRemoved = (storyId: string) => {
+    // Verificar qual era o índice do story que foi removido
+    const removedIndex = stories.findIndex(story => story.id === storyId);
+    
     // Remover story da lista local
     setStories(prevStories => prevStories.filter(story => story.id !== storyId));
     
     // Se o story removido é o que está sendo visualizado, fechar o visualizador
-    if (selectedStoryIndex !== null && stories[selectedStoryIndex]?.id === storyId) {
-      setSelectedStoryIndex(null);
+    // ou navegar para o próximo disponível
+    if (selectedStoryIndex !== null) {
+      // Se era o último story ou único story, fechar o viewer
+      if (stories.length <= 1 || removedIndex >= stories.length - 1) {
+        setSelectedStoryIndex(null);
+      } 
+      // Se removeu um story anterior ao atual, ajustar o índice para manter o story atual visível
+      else if (removedIndex < selectedStoryIndex) {
+        setSelectedStoryIndex(selectedStoryIndex - 1);
+      }
+      // Caso contrário, mantém o mesmo índice (que agora aponta para o próximo story)
     }
     
     // Recarregar a lista de stories do servidor, se disponível

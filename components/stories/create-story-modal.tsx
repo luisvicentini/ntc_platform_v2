@@ -29,6 +29,7 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
   const [isUploading, setIsUploading] = useState(false)
   const [uploadProgress, setUploadProgress] = useState(0)
   const [processingMedia, setProcessingMedia] = useState(false)
+  const [compressingMedia, setCompressingMedia] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<{
     message: string;
@@ -110,6 +111,92 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
     }
   };
   
+  // Função para comprimir imagem
+  const compressImage = async (file: File, maxSizeMB: number = 1): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      setCompressingMedia(true);
+      
+      const reader = new FileReader();
+      reader.onload = (readerEvent) => {
+        const img = new Image();
+        img.onload = () => {
+          // Calcular novas dimensões mantendo a proporção
+          let width = img.width;
+          let height = img.height;
+          const maxDimension = 1200; // Tamanho máximo para qualquer dimensão
+          
+          if (width > height && width > maxDimension) {
+            height = Math.round((height * maxDimension) / width);
+            width = maxDimension;
+          } else if (height > maxDimension) {
+            width = Math.round((width * maxDimension) / height);
+            height = maxDimension;
+          }
+          
+          // Criar canvas para compressão
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          
+          // Desenhar imagem redimensionada
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            setCompressingMedia(false);
+            reject(new Error('Não foi possível criar contexto de canvas'));
+            return;
+          }
+          
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          // Converter para blob com qualidade ajustada
+          let quality = 0.9; // Iniciar com qualidade alta
+          const processBlob = (blob: Blob | null) => {
+            // Se não tiver blob, tratar como erro
+            if (!blob) {
+              setCompressingMedia(false);
+              reject(new Error('Erro ao processar a imagem'));
+              return;
+            }
+            
+            // Se ainda estiver acima do tamanho máximo e qualidade > 0.3, comprimir mais
+            if (blob.size > maxSizeMB * 1024 * 1024 && quality > 0.3) {
+              quality -= 0.1;
+              canvas.toBlob(
+                processBlob, 
+                file.type, 
+                quality
+              );
+            } else {
+              // Criar arquivo a partir do blob
+              const newFile = new File([blob], file.name, {
+                type: file.type,
+                lastModified: Date.now()
+              });
+              
+              setCompressingMedia(false);
+              resolve(newFile);
+            }
+          };
+          
+          canvas.toBlob(
+            processBlob,
+            file.type, 
+            quality
+          );
+        };
+        
+        img.src = readerEvent.target?.result as string;
+      };
+      
+      reader.onerror = () => {
+        setCompressingMedia(false);
+        reject(new Error('Erro ao ler arquivo'));
+      };
+      
+      reader.readAsDataURL(file);
+    });
+  };
+  
   // Função para selecionar mídia
   const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -126,6 +213,12 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
         
         if (!validation.valid) {
           toast.error(validation.message || "Vídeo inválido");
+          return;
+        }
+        
+        // Verificar se o vídeo é muito grande (> 30MB)
+        if (file.size > 30 * 1024 * 1024) {
+          toast.error("O vídeo é muito grande. Por favor, use um vídeo com menos de 30MB.");
           return;
         }
       } else {
@@ -145,11 +238,25 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
           return;
         }
         
-        // Verificar tamanho da imagem (máximo 10MB)
-        const MAX_IMAGE_SIZE = 10 * 1024 * 1024; // 10MB
-        if (file.size > MAX_IMAGE_SIZE) {
-          toast.error("A imagem é muito grande. O tamanho máximo é 10MB.");
-          return;
+        // Se a imagem for maior que 4MB, comprimir
+        if (file.size > 4 * 1024 * 1024) {
+          try {
+            toast.info("Comprimindo imagem para upload...");
+            const compressedFile = await compressImage(file, 2); // Comprimir para no máximo 2MB
+            
+            // Se passou por todas as validações, definir o arquivo comprimido
+            setSelectedMedia(compressedFile);
+            setMediaType("image");
+            
+            // Criar URL para preview
+            const fileURL = URL.createObjectURL(compressedFile);
+            setMediaPreview(fileURL);
+            return;
+          } catch (error) {
+            console.error("Erro ao comprimir imagem:", error);
+            toast.error("Erro ao comprimir imagem. Tente com uma imagem menor.");
+            return;
+          }
         }
       }
       
@@ -180,12 +287,41 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
   // Função para publicar o story
   const handlePublish = async () => {
     if (!selectedMedia || !user) {
-      toast.error('Selecione uma imagem ou vídeo para continuar')
-      return
+      toast.error('Selecione uma imagem ou vídeo para continuar');
+      return;
     }
     
-    setIsUploading(true)
-    setUploadProgress(0)
+    // Verificar o tamanho do arquivo antes de prosseguir
+    const MAX_UPLOAD_SIZE = 5 * 1024 * 1024; // 5MB
+    
+    // Para arquivos maiores que 5MB, exibir aviso
+    if (selectedMedia.size > MAX_UPLOAD_SIZE) {
+      try {
+        // Tentar comprimir a imagem se for muito grande
+        if (mediaType === "image") {
+          toast.info("A imagem é muito grande. Comprimindo para upload...");
+          setCompressingMedia(true);
+          const compressedFile = await compressImage(selectedMedia, 2);
+          setSelectedMedia(compressedFile);
+          setCompressingMedia(false);
+        } else if (selectedMedia.size > 30 * 1024 * 1024) {
+          // Se for um vídeo muito grande (> 30MB), mostrar erro
+          toast.error("O vídeo é muito grande. Use um vídeo com menos de 30MB.");
+          return;
+        } else {
+          // Se for um vídeo entre 5MB e 30MB, avisar que pode demorar
+          toast.info("O vídeo é grande e o upload pode demorar mais.");
+        }
+      } catch (error) {
+        console.error("Erro ao comprimir mídia:", error);
+        toast.error("Não foi possível comprimir a mídia. Tente um arquivo menor.");
+        setCompressingMedia(false);
+        return;
+      }
+    }
+    
+    setIsUploading(true);
+    setUploadProgress(0);
     
     try {
       // Enviar progresso simulado para feedback ao usuário
@@ -196,8 +332,14 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
         });
       }, 300);
       
-      // Converter arquivo para base64
+      // Converter arquivo para base64 com verificação de tamanho
       const base64Media = await convertFileToBase64(selectedMedia);
+      
+      // Verificar tamanho aproximado do base64 (cada caractere = ~0.75 bytes)
+      const base64Size = base64Media.length * 0.75;
+      if (base64Size > 10 * 1024 * 1024) { // 10MB
+        throw new Error("Arquivo muito grande para upload. Use uma imagem ou vídeo menor.");
+      }
       
       // Preparar payload para a API
       const payload = {
@@ -259,51 +401,32 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
       
       clearInterval(progressInterval);
       
-      // Clonar a resposta antes de lê-la para poder usá-la múltiplas vezes
-      const responseClone = response.clone();
-      
-      // Verificar se a resposta é um JSON mesmo se o status não for ok
-      let errorData = null;
-      let responseData = null;
-      
-      try {
-        if (!response.ok) {
-          errorData = await responseClone.json();
-        } else {
-          responseData = await response.json();
-        }
-      } catch (e) {
-        console.error("Erro ao processar resposta JSON:", e);
-      }
-      
+      // Se o status não for ok, tentar analisar a resposta de texto antes
       if (!response.ok) {
-        // Classificar o erro e mostrar feedback adequado
         let errorMessage = "Erro ao publicar o story";
-        let errorDetails = "Tente novamente mais tarde";
-        let isFirebaseStorage = false;
+        let errorDetails = "";
         
-        if (errorData?.error) {
-          errorMessage = errorData.error;
-          errorDetails = errorData.details || "Não foi possível concluir a operação";
-          
-          // Detectar se é erro de Firebase Storage
-          if (
-            errorMessage.includes("Firebase Storage") || 
-            errorMessage.includes("upload da mídia") ||
-            (errorData.code && (
-              errorData.code.includes("storage/") || 
-              errorData.code.includes("permission-denied")
-            ))
-          ) {
-            isFirebaseStorage = true;
+        try {
+          // Tentar obter como JSON primeiro
+          const errorData = await response.json();
+          errorMessage = errorData.error || errorMessage;
+          errorDetails = errorData.details || "";
+        } catch (e) {
+          // Se falhar, tentar obter como texto
+          try {
+            const textResponse = await response.clone().text();
+            errorDetails = `Resposta do servidor: ${textResponse.substring(0, 100)}...`;
+          } catch (textError) {
+            errorDetails = "Não foi possível ler a resposta do servidor";
           }
         }
         
         setError({
           message: errorMessage,
           details: errorDetails,
-          isFirebaseStorage
+          isFirebaseStorage: errorMessage.includes("Firebase Storage") || errorMessage.includes("upload da mídia")
         });
+        
         setIsUploading(false);
         return;
       }
@@ -340,7 +463,7 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
   
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent className="sm:max-w-[500px] max-sm:h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Criar novo story</DialogTitle>
         </DialogHeader>
@@ -368,11 +491,11 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
                 {!mediaPreview || mediaType !== "image" ? (
                   <div 
                     onClick={handleClickSelectMedia}
-                    className="border-2 border-dashed border-zinc-300 rounded-lg p-4 flex flex-col items-center justify-center h-[300px] cursor-pointer bg-zinc-50 hover:bg-zinc-100 transition-colors"
+                    className="border-2 border-dashed border-zinc-300 rounded-lg p-4 flex flex-col items-center justify-center h-[200px] cursor-pointer bg-zinc-50 hover:bg-zinc-100 transition-colors"
                   >
                     <ImageIcon className="h-10 w-10 text-zinc-400 mb-2" />
                     <p className="text-zinc-500">Clique para selecionar uma imagem</p>
-                    <p className="text-zinc-400 text-sm">Tamanho máximo: 30MB</p>
+                    <p className="text-zinc-400 text-sm text-center">Tamanho máximo recomendado: 4MB.</p>
                   </div>
                 ) : (
                   <div className="relative h-[300px] rounded-lg overflow-hidden">
@@ -409,11 +532,12 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
                 {!mediaPreview || mediaType !== "video" ? (
                   <div 
                     onClick={handleClickSelectMedia}
-                    className="border-2 border-dashed border-zinc-300 rounded-lg p-4 flex flex-col items-center justify-center h-[300px] cursor-pointer bg-zinc-50 hover:bg-zinc-100 transition-colors"
+                    className="border-2 border-dashed border-zinc-300 rounded-lg p-4 flex flex-col items-center justify-center h-[200px] cursor-pointer bg-zinc-50 hover:bg-zinc-100 transition-colors"
                   >
                     <Video className="h-10 w-10 text-zinc-400 mb-2" />
                     <p className="text-zinc-500">Clique para selecionar um vídeo</p>
                     <p className="text-zinc-400 text-sm">Tamanho máximo: 30MB</p>
+                    <p className="text-zinc-400 text-xs mt-1">(Para vídeos grandes, o upload pode demorar)</p>
                   </div>
                 ) : (
                   <div className="relative h-[300px] rounded-lg overflow-hidden">
@@ -439,22 +563,22 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
           <div className="space-y-2">
             <div className="flex items-center gap-2 mb-2">
               <Calendar className="h-4 w-4 text-zinc-500" />
-              <Label>Disponível por</Label>
+              <Label>Duração em dias do story</Label>
             </div>
             
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-no-wrap gap-1">
               {[1, 2, 3, 4, 5, 6, 7].map((day) => (
                 <button
                   key={day}
                   type="button"
                   onClick={() => setDurationDays(day)}
-                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors ${
+                  className={`px-3 py-2 rounded-lg border text-sm font-medium transition-colors no-wrap ${
                     durationDays === day 
                       ? 'bg-emerald-600 text-white border-emerald-600' 
                       : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'
                   }`}
                 >
-                  {day} {day === 1 ? 'dia' : 'dias'}
+                  {day}{day === 1 ? 'D' : 'D'}
                 </button>
               ))}
             </div>
@@ -496,19 +620,29 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
           </div>
         )}
         
-        <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isUploading}>
+        <DialogFooter className="flex flex-col gap-1">
+          <Button variant="outline" onClick={onClose} disabled={isUploading || compressingMedia || processingMedia}>
             Cancelar
           </Button>
           <Button 
             onClick={handlePublish} 
-            disabled={!selectedMedia || isUploading}
+            disabled={!selectedMedia || isUploading || compressingMedia || processingMedia}
             className="bg-emerald-600 hover:bg-emerald-700 text-white"
           >
             {isUploading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 Publicando {uploadProgress.toFixed(0)}%
+              </>
+            ) : compressingMedia ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Comprimindo imagem...
+              </>
+            ) : processingMedia ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Processando mídia...
               </>
             ) : (
               'Publicar Story'
