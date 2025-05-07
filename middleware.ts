@@ -68,14 +68,15 @@ export function middleware(request: NextRequest) {
       '/api/public/restaurants',
       '/api/stories',
       '/api/stories/create',
-      '/api/proxy/video'
+      '/api/proxy/video',
+      '/api/products'
     ]
 
     // Verificar se é uma rota pública
     const isPublicApiRoute = publicApiRoutes.some(route => pathname.startsWith(route));
     
     // Adicionar log para depuração
-    if (pathname.includes('/public/restaurants') || pathname.includes('/stories')) {
+    if (pathname.includes('/public/restaurants') || pathname.includes('/stories') || pathname.includes('/products')) {
       console.log(`[MIDDLEWARE] Acesso detectado à rota: ${pathname}`);
       console.log(`[MIDDLEWARE] É uma rota pública? ${isPublicApiRoute ? 'SIM' : 'NÃO'}`);
       console.log(`[MIDDLEWARE] Ação: ${isPublicApiRoute ? 'Permitir acesso' : 'Verificar autenticação'}`);

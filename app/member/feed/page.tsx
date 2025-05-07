@@ -29,6 +29,8 @@ import {
 } from "@/components/ui/dialog"
 import { StoriesContainer } from "@/components/stories/stories-container"
 import { Story } from "@/components/stories/story-viewer"
+import { ProductCarousel, Product } from "@/components/products/product-carousel"
+import { ProductSheet } from "@/components/products/product-sheet"
 
 interface FeedStatus {
   status: "active" | "pending" | "canceled" | "none" | "loading";
@@ -104,9 +106,71 @@ export default function FeedPage() {
   const [subscriptionsLoaded, setSubscriptionsLoaded] = useState(false)
   const [stories, setStories] = useState<Story[]>([])
   const [loadingStories, setLoadingStories] = useState(true)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loadingProducts, setLoadingProducts] = useState(true)
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null)
   
   // Ref para cada carrossel por categoria
   const carouselRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+
+  // Carregar produtos da API
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoadingProducts(true)
+        console.log("Tentando buscar produtos da API...")
+        
+        // Buscar token da sessão armazenado
+        const sessionToken = localStorage.getItem("session_token") || ""
+        console.log("Token de sessão disponível:", !!sessionToken)
+        
+        const response = await fetch("/api/products", {
+          credentials: "include",
+          headers: {
+            "x-session-token": sessionToken,
+            "x-auth-uid": user?.uid || "",
+            "x-auth-email": user?.email || ""
+          }
+        })
+        
+        console.log("Status da resposta da API de produtos:", response.status)
+        
+        // Mesmo em caso de erro 500, tentar processar a resposta JSON
+        const data = await response.json().catch(e => {
+          console.error("Erro ao processar JSON da resposta:", e)
+          return { products: [] }
+        })
+        
+        console.log("Dados de produtos recebidos:", data)
+        
+        if (data.products && Array.isArray(data.products)) {
+          console.log(`Recebidos ${data.products.length} produtos`)
+          if (data.products.length > 0) {
+            setProducts(data.products)
+          } else {
+            console.warn("Nenhum produto encontrado na API")
+            setProducts([])
+          }
+        } else {
+          console.warn("API retornou um formato inesperado:", data)
+          setProducts([])
+        }
+        
+        // Verificar se houve erro na API
+        if (data.error) {
+          console.error("API retornou erro:", data.error, data.details || "")
+        }
+      } catch (error) {
+        console.error("Erro ao carregar produtos:", error)
+        setProducts([])
+      } finally {
+        setLoadingProducts(false)
+      }
+    }
+    
+    // Carregar produtos independentemente do status de autenticação do usuário
+    fetchProducts()
+  }, [])
 
   // Função para obter saudação com base no horário
   const getGreeting = () => {
@@ -606,13 +670,38 @@ export default function FeedPage() {
     </div>
   );
 
+  // Renderizar skeletons para carrossel de produtos
+  const renderProductSkeleton = () => (
+    <div className="mb-8">
+      <div className="flex justify-between items-center mb-4">
+        <Skeleton className="h-8 w-[200px]" />
+      </div>
+      
+      <div className="flex overflow-x-auto gap-4">
+        {[1, 2, 3, 4].map((i) => (
+          <div key={i} style={{ width: 'calc(80% - 16px)', flexShrink: 0 }}>
+            <Card className="overflow-hidden bg-zinc-50 border-zinc-100 h-full">
+              <div className="aspect-video">
+                <Skeleton className="h-full w-full" />
+              </div>
+              <div className="p-4 space-y-3">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            </Card>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   // Adicionar logs para debug
   console.log("Estado atual:", {
     feedStatus: feedStatus.status,
     estabelecimentosCarregados: establishmentsData.length,
     estabelecimentosFiltrados: filteredEstablishments.length,
     estabelecimentosDestaque: featuredEstablishments.length,
-    categorias: categorizedEstablishments.length
+    produtos: products.length
   });
 
   // Carregar stories
@@ -650,6 +739,65 @@ export default function FeedPage() {
     
     fetchStories()
   }, [])
+
+  // Renderizar seção de produtos (isolando a lógica em uma função separada)
+  const renderProductsSection = () => {
+    // Adicionar verificações adicionais para segurança
+    if (!Array.isArray(products)) {
+      console.error("Erro: 'products' não é um array válido", products)
+      return null
+    }
+    
+    // Se estiver carregando, mostra skeleton
+    if (loadingProducts) {
+      console.log("Renderizando skeleton de produtos...")
+      return (
+        <section className="mb-8">
+          {renderProductSkeleton()}
+        </section>
+      )
+    }
+    
+    // Se tiver produtos, mostra o carrossel
+    if (products.length > 0) {
+      console.log(`Renderizando carrossel com ${products.length} produtos`)
+      return (
+        <section className="mb-8">
+          <div className="relative">
+            <ProductCarousel 
+              products={products} 
+              hasActiveSubscription={feedStatus.status === "active"}
+              onProductClick={(product) => {
+                // Verificar se o usuário tem assinatura ativa
+                if (feedStatus.status !== "active") {
+                  setShowSubscriptionModal(true);
+                } else {
+                  setSelectedProduct(product);
+                }
+              }} 
+            />
+          </div>
+          
+          <style jsx global>{`
+            @keyframes progress {
+              0% { transform: scaleX(0); }
+              100% { transform: scaleX(1); }
+            }
+            .animate-progress-bar {
+              animation: progress 5s linear forwards;
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+              display: none;
+            }
+          `}</style>
+        </section>
+      )
+    }
+    
+    // Se não tiver produtos e não está carregando, não mostra nada
+    console.log("Nenhum produto encontrado para exibição")
+    return null
+  }
 
   return (
     <div className="container md:py-6 sm:pt-0">
@@ -700,7 +848,6 @@ export default function FeedPage() {
           </p>
         </div>
       </header>
-      
 
       {/* Barra de pesquisa e filtros */}
       <section className="bg-white rounded-xl p-5 shadow-sm border border-zinc-100 mb-8">
@@ -810,7 +957,7 @@ export default function FeedPage() {
                   </div>
 
                   {/* Filtro de parceiro */}
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <Label className="text-zinc-600 font-medium">Parceiro</Label>
                     <Select
                       value={filters.partnerId}
@@ -828,7 +975,7 @@ export default function FeedPage() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </div> */}
 
                   {/* Filtro de avaliação */}
                   <div className="space-y-3">
@@ -894,6 +1041,9 @@ export default function FeedPage() {
         </section>
       )}
 
+      {/* Seção de Produtos - Única instância usando a função de renderização */}
+      {renderProductsSection()}
+
       {/* Conteúdo principal */}
       <main className="pb-10">
         {feedStatus.status === "loading" ? (
@@ -906,7 +1056,7 @@ export default function FeedPage() {
             {/* Seção de destaques */}
             {featuredEstablishments.length > 0 && (
               <section>
-                {renderCategoryCarousel("Em destaque", featuredEstablishments)}
+                {renderCategoryCarousel("Cupons em destaque", featuredEstablishments)}
               </section>
             )}
 
@@ -968,6 +1118,14 @@ export default function FeedPage() {
           establishment={selectedEstablishment as unknown as AvailableEstablishment}
           isOpen={!!selectedEstablishment}
           onClose={() => setSelectedEstablishment(null)}
+        />
+      )}
+
+      {selectedProduct && (
+        <ProductSheet
+          product={selectedProduct}
+          isOpen={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
         />
       )}
 
