@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { ChevronLeft, ChevronRight, X, Volume2, VolumeX, ImageIcon, Film, ThumbsUp, ThumbsDown, Heart, Flame } from "lucide-react"
+import { ChevronLeft, ChevronRight, X, Volume2, VolumeX, ImageIcon, Film, ThumbsUp, ThumbsDown, Heart, Flame, Trash2 } from "lucide-react"
 import { StoryProgressBar } from "./story-progress-bar"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -10,6 +10,17 @@ import { EstablishmentSheet } from "@/components/establishment-sheet"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import ReactPlayer from "react-player"
 import { toast } from "sonner"
+import { useAuth } from "@/contexts/auth-context"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 // Objeto com cores para as letras do alfabeto
 const avatarColors = {
@@ -152,12 +163,14 @@ interface StoryViewerProps {
   stories: Story[]
   initialStoryIndex: number
   onClose: () => void
+  onRemoveStory?: (storyId: string) => void
 }
 
 export function StoryViewer({ 
   stories, 
   initialStoryIndex = 0, 
-  onClose 
+  onClose,
+  onRemoveStory
 }: StoryViewerProps) {
   // Estados básicos
   const [currentStoryIndex, setCurrentStoryIndex] = useState(initialStoryIndex);
@@ -171,7 +184,10 @@ export function StoryViewer({
   const [isReacting, setIsReacting] = useState(false);
   const [videoDuration, setVideoDuration] = useState(0);
   const [videoProgress, setVideoProgress] = useState(0);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isRemoving, setIsRemoving] = useState(false);
   const isDesktop = useMediaQuery("(min-width: 768px)");
+  const { user } = useAuth();
   
   // Referências para elementos DOM e estado
   const isMounted = useRef(true);
@@ -342,7 +358,7 @@ export function StoryViewer({
         throw new Error('Falha ao salvar reação');
       }
       
-      // Atualizar o estado local para refletir a reação do usuário
+      // Atualizar o estado local para refletir a reação do usuário mais recente
       setUserReactions(prev => ({
         ...prev,
         [currentStory.id]: reaction
@@ -353,18 +369,7 @@ export function StoryViewer({
         if (story.id === currentStory.id) {
           const updatedReactions = story.reactions || { likes: 0, dislikes: 0, hearts: 0, fires: 0 };
           
-          // Remover reação anterior se existir
-          const previousReaction = hasUserReacted(story.id);
-          if (previousReaction) {
-            switch (previousReaction) {
-              case 'like': updatedReactions.likes = Math.max(0, (updatedReactions.likes || 0) - 1); break;
-              case 'dislike': updatedReactions.dislikes = Math.max(0, (updatedReactions.dislikes || 0) - 1); break;
-              case 'heart': updatedReactions.hearts = Math.max(0, (updatedReactions.hearts || 0) - 1); break;
-              case 'fire': updatedReactions.fires = Math.max(0, (updatedReactions.fires || 0) - 1); break;
-            }
-          }
-          
-          // Adicionar nova reação
+          // Incrementar a reação selecionada (sem remover reações anteriores)
           switch (reaction) {
             case 'like': updatedReactions.likes = (updatedReactions.likes || 0) + 1; break;
             case 'dislike': updatedReactions.dislikes = (updatedReactions.dislikes || 0) + 1; break;
@@ -375,7 +380,7 @@ export function StoryViewer({
           return {
             ...story,
             reactions: updatedReactions,
-            userReaction: reaction
+            userReaction: reaction // Atualiza apenas a reação mais recente do usuário para efeito de UI
           };
         }
         return story;
@@ -393,12 +398,6 @@ export function StoryViewer({
   
   const handleReactionClick = (reaction: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
-    
-    // Verificar se o usuário já reagiu com a mesma reação
-    const currentReaction = hasUserReacted(currentStory.id);
-    
-    // Se já reagiu com a mesma reação, não fazer nada
-    if (currentReaction === reaction) return;
     
     // Enviar reação
     sendReaction(reaction);
@@ -438,6 +437,68 @@ export function StoryViewer({
   const handleVideoProgress = (state: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => {
     if (!isMounted.current) return;
     setVideoProgress(state.played * 100);
+  };
+  
+  // Verificar se o usuário atual é o dono do story ou um admin
+  const canRemoveStory = useCallback(() => {
+    if (!user) return false;
+    
+    // Verificar se é o criador do story
+    const isOwner = user.uid === currentStory.userId;
+    
+    // Verificar se é um produtor de conteúdo ou admin
+    const isContentProducer = (user as any).isContentProducer === true;
+    const isAdmin = (user as any).role === "admin" || 
+                   ((user as any).roles && (user as any).roles.includes("admin"));
+    
+    return isOwner || isContentProducer || isAdmin;
+  }, [user, currentStory]);
+  
+  // Função para remover o story
+  const handleRemoveStory = async () => {
+    if (!currentStory || !currentStory.id) return;
+    
+    try {
+      setIsRemoving(true);
+      
+      const response = await fetch('/api/stories/remove', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storyId: currentStory.id
+        }),
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Falha ao remover o story');
+      }
+      
+      toast.success('Story removido com sucesso');
+      
+      // Fechar diálogo de confirmação
+      setShowDeleteConfirm(false);
+      
+      // Se houver um callback onRemoveStory, chamá-lo para atualizar a lista de stories
+      if (onRemoveStory) {
+        onRemoveStory(currentStory.id);
+      }
+      
+      // Se estiver no último story, fechar o viewer, senão passar para o próximo
+      if (currentStoryIndex >= stories.length - 1) {
+        onClose();
+      } else {
+        handleNext();
+      }
+    } catch (error) {
+      console.error('Erro ao remover story:', error);
+      toast.error('Não foi possível remover o story');
+    } finally {
+      setIsRemoving(false);
+    }
   };
   
   // Marcar componente como montado/desmontado
@@ -508,6 +569,17 @@ export function StoryViewer({
       >
         <X className="h-6 w-6" />
       </button>
+      
+      {/* Botão de remover (apenas para o dono do story ou admin) */}
+      {canRemoveStory() && (
+        <button 
+          onClick={() => setShowDeleteConfirm(true)}
+          className="absolute top-14 right-4 z-20 text-white p-2 hover:bg-red-500/30 rounded-full"
+          title="Remover story"
+        >
+          <Trash2 className="h-6 w-6" />
+        </button>
+      )}
       
       {/* Barra de progresso superior */}
       <div className="absolute top-0 left-0 right-0 p-4 z-10">
@@ -903,6 +975,28 @@ export function StoryViewer({
           onClose={handleEstablishmentClose}
         />
       )}
+      
+      {/* Dialog de confirmação de remoção */}
+      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover Story</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover este story? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRemoving}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleRemoveStory}
+              disabled={isRemoving}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              {isRemoving ? 'Removendo...' : 'Sim, remover'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 } 

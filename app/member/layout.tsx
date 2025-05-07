@@ -7,9 +7,9 @@ import { Header } from "@/components/header"
 import { useAuth } from "@/contexts/auth-context"
 import { Home, User, Ticket, MessageSquareText } from "lucide-react"
 import { CommunityDrawerProvider, useCommunityDrawer } from "@/components/community-tutorial-drawer"
+import { WhatsAppSupportButton } from "@/components/whatsapp-support-button"
 
 export default function MemberLayout({ children }: { children: React.ReactNode }) {
-  const { user } = useAuth()
 
   return (
     <RouteGuard allowedUserType="member">
@@ -25,6 +25,7 @@ export default function MemberLayout({ children }: { children: React.ReactNode }
 }
 
 function MemberLayoutContent({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth()
   const { openDrawer } = useCommunityDrawer();
   
   const menuItems = [
@@ -57,6 +58,12 @@ function MemberLayoutContent({ children }: { children: React.ReactNode }) {
       <main className="py-2">
         {children}
       </main>
+      
+      {/* Botão flutuante de suporte via WhatsApp */}
+      <WhatsAppSupportButton 
+        phoneNumber="5519982240767" 
+        message={`Olá! Sou o usuário *${user?.displayName}* no Clube Não Tem Chef e preciso de ajuda com a plataforma. Meu email é *${user?.email}*`} 
+      />
     </div>
   )
 }

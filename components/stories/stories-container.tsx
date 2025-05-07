@@ -15,14 +15,20 @@ interface StoriesContainerProps {
 }
 
 export function StoriesContainer({ 
-  stories, 
+  stories: initialStories, 
   isContentProducer = false,
   onReloadStories 
 }: StoriesContainerProps) {
   const [selectedStoryIndex, setSelectedStoryIndex] = useState<number | null>(null)
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [viewedStories, setViewedStories] = useState<Record<string, boolean>>({})
+  const [stories, setStories] = useState<Story[]>(initialStories)
   const { user } = useAuth()
+  
+  // Atualizar stories quando as props mudarem
+  useEffect(() => {
+    setStories(initialStories);
+  }, [initialStories]);
   
   // Função para determinar se um usuário já viu um story
   const hasSeenStory = (storyId: string) => {
@@ -78,6 +84,22 @@ export function StoriesContainer({
     }
   }
   
+  // Handler para quando um story é removido
+  const handleStoryRemoved = (storyId: string) => {
+    // Remover story da lista local
+    setStories(prevStories => prevStories.filter(story => story.id !== storyId));
+    
+    // Se o story removido é o que está sendo visualizado, fechar o visualizador
+    if (selectedStoryIndex !== null && stories[selectedStoryIndex]?.id === storyId) {
+      setSelectedStoryIndex(null);
+    }
+    
+    // Recarregar a lista de stories do servidor, se disponível
+    if (onReloadStories) {
+      onReloadStories();
+    }
+  }
+  
   return (
     <>
       <div className="flex items-center gap-4 overflow-x-auto py-4 px-2 no-scrollbar border-b border-zinc-100 pb-5">
@@ -117,6 +139,7 @@ export function StoriesContainer({
           stories={stories}
           initialStoryIndex={selectedStoryIndex}
           onClose={handleCloseViewer}
+          onRemoveStory={handleStoryRemoved}
         />
       )}
       

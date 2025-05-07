@@ -103,6 +103,9 @@ export async function POST(request: NextRequest) {
       );
     }
     
+    // Criar formato seguro para o ID do usuário para ser usado como chave no objeto
+    const safeUserId = userId?.replace(/\./g, '_').replace(/\$/g, '_') || 'anonymous';
+    
     // Conjunto de campos de reação
     const reactionFields = {
       like: 'likes',
@@ -112,29 +115,50 @@ export async function POST(request: NextRequest) {
     };
     
     // Obter a reação atual do usuário (se houver)
-    const userReactionsKey = `userReactions.${userId?.replace(/\./g, '_').replace(/\$/g, '_')}`;
-    const currentReaction = storyData.userReactions && storyData.userReactions[userId || 'anonymous'];
+    const userReactionsKey = `userReactions.${safeUserId}`;
+    const currentReaction = storyData.userReactions && storyData.userReactions[safeUserId];
     
     // Preparar atualizações
     const updates: any = {};
     
-    // Se o usuário já reagiu, remover a reação anterior
-    if (currentReaction && currentReaction !== reaction) {
-      const previousReactionField = `reactions.${reactionFields[currentReaction as keyof typeof reactionFields]}`;
-      updates[previousReactionField] = increment(-1);
-    }
+    // Sempre incrementar a reação correspondente
+    const reactionField = `reactions.${reactionFields[reaction as keyof typeof reactionFields]}`;
+    updates[reactionField] = increment(1);
     
-    // Adicionar a nova reação
-    const newReactionField = `reactions.${reactionFields[reaction as keyof typeof reactionFields]}`;
-    updates[newReactionField] = currentReaction === reaction ? increment(0) : increment(1);
-    
-    // Atualizar a reação do usuário
+    // Atualizar a reação do usuário no registro para fins de UI
     updates[userReactionsKey] = reaction;
     
-    // Atualizar contador de interações
-    if (!currentReaction || currentReaction !== reaction) {
-      updates.interactions = increment(1);
+    // Manter um registro de todas as reações
+    // Criar ou atualizar o array de reações por tipo
+    const reactionHistoryField = `reactionHistory.${reactionFields[reaction as keyof typeof reactionFields]}`;
+    if (!storyData.reactionHistory) {
+      updates.reactionHistory = {
+        [reactionFields[reaction as keyof typeof reactionFields]]: [{
+          userId: safeUserId,
+          timestamp: new Date()
+        }]
+      };
+    } else {
+      // O Firestore não suporta arrayUnion com objetos que contêm datas, então usamos um método alternativo
+      if (!storyData.reactionHistory[reactionFields[reaction as keyof typeof reactionFields]]) {
+        updates[reactionHistoryField] = [{
+          userId: safeUserId,
+          timestamp: new Date()
+        }];
+      } else {
+        const existingHistory = storyData.reactionHistory[reactionFields[reaction as keyof typeof reactionFields]] || [];
+        updates[reactionHistoryField] = [
+          ...existingHistory,
+          {
+            userId: safeUserId,
+            timestamp: new Date()
+          }
+        ];
+      }
     }
+    
+    // Atualizar contador de interações
+    updates.interactions = increment(1);
     
     // Salvar no Firestore
     await updateDoc(storyRef, updates);
