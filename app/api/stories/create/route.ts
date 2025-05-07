@@ -93,14 +93,58 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Se não conseguiu autenticar via Firebase, tentar via token de sessão
+    // Verificar o cookie de sessão (__session)
+    // Este cookie é definido pelo auth-context.tsx quando o usuário faz login
+    const sessionCookie = request.cookies.get('__session');
+    if (!isAuthenticated && sessionCookie && sessionCookie.value) {
+      try {
+        const sessionData = JSON.parse(sessionCookie.value);
+        if (sessionData && sessionData.user) {
+          userId = sessionData.user.uid || sessionData.user.id || sessionData.user.userId;
+          console.log("Usuário autenticado via cookie de sessão:", userId);
+          
+          // Usar os dados do usuário diretamente do cookie
+          userData = {
+            displayName: sessionData.user.displayName || sessionData.user.name,
+            photoURL: sessionData.user.photoURL || sessionData.user.avatar,
+            isContentProducer: sessionData.user.isContentProducer || false,
+            email: sessionData.user.email
+          };
+          
+          isAuthenticated = true;
+        }
+      } catch (cookieError) {
+        console.warn("Erro ao analisar cookie de sessão:", cookieError);
+      }
+    }
+    
+    // Se não conseguiu autenticar via Firebase ou cookie, tentar via token de sessão
     if (!isAuthenticated && sessionToken) {
       userId = sessionToken;
       console.log("Usando token de sessão como ID:", userId);
+      
+      // Verificar header x-user-data que pode conter dados do usuário em JSON
+      const userDataHeader = request.headers.get('x-user-data');
+      if (userDataHeader) {
+        try {
+          const parsedUserData = JSON.parse(userDataHeader);
+          userData = {
+            displayName: parsedUserData.displayName || parsedUserData.name,
+            photoURL: parsedUserData.photoURL || parsedUserData.avatar,
+            isContentProducer: parsedUserData.isContentProducer || false
+          };
+          console.log("Dados do usuário obtidos do cabeçalho x-user-data");
+        } catch (error) {
+          console.warn("Erro ao analisar cabeçalho x-user-data:", error);
+        }
+      }
     } else if (!isAuthenticated) {
-      // Último recurso: usar ID temporário, mas só para fins de desenvolvimento
-      console.warn("AVISO: Nenhum método de autenticação válido. Usando ID de usuário temporário.");
-      // userId já tem o valor padrão definido acima
+      // Último recurso: tentar obter ID do usuário de outros cabeçalhos
+      const userIdHeader = request.headers.get('x-session-user-id');
+      if (userIdHeader) {
+        userId = userIdHeader;
+        console.log("Usando ID do usuário do cabeçalho x-session-user-id:", userId);
+      }
     }
     
     // Obter dados do request
@@ -139,6 +183,11 @@ export async function POST(request: NextRequest) {
     if (userSnapshot.exists()) {
       userData = userSnapshot.data();
       console.log("Usuário encontrado no Firestore:", userData.displayName || userData.name);
+      
+      // Registrar se o usuário tem permissão para criar stories
+      console.log("Permissão de produtor de conteúdo:", 
+        userData.isContentProducer === true ? "Sim" : "Não", 
+        userData.role === "contentProducer" ? "(via role)" : "");
     } else {
       // Se não encontrar pelo ID exato, tentar buscar pelo header x-session-user-id
       const userIdFromHeader = request.headers.get('x-session-user-id');
@@ -152,6 +201,11 @@ export async function POST(request: NextRequest) {
           userData = alternativeUserSnapshot.data();
           userId = userIdFromHeader; // Atualizar o userId para o correto
           console.log("Usuário encontrado pelo ID alternativo:", userData.displayName || userData.name);
+          
+          // Registrar se o usuário tem permissão para criar stories
+          console.log("Permissão de produtor de conteúdo:", 
+            userData.isContentProducer === true ? "Sim" : "Não", 
+            userData.role === "contentProducer" ? "(via role)" : "");
         } else {
           // Se ainda não encontrar, buscar pela coleção de usuários pelo email
           const authHeader = request.headers.get('authorization');
@@ -173,6 +227,11 @@ export async function POST(request: NextRequest) {
                   userData = userDoc.data();
                   userId = userDoc.id;
                   console.log("Usuário encontrado pelo email:", userData.displayName || userData.name);
+                  
+                  // Registrar se o usuário tem permissão para criar stories
+                  console.log("Permissão de produtor de conteúdo:", 
+                    userData.isContentProducer === true ? "Sim" : "Não", 
+                    userData.role === "contentProducer" ? "(via role)" : "");
                 }
               }
             } catch (error) {
@@ -181,47 +240,97 @@ export async function POST(request: NextRequest) {
           }
           
           // Se ainda não encontrou o usuário, usar dados do cookie de sessão
-          if (!userData) {
-            const sessionCookie = request.cookies.get('__session');
-            if (sessionCookie?.value) {
-              try {
-                const sessionData = JSON.parse(sessionCookie.value);
-                if (sessionData.user) {
-                  userData = {
-                    displayName: sessionData.user.displayName || sessionData.user.name,
-                    photoURL: sessionData.user.photoURL || sessionData.user.avatar,
-                    isContentProducer: true
-                  };
-                  console.log("Usuário encontrado no cookie de sessão:", userData.displayName);
-                }
-              } catch (error) {
-                console.warn("Erro ao processar cookie de sessão:", error);
+          if (!userData && sessionCookie?.value) {
+            try {
+              const sessionData = JSON.parse(sessionCookie.value);
+              if (sessionData.user) {
+                userData = {
+                  displayName: sessionData.user.displayName || sessionData.user.name,
+                  photoURL: sessionData.user.photoURL || sessionData.user.avatar,
+                  isContentProducer: true
+                };
+                console.log("Usuário encontrado no cookie de sessão:", userData.displayName);
               }
+            } catch (error) {
+              console.warn("Erro ao processar cookie de sessão:", error);
             }
           }
           
           // Se ainda não encontrou, usar dados temporários mas mais genéricos
           if (!userData) {
-            console.warn("AVISO: Usuário não encontrado por nenhum método, criando dados temporários");
-            userData = { 
-              isContentProducer: true,
-              displayName: "Usuário",
-              photoURL: null
-            };
+            // Verificar o header x-user-data que pode conter dados do usuário em JSON
+            const userDataHeader = request.headers.get('x-user-data');
+            if (userDataHeader) {
+              try {
+                userData = JSON.parse(userDataHeader);
+                console.log("Dados do usuário obtidos do cabeçalho x-user-data:", userData.displayName);
+              } catch (error) {
+                console.warn("Erro ao processar header x-user-data:", error);
+                // Usar valores padrão
+                userData = { 
+                  isContentProducer: true,
+                  displayName: "Usuário",
+                  photoURL: null
+                };
+              }
+            } else {
+              console.warn("AVISO: Usuário não encontrado por nenhum método, criando dados temporários");
+              userData = { 
+                isContentProducer: true,
+                displayName: "Usuário",
+                photoURL: null
+              };
+            }
           }
         }
       } else {
         // Verificar nas variáveis do request se há informações do usuário
         const userFromCookie = request.cookies.get('__user')?.value ? 
                     JSON.parse(request.cookies.get('__user')?.value || '{}') : null;
-                    
-        // Criar um usuário temporário para testes se não existir
-        console.warn("AVISO: Usuário não encontrado pelo ID, criando dados temporários");
-        userData = { 
-          isContentProducer: true,
-          displayName: userFromCookie?.displayName || request.headers.get('x-user-name') || "Usuário",
-          photoURL: userFromCookie?.photoURL || request.headers.get('x-user-avatar') || null
-        };
+        
+        // Verificar o header x-user-data que pode conter dados do usuário em JSON
+        const userDataHeader = request.headers.get('x-user-data');
+        if (userDataHeader) {
+          try {
+            userData = JSON.parse(userDataHeader);
+            console.log("Dados do usuário obtidos do cabeçalho x-user-data:", userData.displayName);
+          } catch (error) {
+            console.warn("Erro ao processar header x-user-data:", error);
+            
+            // Usar dados do cookie se disponível
+            if (userFromCookie) {
+              userData = {
+                isContentProducer: true,
+                displayName: userFromCookie.displayName || request.headers.get('x-user-name') || "Usuário",
+                photoURL: userFromCookie.photoURL || request.headers.get('x-user-avatar') || null
+              };
+              console.log("Dados do usuário obtidos do cookie __user:", userData.displayName);
+            } else {
+              // Criar um usuário temporário para testes se não existir
+              console.warn("AVISO: Usuário não encontrado pelo ID, criando dados temporários");
+              userData = { 
+                isContentProducer: true,
+                displayName: request.headers.get('x-user-name') || "Usuário",
+                photoURL: request.headers.get('x-user-avatar') || null
+              };
+            }
+          }
+        } else if (userFromCookie) {
+          userData = {
+            isContentProducer: true,
+            displayName: userFromCookie.displayName || request.headers.get('x-user-name') || "Usuário",
+            photoURL: userFromCookie.photoURL || request.headers.get('x-user-avatar') || null
+          };
+          console.log("Dados do usuário obtidos do cookie __user:", userData.displayName);
+        } else {                   
+          // Criar um usuário temporário para testes se não existir
+          console.warn("AVISO: Usuário não encontrado pelo ID, criando dados temporários");
+          userData = { 
+            isContentProducer: true,
+            displayName: request.headers.get('x-user-name') || "Usuário",
+            photoURL: request.headers.get('x-user-avatar') || null
+          };
+        }
       }
     }
     
@@ -232,6 +341,31 @@ export async function POST(request: NextRequest) {
       photoURL: userData.photoURL,
       isContentProducer: userData.isContentProducer
     });
+    
+    // Verificar se o usuário tem permissão para criar stories
+    // Aceitar tanto isContentProducer quanto roles específicas para compatibilidade
+    const hasContentProducerPermission = 
+      userData.isContentProducer === true || 
+      userData.role === "contentProducer" || 
+      userData.role === "admin" ||
+      (userData.roles && (
+        userData.roles.includes("contentProducer") || 
+        userData.roles.includes("admin")
+      ));
+    
+    
+    
+    // Se o usuário não tiver permissão e não estivermos em desenvolvimento, retornar erro
+    if (!hasContentProducerPermission) {
+      console.warn(`Usuário ${userId} não tem permissão para criar stories`);
+      return NextResponse.json(
+        { 
+          error: "Você não tem permissão para publicar stories", 
+          details: "Apenas produtores de conteúdo podem criar stories."
+        },
+        { status: 403, headers: customCorsHeaders }
+      );
+    }
     
     // Verificar estabelecimento se fornecido
     let establishmentData = null;
@@ -254,7 +388,40 @@ export async function POST(request: NextRequest) {
     
     // Gerar ID único para o story
     const storyId = uuidv4();
-    const fileExtension = mediaType === "image" ? ".jpg" : ".mp4";
+    
+    // Determinar a extensão com base no MIME type do mediaBase64
+    const getMimeExtension = (mimeString: string): string => {
+      // Extrair o MIME type do data URL
+      const mimeMatch = mimeString.match(/^data:([^;]+);base64,/);
+      const mimeType = mimeMatch ? mimeMatch[1] : '';
+      
+      switch (mimeType) {
+        // Imagens
+        case 'image/jpeg':
+        case 'image/jpg': return '.jpg';
+        case 'image/png': return '.png';
+        case 'image/gif': return '.gif';
+        case 'image/webp': return '.webp';
+        case 'image/bmp': return '.bmp';
+        case 'image/svg+xml': return '.svg';
+        
+        // Vídeos
+        case 'video/mp4': return '.mp4';
+        case 'video/webm': return '.webm';
+        case 'video/quicktime': return '.mov';
+        case 'video/x-msvideo': return '.avi';
+        case 'video/avi': return '.avi';
+        case 'video/x-matroska': return '.mkv';
+        case 'video/3gpp': return '.3gp';
+        case 'video/x-m4v': return '.m4v';
+        
+        // Padrão
+        default: return mediaType === "image" ? ".jpg" : ".mp4";
+      }
+    };
+    
+    // Obter a extensão correta com base no tipo MIME
+    const fileExtension = getMimeExtension(mediaBase64);
     
     try {
       // Verificar a configuração do storage
@@ -278,14 +445,39 @@ export async function POST(request: NextRequest) {
           const base64Data = mediaBase64.split(',')[1]; // Remover o prefixo data:image/jpeg;base64,
           const mediaBuffer = Buffer.from(base64Data, 'base64');
           
+          // Determinar o contentType com base na extensão
+          const getContentType = (extension: string): string => {
+            switch(extension.toLowerCase()) {
+              // Imagens
+              case '.jpg':
+              case '.jpeg': return 'image/jpeg';
+              case '.png': return 'image/png';
+              case '.gif': return 'image/gif';
+              case '.webp': return 'image/webp';
+              case '.bmp': return 'image/bmp';
+              case '.svg': return 'image/svg+xml';
+              
+              // Vídeos
+              case '.mp4': return 'video/mp4';
+              case '.webm': return 'video/webm';
+              case '.mov': return 'video/quicktime';
+              case '.avi': return 'video/x-msvideo';
+              case '.mkv': return 'video/x-matroska';
+              case '.3gp': return 'video/3gpp';
+              case '.m4v': return 'video/mp4';
+              
+              // Padrão
+              default: return mediaType === 'image' ? 'image/jpeg' : 'video/mp4';
+            }
+          };
+          
+          // Obter o content type correto com base na extensão
+          const contentType = getContentType(fileExtension);
+          
           // Upload via Firebase Admin Storage
           const bucket = admin.storage().bucket();
           const file = bucket.file(storageFilePath);
           
-          const contentType = mediaType === "image" 
-            ? "image/jpeg" 
-            : "video/mp4";
-            
           await file.save(mediaBuffer, {
             contentType,
             metadata: {
@@ -352,6 +544,14 @@ export async function POST(request: NextRequest) {
         views: 0,
         interactions: 0
       };
+      
+      console.log("Dados do story a serem salvos:", {
+        storyId,
+        userId,
+        userName: storyData.userName,
+        mediaType,
+        expiresAt: expirationDate
+      });
       
       // Salvar no Firestore
       console.log("Salvando dados no Firestore");

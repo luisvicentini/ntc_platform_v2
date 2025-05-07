@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback } from "react"
-import { ChevronLeft, ChevronRight, X, Volume2, VolumeX, ImageIcon, Film } from "lucide-react"
+import { ChevronLeft, ChevronRight, X, Volume2, VolumeX, ImageIcon, Film, ThumbsUp, ThumbsDown, Heart, Flame } from "lucide-react"
 import { StoryProgressBar } from "./story-progress-bar"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
@@ -9,6 +9,7 @@ import { AvailableEstablishment } from "@/types/establishment"
 import { EstablishmentSheet } from "@/components/establishment-sheet"
 import { useMediaQuery } from "@/hooks/use-media-query"
 import ReactPlayer from "react-player"
+import { toast } from "sonner"
 
 // Objeto com cores para as letras do alfabeto
 const avatarColors = {
@@ -138,6 +139,13 @@ export interface Story {
   durationDays?: number
   daysRemaining?: number
   linkedEstablishment?: AvailableEstablishment | null
+  reactions?: {
+    likes?: number
+    dislikes?: number
+    hearts?: number
+    fires?: number
+  }
+  userReaction?: 'like' | 'dislike' | 'heart' | 'fire' | null
 }
 
 interface StoryViewerProps {
@@ -159,11 +167,17 @@ export function StoryViewer({
   const [mediaError, setMediaError] = useState(false);
   const [avatarError, setAvatarError] = useState(false);
   const [showEstablishment, setShowEstablishment] = useState(false);
+  const [userReactions, setUserReactions] = useState<Record<string, string>>({});
+  const [isReacting, setIsReacting] = useState(false);
+  const [videoDuration, setVideoDuration] = useState(0);
+  const [videoProgress, setVideoProgress] = useState(0);
   const isDesktop = useMediaQuery("(min-width: 768px)");
   
-  // Referência para controlar o estado de montagem do componente
+  // Referências para elementos DOM e estado
   const isMounted = useRef(true);
   const playerRef = useRef<ReactPlayer>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const touchStartY = useRef<number | null>(null);
   
   // Verificar se temos stories válidos
   if (!stories || stories.length === 0) {
@@ -248,6 +262,148 @@ export function StoryViewer({
     setIsMuted(!isMuted);
   };
   
+  // Tratadores de gesto para arrastar para baixo
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY;
+  };
+  
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current === null) return;
+    
+    const touchY = e.touches[0].clientY;
+    const diff = touchY - touchStartY.current;
+    
+    // Se arrastar para baixo mais de 100px, fechar
+    if (diff > 100) {
+      touchStartY.current = null;
+      onClose();
+    }
+  };
+  
+  const handleTouchEnd = () => {
+    touchStartY.current = null;
+  };
+  
+  // Função para lidar com cliques nas áreas laterais para navegação
+  const handleAreaClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Não ativar para mobile em modo paisagem (eles já têm botões visíveis)
+    if (isDesktop) return;
+    
+    // Não proceder se estiver em um elemento interativo
+    if ((e.target as HTMLElement).closest('button')) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const width = rect.width;
+    
+    // Dividir a tela em 3 áreas: 25% esquerda, 50% centro, 25% direita
+    if (x < width * 0.25) {
+      handlePrevious();
+    } else if (x > width * 0.75) {
+      handleNext();
+    }
+    // A área central não faz nada (ou pode pausar/resumir)
+  };
+  
+  // Funções para lidar com reações
+  const getReactionCount = (reaction: string): number => {
+    switch (reaction) {
+      case 'like': return currentStory.reactions?.likes || 0;
+      case 'dislike': return currentStory.reactions?.dislikes || 0;
+      case 'heart': return currentStory.reactions?.hearts || 0;
+      case 'fire': return currentStory.reactions?.fires || 0;
+      default: return 0;
+    }
+  };
+  
+  // Verificar se o usuário já reagiu a este story
+  const hasUserReacted = (storyId: string): string | null => {
+    return userReactions[storyId] || currentStory.userReaction || null;
+  };
+  
+  // Enviar reação para o servidor
+  const sendReaction = async (reaction: string) => {
+    try {
+      setIsReacting(true);
+      
+      const response = await fetch('/api/stories/reaction', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          storyId: currentStory.id,
+          reaction: reaction
+        }),
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Falha ao salvar reação');
+      }
+      
+      // Atualizar o estado local para refletir a reação do usuário
+      setUserReactions(prev => ({
+        ...prev,
+        [currentStory.id]: reaction
+      }));
+      
+      // Atualizar a contagem de reações (simulação otimista)
+      const updatedStories = stories.map(story => {
+        if (story.id === currentStory.id) {
+          const updatedReactions = story.reactions || { likes: 0, dislikes: 0, hearts: 0, fires: 0 };
+          
+          // Remover reação anterior se existir
+          const previousReaction = hasUserReacted(story.id);
+          if (previousReaction) {
+            switch (previousReaction) {
+              case 'like': updatedReactions.likes = Math.max(0, (updatedReactions.likes || 0) - 1); break;
+              case 'dislike': updatedReactions.dislikes = Math.max(0, (updatedReactions.dislikes || 0) - 1); break;
+              case 'heart': updatedReactions.hearts = Math.max(0, (updatedReactions.hearts || 0) - 1); break;
+              case 'fire': updatedReactions.fires = Math.max(0, (updatedReactions.fires || 0) - 1); break;
+            }
+          }
+          
+          // Adicionar nova reação
+          switch (reaction) {
+            case 'like': updatedReactions.likes = (updatedReactions.likes || 0) + 1; break;
+            case 'dislike': updatedReactions.dislikes = (updatedReactions.dislikes || 0) + 1; break;
+            case 'heart': updatedReactions.hearts = (updatedReactions.hearts || 0) + 1; break;
+            case 'fire': updatedReactions.fires = (updatedReactions.fires || 0) + 1; break;
+          }
+          
+          return {
+            ...story,
+            reactions: updatedReactions,
+            userReaction: reaction
+          };
+        }
+        return story;
+      });
+      
+      // Não atualizar diretamente stories porque é uma prop
+      // Mas atualizamos o userReaction acima
+    } catch (error) {
+      console.error('Erro ao salvar reação:', error);
+      toast.error('Não foi possível salvar sua reação');
+    } finally {
+      setIsReacting(false);
+    }
+  };
+  
+  const handleReactionClick = (reaction: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    // Verificar se o usuário já reagiu com a mesma reação
+    const currentReaction = hasUserReacted(currentStory.id);
+    
+    // Se já reagiu com a mesma reação, não fazer nada
+    if (currentReaction === reaction) return;
+    
+    // Enviar reação
+    sendReaction(reaction);
+  };
+  
   // Funções para lidar com erros de mídia
   const handleMediaError = useCallback(() => {
     if (!isMounted.current) return;
@@ -271,6 +427,18 @@ export function StoryViewer({
     if (!isMounted.current) return;
     setAvatarError(true);
   }, [currentStory.userAvatar]);
+  
+  // Funções para lidar com eventos de vídeo
+  const handleVideoDuration = (duration: number) => {
+    if (!isMounted.current) return;
+    console.log("Duração do vídeo:", duration);
+    setVideoDuration(duration);
+  };
+  
+  const handleVideoProgress = (state: { played: number; playedSeconds: number; loaded: number; loadedSeconds: number }) => {
+    if (!isMounted.current) return;
+    setVideoProgress(state.played * 100);
+  };
   
   // Marcar componente como montado/desmontado
   useEffect(() => {
@@ -328,6 +496,9 @@ export function StoryViewer({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [handleNext, handlePrevious, onClose]);
   
+  // Verificar se o story já tem alguma reação do usuário
+  const currentUserReaction = hasUserReacted(currentStory.id);
+  
   return (
     <div className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center">
       {/* Botão de fechar */}
@@ -343,7 +514,8 @@ export function StoryViewer({
         <StoryProgressBar 
           count={stories.length}
           currentIndex={currentStoryIndex}
-          duration={isVideo ? 0 : 5000} // Se for vídeo, usar a duração do vídeo
+          duration={isVideo ? 0 : 5000} // Se for vídeo, usar progresso específico
+          videoProgress={isVideo ? videoProgress : undefined}
           onComplete={handleNext}
           isPaused={isPaused || mediaLoading}
         />
@@ -381,8 +553,12 @@ export function StoryViewer({
       
       {/* Conteúdo do Story */}
       <div 
+        ref={containerRef}
         className="relative w-full h-full md:w-[400px] md:h-[calc(100vh-120px)] md:rounded-xl overflow-hidden bg-zinc-900"
-        onClick={() => !isVideo && handleNext()}
+        onClick={handleAreaClick}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
         {mediaLoading && (
           // Estado de carregamento
@@ -475,6 +651,8 @@ export function StoryViewer({
                   console.log("ReactPlayer - pronto");
                   setMediaLoading(false);
                 }}
+                onDuration={handleVideoDuration}
+                onProgress={handleVideoProgress}
                 onError={(e) => {
                   console.error("ReactPlayer - erro:", e);
                   // Log detalhado para diagnóstico
@@ -545,6 +723,67 @@ export function StoryViewer({
           </div>
         )}
         
+        {/* Barra de reações */}
+        <div className={`absolute ${currentStory.linkedEstablishment ? 'bottom-32' : 'bottom-16'} right-1 z-20`}>
+          <div className="flex items-center justify-between flex flex-col h-auto w-20 mx-auto">
+            {/* Botão Curtir */}
+            <button 
+              onClick={handleReactionClick('like')}
+              disabled={isReacting}
+              className={`flex flex-col items-center px-3 py-2 rounded-lg transition-colors ${
+                currentUserReaction === 'like' 
+                  ? 'bg-emerald-500/30 text-white' 
+                  : 'text-white/80 hover:bg-white/10'
+              }`}
+            >
+              <span className={`text-2xl ${currentUserReaction === 'like' ? 'text-emerald-400' : 'text-white/80'}`}>👍</span>
+              <span className="text-xs mt-1 font-medium">{getReactionCount('like')}</span>
+            </button>
+            
+            {/* Botão Não Curtir */}
+            <button 
+              onClick={handleReactionClick('dislike')}
+              disabled={isReacting}
+              className={`flex flex-col items-center px-3 py-2 rounded-lg transition-colors ${
+                currentUserReaction === 'dislike' 
+                  ? 'bg-red-500/30 text-white' 
+                  : 'text-white/80 hover:bg-white/10'
+              }`}
+            >
+              <span className={`text-2xl ${currentUserReaction === 'dislike' ? 'text-red-400' : 'text-white/80'}`}>👎</span>
+              <span className="text-xs mt-1 font-medium">{getReactionCount('dislike')}</span>
+            </button>
+            
+            {/* Botão Coração */}
+            <button 
+              onClick={handleReactionClick('heart')}
+              disabled={isReacting}
+              className={`flex flex-col items-center px-3 py-2 rounded-lg transition-colors ${
+                currentUserReaction === 'heart' 
+                  ? 'bg-pink-500/30 text-white' 
+                  : 'text-white/80 hover:bg-white/10'
+              }`}
+            >
+              <span className={`text-2xl ${currentUserReaction === 'heart' ? 'text-pink-400' : 'text-white/80'}`}>💖</span>
+              <span className="text-xs mt-1 font-medium">{getReactionCount('heart')}</span>
+            </button>
+            
+            {/* Botão Fogo */}
+            <button 
+              onClick={handleReactionClick('fire')}
+              disabled={isReacting}
+              className={`flex flex-col items-center px-3 py-2 rounded-lg transition-colors ${
+                currentUserReaction === 'fire' 
+                  ? 'bg-orange-500/30 text-white' 
+                  : 'text-white/80 hover:bg-white/10'
+              }`}
+            >
+              <span className={`text-2xl ${currentUserReaction === 'fire' ? 'text-orange-400' : 'text-white/80'}`}>🔥</span>
+              <span className="text-xs mt-1 font-medium">{getReactionCount('fire')}</span>
+            </button>
+          </div>
+        </div>
+        
         {/* Estabelecimento vinculado (card) */}
         {currentStory.linkedEstablishment && (
           <div 
@@ -585,6 +824,10 @@ export function StoryViewer({
             </div>
           </div>
         )}
+        
+        {/* Área de clique para navegação em dispositivos móveis */}
+        <div className="absolute inset-y-0 left-0 w-1/4 z-5" onClick={(e) => { e.stopPropagation(); handlePrevious(); }}></div>
+        <div className="absolute inset-y-0 right-0 w-1/4 z-5" onClick={(e) => { e.stopPropagation(); handleNext(); }}></div>
       </div>
       
       {/* Botões de navegação (apenas desktop) */}

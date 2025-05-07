@@ -41,16 +41,11 @@ const getAvatarColorClass = (name: string | undefined | null): string => {
   return avatarColors[firstChar] || "bg-zinc-500 text-white"; // Retorna a cor correspondente ou a cor padrão
 };
 
-// Função para verificar se a URL parece válida
+// Função simples para verificar se a URL é válida
 const isValidURL = (url: string): boolean => {
   if (!url) return false;
   if (url === 'undefined' || url === 'null') return false;
   return url.startsWith('http://') || url.startsWith('https://');
-};
-
-// Função para verificar se é uma URL de placeholder
-const isPlaceholderUrl = (url: string): boolean => {
-  return url.includes('placehold.co') || url.includes('placeholder');
 };
 
 // Função para processar a URL do vídeo e usar o proxy se necessário
@@ -95,95 +90,31 @@ export function StoryCircle({
   const [isHovered, setIsHovered] = useState(false)
   const [imageError, setImageError] = useState(false)
   const [avatarError, setAvatarError] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
   const isVideo = mediaType === "video"
   const isMounted = useRef(true)
   
-  // Verificar se a URL é de placeholder ou inválida
-  const isPlaceholder = isPlaceholderUrl(thumbnail);
-  const isValidThumbnail = isValidURL(thumbnail) && !isPlaceholder;
-  
-  // Verificar se o avatar é uma URL válida
-  const isValidAvatar = isValidURL(userAvatar);
+  // Verificação simplificada: URL válida?
+  const isValidThumbnail = isValidURL(thumbnail);
   
   // Obter a classe de cor com base no nome do usuário
   const avatarColorClass = getAvatarColorClass(userName);
   const userInitial = userName?.charAt(0)?.toUpperCase() || "U";
-
-  // Função simplificada para extrair um frame de vídeo como thumbnail
-  useEffect(() => {
-    if (!isVideo || !isValidThumbnail) return;
-    
-    // Para vídeos, agora não precisamos mais gerar thumbnails
-    // já que vamos reproduzir o vídeo diretamente
-    console.log(`StoryCircle ${id} - Carregando preview de vídeo: ${thumbnail.substring(0, 40)}...`);
-  }, [id, thumbnail, isVideo, isValidThumbnail]);
-
-  // Uso de useEffect para garantir tempo de carregamento máximo para imagens
-  useEffect(() => {
-    // Se for vídeo, a lógica agora é diferente
-    if (isVideo) return;
-    
-    // Se a URL não for válida, não tentar carregar
-    if (!isValidThumbnail) {
-      setImageError(true);
-      setIsLoading(false);
-      return;
+  
+  // Para vídeos - Manipuladores de eventos específicos
+  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
+    const video = e.currentTarget;
+    // Se o vídeo passar de 2 segundos, voltar para o início
+    if (video.currentTime > 2) {
+      video.currentTime = 0;
     }
-    
-    // Imagens - verificar carregamento
-    setIsLoading(true);
-    const img = new Image();
-    let isActive = true;
-    
-    img.onload = () => {
-      if (isActive && isMounted.current) {
-        setIsLoading(false);
-        setImageError(false);
-      }
-    };
-    
-    img.onerror = () => {
-      if (isActive && isMounted.current) {
-        setIsLoading(false);
-        setImageError(true);
-      }
-    };
-    
-    img.src = thumbnail;
-    
-    // Timeout de segurança para imagens (3 segundos)
-    const timeoutId = setTimeout(() => {
-      if (isMounted.current && isLoading) {
-        console.log(`StoryCircle ${id} - Timeout para imagem`);
-        setIsLoading(false);
-        setImageError(true);
-      }
-    }, 3000);
-    
-    return () => {
-      isActive = false;
-      clearTimeout(timeoutId);
-      img.onload = null;
-      img.onerror = null;
-    };
-  }, [id, thumbnail, isValidThumbnail, isVideo, isLoading]);
-
-  // Mostrar logs apenas uma vez para debugging
+  };
+  
+  // Limpar flag ao desmontar
   useEffect(() => {
-    console.log(`StoryCircle ${id} - Status:`, {
-      thumbnail: thumbnail?.substring(0, 30) + '...',
-      isValidThumbnail,
-      isPlaceholder,
-      isVideo,
-      userName
-    });
-    
-    // Limpar flag ao desmontar
     return () => {
       isMounted.current = false;
     };
-  }, [id, thumbnail, isValidThumbnail, isPlaceholder, userName, isVideo]);
+  }, []);
   
   // Função para lidar com erro ao carregar avatar
   const handleAvatarError = () => {
@@ -194,35 +125,7 @@ export function StoryCircle({
   // Função para lidar com erro ao carregar a thumbnail
   const handleImageError = () => {
     if (!isMounted.current) return;
-    console.error(`StoryCircle ${id} - Erro ao carregar imagem:`, { 
-      thumbnail: thumbnail
-    });
     setImageError(true);
-    setIsLoading(false);
-  };
-  
-  // Função para controlar o tempo de reprodução do vídeo
-  const handleTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
-    const video = e.currentTarget;
-    // Se o vídeo passar de 2 segundos, voltar para o início
-    if (video.currentTime > 2) {
-      video.currentTime = 0;
-    }
-  };
-  
-  // Função para lidar com o carregamento do vídeo
-  const handleVideoLoaded = () => {
-    if (!isMounted.current) return;
-    console.log(`StoryCircle ${id} - Vídeo carregado com sucesso`);
-    setIsLoading(false);
-  };
-  
-  // Função para lidar com erro no vídeo
-  const handleVideoError = () => {
-    if (!isMounted.current) return;
-    console.error(`StoryCircle ${id} - Erro ao carregar vídeo`);
-    setImageError(true);
-    setIsLoading(false);
   };
 
   return (
@@ -242,13 +145,8 @@ export function StoryCircle({
       >
         <div className="w-full h-full overflow-hidden rounded-full bg-white">
           <div className="w-full h-full relative">
-            {isLoading ? (
-              // Estado de carregamento
-              <div className="w-full h-full bg-zinc-100 flex items-center justify-center">
-                <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            ) : imageError || !isValidThumbnail ? (
-              // Estado de erro na imagem ou placeholder
+            {!isValidThumbnail ? (
+              // Placeholder para URLs inválidas
               <div className="w-full h-full bg-zinc-100 flex items-center justify-center">
                 {isVideo ? (
                   <Film className="h-8 w-8 text-zinc-400" />
@@ -267,35 +165,38 @@ export function StoryCircle({
                   loop
                   playsInline
                   onTimeUpdate={handleTimeUpdate}
-                  onLoadedData={handleVideoLoaded}
-                  onError={handleVideoError}
+                  onError={handleImageError}
                   src={processVideoUrl(thumbnail)}
                 />
                 
                 {/* Overlay com ícone de vídeo */}
-                <div className="absolute inset-0 flex items-center justify-center bg-black/30">
+                {/* <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                   <Film className="h-5 w-5 text-white" />
-                </div>
+                </div> */}
               </div>
             ) : (
-              // Imagem para stories de imagem
-              <img 
-                src={thumbnail} 
-                alt={`Story de ${userName}`}
-                className="w-full h-full object-cover"
-                onLoad={() => {
-                  console.log(`StoryCircle ${id} - Imagem carregada com sucesso`);
-                  setIsLoading(false);
-                }}
-                onError={handleImageError}
-              />
+              // Imagem para stories de imagem - abordagem simplificada
+              <div className="w-full h-full">
+                {imageError ? (
+                  <div className="w-full h-full bg-zinc-100 flex items-center justify-center">
+                    <ImageIcon className="h-8 w-8 text-zinc-400" />
+                  </div>
+                ) : (
+                  <img 
+                    src={thumbnail} 
+                    alt={`Story de ${userName}`}
+                    className="w-full h-full object-cover"
+                    onError={handleImageError}
+                  />
+                )}
+              </div>
             )}
           </div>
         </div>
         
         {/* Avatar do usuário */}
         <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full overflow-hidden border-2 border-white">
-          {avatarError || !userAvatar || !isValidAvatar ? (
+          {avatarError || !userAvatar || !isValidURL(userAvatar) ? (
             <div className={`w-full h-full flex items-center justify-center font-medium text-sm ${avatarColorClass}`}>
               {userInitial}
             </div>

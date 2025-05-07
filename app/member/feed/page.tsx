@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Search, Filter, AlertTriangle, LockIcon, ChevronLeft, ChevronRight } from "lucide-react"
+import { Search, Filter, AlertTriangle, LockIcon, ChevronLeft, ChevronRight, Ticket } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 import { Label } from "@/components/ui/label"
@@ -493,6 +493,10 @@ export default function FeedPage() {
           </svg>
           <span>{establishment.rating.toFixed(1)}</span>
           <span>{establishment.isFeatured && <FeaturedBadge />}</span>
+        </div>
+        {/* Valor do desconto do cupom */}
+        <div className="absolute bottom-3 right-3 bg-white/90 border border-white text-black px-2 py-1 rounded-xl flex flex-row items-center space-x-2 shadow-md shadow-black/20">
+          <Ticket className="w-4 h-4 text-emerald-500" /><span className="text-emerald-500">{establishment.discountValue}</span>
         </div>
         
         {/* Ícone de cadeado para indicar conteúdo bloqueado */}

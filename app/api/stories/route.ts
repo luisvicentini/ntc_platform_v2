@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
       'Access-Control-Allow-Origin': origin
     };
     
-    // Verificar autenticação pelo cookie ou token Authorization - mas não bloquear
+    // Verificar se o cookie de sessão ou token Authorization - mas não bloquear
     // Apenas para fins de log, permitimos acesso a qualquer usuário para visualizar stories
     const sessionCookie = request.cookies.get('__session');
     const authHeader = request.headers.get('authorization');
@@ -42,6 +42,19 @@ export async function GET(request: NextRequest) {
       const xSessionToken = request.headers.get('x-session-token');
       userId = xSessionToken || 'anonymous';
       console.log(`Usuário anônimo ou token de sessão: ${userId}`);
+    }
+    
+    // Verificar cookie de sessão para obter ID do usuário
+    if (!userId && sessionCookie?.value) {
+      try {
+        const sessionData = JSON.parse(sessionCookie.value);
+        if (sessionData.user && (sessionData.user.uid || sessionData.user.id)) {
+          userId = sessionData.user.uid || sessionData.user.id;
+          console.log("ID do usuário obtido do cookie de sessão:", userId);
+        }
+      } catch (error) {
+        console.warn("Erro ao analisar cookie de sessão:", error);
+      }
     }
     
     console.log("Iniciando busca de stories ativos");
@@ -121,7 +134,11 @@ export async function GET(request: NextRequest) {
         // Garantir que mediaType existe (para compatibilidade com stories antigos)
         mediaType: storyData.mediaType || "image",
         // Garantir compatibilidade com o campo legado imageUrl
-        mediaUrl: storyData.mediaUrl || storyData.imageUrl
+        mediaUrl: storyData.mediaUrl || storyData.imageUrl,
+        // Adicionar dados de reações se existirem
+        reactions: storyData.reactions || { likes: 0, dislikes: 0, hearts: 0, fires: 0 },
+        // Incluir a reação do usuário atual, se existir
+        userReaction: storyData.userReactions && storyData.userReactions[userId || 'anonymous']
       });
     }
     

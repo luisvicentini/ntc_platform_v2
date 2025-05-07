@@ -7,6 +7,7 @@ interface StoryProgressBarProps {
   count: number
   currentIndex: number
   duration: number
+  videoProgress?: number // Progresso do vídeo (0-100)
   onComplete: () => void
   isPaused: boolean
 }
@@ -15,6 +16,7 @@ export function StoryProgressBar({
   count,
   currentIndex,
   duration,
+  videoProgress,
   onComplete,
   isPaused
 }: StoryProgressBarProps) {
@@ -33,8 +35,21 @@ export function StoryProgressBar({
     }, 10);
   }, [onComplete]);
   
-  // Gerenciar a progressão da barra
+  // Atualizar progresso com base em videoProgress, se fornecido (para vídeos)
   useEffect(() => {
+    if (videoProgress !== undefined) {
+      setProgress(videoProgress);
+      if (videoProgress >= 99.5) {
+        handleComplete();
+      }
+    }
+  }, [videoProgress, handleComplete]);
+  
+  // Gerenciar a progressão da barra (para imagens)
+  useEffect(() => {
+    // Se tivermos um videoProgress definido, usar esse modo em vez deste efeito
+    if (videoProgress !== undefined) return;
+    // Se pausado ou duração inválida, não fazer nada
     if (isPaused || duration <= 0) return;
     
     const interval = 10; // Atualiza a cada 10ms para uma animação suave
@@ -54,7 +69,7 @@ export function StoryProgressBar({
     }, interval);
     
     return () => clearInterval(timer);
-  }, [currentIndex, duration, handleComplete, isPaused]);
+  }, [currentIndex, duration, handleComplete, isPaused, videoProgress]);
   
   return (
     <div className="flex w-full gap-1">

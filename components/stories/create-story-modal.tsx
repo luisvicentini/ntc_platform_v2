@@ -48,11 +48,20 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
     }
 
     // Verificar tipos de arquivo suportados
-    const supportedTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v'];
+    const supportedTypes = [
+      'video/mp4', 
+      'video/webm', 
+      'video/quicktime', 
+      'video/x-m4v',
+      'video/avi',
+      'video/x-msvideo',  // AVI
+      'video/x-matroska',  // MKV
+      'video/3gpp'  // 3GP
+    ];
     if (!supportedTypes.includes(file.type)) {
       return { 
         valid: false, 
-        message: `Formato de vídeo não suportado. Use MP4, WebM ou MOV.` 
+        message: `Formato de vídeo não suportado. Use MP4, WebM, MOV, AVI ou MKV.` 
       };
     }
 
@@ -66,12 +75,12 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
         
         // Event listeners para verificar se o vídeo é reproduzível
         video.onloadedmetadata = () => {
-          // Verificar duração (máximo 60 segundos)
-          if (video.duration > 60) {
+          // Verificar duração (máximo 120 segundos - 2 minutos)
+          if (video.duration > 120) {
             URL.revokeObjectURL(videoURL);
             resolve({ 
               valid: false, 
-              message: `O vídeo é muito longo. A duração máxima é 60 segundos.` 
+              message: `O vídeo é muito longo. A duração máxima é 2 minutos.` 
             });
             return;
           }
@@ -121,9 +130,18 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
         }
       } else {
         // Validar imagem
-        const isImage = file.type.startsWith('image/');
-        if (!isImage) {
-          toast.error("Formato de arquivo não suportado. Use imagens ou vídeos.");
+        const supportedImageTypes = [
+          'image/jpeg', 
+          'image/jpg', 
+          'image/png', 
+          'image/gif', 
+          'image/webp', 
+          'image/bmp',
+          'image/svg+xml'
+        ];
+        
+        if (!supportedImageTypes.some(type => file.type === type)) {
+          toast.error("Formato de imagem não suportado. Use JPG, PNG, GIF, WEBP, BMP ou SVG.");
           return;
         }
         
@@ -213,7 +231,23 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
       // Adicionar ID do usuário atual para ajudar na autenticação
       if (user.uid) {
         headers['x-session-user-id'] = user.uid;
+        
+        // Adicionar dados básicos do usuário em um cabeçalho, para caso a sessão não esteja disponível
+        const userData = {
+          displayName: user.displayName || user.userName,
+          photoURL: user.photoURL,
+          isContentProducer: user.isContentProducer === true,
+          email: user.email || user.userEmail
+        };
+        
+        headers['x-user-data'] = JSON.stringify(userData);
       }
+      
+      console.log('Enviando story com dados do usuário:', {
+        uid: user.uid,
+        displayName: user.displayName || user.userName,
+        isContentProducer: user.isContentProducer
+      });
       
       // Enviar para a API
       const response = await fetch('/api/stories/create', {
