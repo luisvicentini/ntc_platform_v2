@@ -312,12 +312,12 @@ export function ProductCarousel({ products, onProductClick, hasActiveSubscriptio
                     />
                   )}
                 </div>
-                <div className="p-4 space-y-2">
+                <div className="p-4 space-y-3">
                   <h3 className="font-semibold text-zinc-500">{product.name}</h3>
                   <p className="text-sm text-zinc-400 line-clamp-2">{product.description}</p>
-                  <p className="text-xs text-emerald-500 font-medium">
-                    Cupom: {maskVoucherCode(product.voucher)}
-                  </p>
+                  <div className="flex items-center gap-2 text-sm opacity-80 mt-1 font-medium text-zinc-500">
+                    <Ticket className="w-4 h-4" /> CUPOM: {maskVoucherCode(product.voucher).toUpperCase()}
+                  </div>
                 </div>
               </Card>
             </div>

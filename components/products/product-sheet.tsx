@@ -128,8 +128,8 @@ export function ProductSheet({ product, isOpen, onClose }: ProductSheetProps) {
           <div className="bg-amber-50 border border-amber-200 p-4 rounded-lg flex items-center space-x-4">
             <Ticket className="h-8 w-8 text-amber-500" />
             <div>
-              <p className="text-xl font-bold text-amber-500">Código promocional</p>
-              <p className="text-sm text-amber-800 font-bold tracking-wider">{product.voucher}</p>
+              <p className="text-sm font-medium text-amber-500">Código promocional</p>
+              <p className="text-xl text-amber-800 font-bold tracking-wider">{product.voucher}</p>
             </div>
           </div>
 
@@ -165,7 +165,7 @@ export function ProductSheet({ product, isOpen, onClose }: ProductSheetProps) {
         <div className="p-6 border-t border-zinc-200 space-y-3">
           <Button 
             onClick={handleCopyVoucher}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold"
+            className="w-full bg-primary hover:bg-red-700 text-white font-bold"
             disabled={copied}
           >
             {copied ? (
