@@ -11,8 +11,9 @@ import { getAuth as getAdminAuth } from 'firebase-admin/auth'
 export const config = {
   api: {
     bodyParser: {
-      sizeLimit: '20mb' // Aumentar o limite para 20MB
-    }
+      sizeLimit: '10mb' // Reduzido para garantir compatibilidade com servidores
+    },
+    responseLimit: false
   }
 }
 
@@ -77,6 +78,19 @@ export async function POST(request: NextRequest) {
       ...corsHeaders,
       'Access-Control-Allow-Origin': origin
     };
+    
+    // Verificar tamanho da requisição
+    const contentLength = request.headers.get('content-length');
+    if (contentLength && parseInt(contentLength) > 8 * 1024 * 1024) { // 8MB
+      console.error(`Requisição muito grande: ${parseInt(contentLength) / (1024 * 1024)}MB`);
+      return NextResponse.json(
+        { 
+          error: "Conteúdo muito grande", 
+          details: "A mídia enviada excede o limite de 8MB. Comprima a imagem ou use um arquivo menor."
+        },
+        { status: 413, headers: customCorsHeaders }
+      );
+    }
     
     // Obter o token de autorização do cabeçalho
     const authHeader = request.headers.get('authorization');

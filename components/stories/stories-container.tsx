@@ -30,6 +30,30 @@ export function StoriesContainer({
     setStories(initialStories);
   }, [initialStories]);
   
+  // Listener para atualizar reações quando o evento for disparado
+  useEffect(() => {
+    const handleReactionUpdated = (event: Event) => {
+      const { storyId, reactions } = (event as CustomEvent).detail;
+      
+      // Atualizar o story com as contagens de reações atualizadas
+      setStories(prevStories => 
+        prevStories.map(story => 
+          story.id === storyId 
+            ? { ...story, reactions: reactions }
+            : story
+        )
+      );
+    };
+    
+    // Adicionar listener para o evento
+    window.addEventListener('storyReactionUpdated', handleReactionUpdated);
+    
+    // Cleanup: remover listener quando o componente for desmontado
+    return () => {
+      window.removeEventListener('storyReactionUpdated', handleReactionUpdated);
+    };
+  }, []);
+  
   // Função para determinar se um usuário já viu um story
   const hasSeenStory = (storyId: string) => {
     return viewedStories[storyId] || false

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useRef, useCallback } from "react"
+import { useState, useRef, useCallback, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -13,6 +13,9 @@ import { Loader2 } from 'lucide-react'
 import { toast } from "sonner"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
+import { storage } from "@/lib/firebase"
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
+import { v4 as uuidv4 } from "uuid"
 
 interface CreateStoryModalProps {
   isOpen: boolean
@@ -30,6 +33,7 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
   const [uploadProgress, setUploadProgress] = useState(0)
   const [processingMedia, setProcessingMedia] = useState(false)
   const [compressingMedia, setCompressingMedia] = useState(false)
+  const [isProduction, setIsProduction] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<{
     message: string;
@@ -39,6 +43,22 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
   
   const { establishments } = useEstablishment()
   const { user } = useAuth()
+  
+  // Verificar se estamos em ambiente de produção ou localhost
+  useEffect(() => {
+    const hostname = window.location.hostname;
+    const isProductionEnv = !(hostname === 'localhost' || hostname === '127.0.0.1');
+    
+    setIsProduction(isProductionEnv);
+    
+    // Se estiver em produção, exibir aviso sobre limites
+    if (isProductionEnv) {
+      toast.info(
+        "Em produção, o tamanho máximo de upload é menor. Compressão automática será aplicada.", 
+        { duration: 5000 }
+      );
+    }
+  }, []);
   
   // Função para verificar se um arquivo de vídeo é válido
   const isValidVideoFile = async (file: File): Promise<{valid: boolean, message?: string}> => {
@@ -123,7 +143,7 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
           // Calcular novas dimensões mantendo a proporção
           let width = img.width;
           let height = img.height;
-          const maxDimension = 1200; // Tamanho máximo para qualquer dimensão
+          const maxDimension = 1200; // Tamanho máximo para qualquer dimensão - reduzido para 1200px 
           
           if (width > height && width > maxDimension) {
             height = Math.round((height * maxDimension) / width);
@@ -149,7 +169,7 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
           ctx.drawImage(img, 0, 0, width, height);
           
           // Converter para blob com qualidade ajustada
-          let quality = 0.9; // Iniciar com qualidade alta
+          let quality = 0.8; // Começar com qualidade média em vez de alta
           const processBlob = (blob: Blob | null) => {
             // Se não tiver blob, tratar como erro
             if (!blob) {
@@ -158,8 +178,8 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
               return;
             }
             
-            // Se ainda estiver acima do tamanho máximo e qualidade > 0.3, comprimir mais
-            if (blob.size > maxSizeMB * 1024 * 1024 && quality > 0.3) {
+            // Se ainda estiver acima do tamanho máximo e qualidade > 0.2, comprimir mais
+            if (blob.size > maxSizeMB * 1024 * 1024 && quality > 0.2) {
               quality -= 0.1;
               canvas.toBlob(
                 processBlob, 
@@ -201,6 +221,16 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
   const handleMediaSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
+      
+      // Verificações de tamanho com base no ambiente
+      if (isProduction) {
+        // Em produção, aplicar limites mais rigorosos
+        if (file.size > 15 * 1024 * 1024) { // 15MB
+          toast.error("Em produção, o tamanho máximo é 15MB. Selecione um arquivo menor.");
+          return;
+        }
+      }
+      
       // Determinar o tipo de mídia
       const isVideo = file.type.startsWith('video/');
       
@@ -216,9 +246,10 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
           return;
         }
         
-        // Verificar se o vídeo é muito grande (> 30MB)
-        if (file.size > 30 * 1024 * 1024) {
-          toast.error("O vídeo é muito grande. Por favor, use um vídeo com menos de 30MB.");
+        // Verificar se o vídeo é muito grande
+        const videoSizeLimit = isProduction ? 15 * 1024 * 1024 : 30 * 1024 * 1024; // 15MB em produção, 30MB em localhost
+        if (file.size > videoSizeLimit) {
+          toast.error(`O vídeo é muito grande. Por favor, use um vídeo com menos de ${isProduction ? '15MB' : '30MB'}.`);
           return;
         }
       } else {
@@ -238,11 +269,12 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
           return;
         }
         
-        // Se a imagem for maior que 4MB, comprimir
-        if (file.size > 4 * 1024 * 1024) {
+        // Se a imagem for maior que o limite, comprimir
+        const imageSizeLimit = isProduction ? 2 * 1024 * 1024 : 4 * 1024 * 1024; // 2MB em produção, 4MB em localhost
+        if (file.size > imageSizeLimit) {
           try {
-            toast.info("Comprimindo imagem para upload...");
-            const compressedFile = await compressImage(file, 2); // Comprimir para no máximo 2MB
+            toast.info(`Comprimindo imagem para upload (limite: ${isProduction ? '2MB' : '4MB'})...`);
+            const compressedFile = await compressImage(file, isProduction ? 1 : 2); // Comprimir mais em produção
             
             // Se passou por todas as validações, definir o arquivo comprimido
             setSelectedMedia(compressedFile);
@@ -292,162 +324,212 @@ export function CreateStoryModal({ isOpen, onClose, onSuccess }: CreateStoryModa
     }
     
     // Verificar o tamanho do arquivo antes de prosseguir
-    const MAX_UPLOAD_SIZE = 5 * 1024 * 1024; // 5MB
+    const MAX_UPLOAD_SIZE = isProduction ? 3 * 1024 * 1024 : 4 * 1024 * 1024; // 3MB em produção, 4MB em localhost
     
-    // Para arquivos maiores que 5MB, exibir aviso
-    if (selectedMedia.size > MAX_UPLOAD_SIZE) {
-      try {
-        // Tentar comprimir a imagem se for muito grande
-        if (mediaType === "image") {
-          toast.info("A imagem é muito grande. Comprimindo para upload...");
-          setCompressingMedia(true);
-          const compressedFile = await compressImage(selectedMedia, 2);
-          setSelectedMedia(compressedFile);
-          setCompressingMedia(false);
-        } else if (selectedMedia.size > 30 * 1024 * 1024) {
-          // Se for um vídeo muito grande (> 30MB), mostrar erro
-          toast.error("O vídeo é muito grande. Use um vídeo com menos de 30MB.");
-          return;
-        } else {
-          // Se for um vídeo entre 5MB e 30MB, avisar que pode demorar
-          toast.info("O vídeo é grande e o upload pode demorar mais.");
-        }
-      } catch (error) {
-        console.error("Erro ao comprimir mídia:", error);
-        toast.error("Não foi possível comprimir a mídia. Tente um arquivo menor.");
+    // Para arquivos maiores que o limite, tentar comprimir
+    try {
+      let mediaToUpload = selectedMedia;
+      
+      // Comprimir todas as imagens, independente do tamanho original
+      if (mediaType === "image") {
+        toast.info("Comprimindo imagem para upload...");
+        setCompressingMedia(true);
+        mediaToUpload = await compressImage(selectedMedia, isProduction ? 1 : 1.5); // Comprimir mais em produção
         setCompressingMedia(false);
+        
+        // Verificar se mesmo após compressão ainda está muito grande
+        if (mediaToUpload.size > (isProduction ? 1.5 : 2) * 1024 * 1024) {
+          // Tentar comprimir ainda mais
+          toast.info("Aplicando compressão adicional...");
+          setCompressingMedia(true);
+          mediaToUpload = await compressImage(mediaToUpload, isProduction ? 0.8 : 1); // Comprimir mais agressivamente em produção
+          setCompressingMedia(false);
+        }
+      } else if (mediaToUpload.size > (isProduction ? 15 : 20) * 1024 * 1024) {
+        // Se for um vídeo muito grande, mostrar erro
+        toast.error(`O vídeo é muito grande. Use um vídeo com menos de ${isProduction ? '15MB' : '20MB'}.`);
         return;
       }
-    }
-    
-    setIsUploading(true);
-    setUploadProgress(0);
-    
-    try {
+      
+      setSelectedMedia(mediaToUpload);
+      setIsUploading(true);
+      setUploadProgress(0);
+      
       // Enviar progresso simulado para feedback ao usuário
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           const newProgress = prev + 5;
-          return newProgress > 90 ? 90 : newProgress;
+          return newProgress > 80 ? 80 : newProgress;
         });
       }, 300);
       
-      // Converter arquivo para base64 com verificação de tamanho
-      const base64Media = await convertFileToBase64(selectedMedia);
-      
-      // Verificar tamanho aproximado do base64 (cada caractere = ~0.75 bytes)
-      const base64Size = base64Media.length * 0.75;
-      if (base64Size > 10 * 1024 * 1024) { // 10MB
-        throw new Error("Arquivo muito grande para upload. Use uma imagem ou vídeo menor.");
-      }
-      
-      // Preparar payload para a API
-      const payload = {
-        mediaBase64: base64Media,
-        mediaType: mediaType,
-        establishmentId: selectedEstablishmentId || null,
-        durationDays: durationDays
-      };
-      
-      // Obter token do usuário atual, se disponível
-      let headers: Record<string, string> = {
-        'Content-Type': 'application/json',
-      };
-      
-      // Se o Firebase Auth estiver disponível, adicionar token de autenticação
       try {
-        if (user.getIdToken) {
-          const token = await user.getIdToken(true);
-          headers['Authorization'] = `Bearer ${token}`;
-        }
-      } catch (e) {
-        console.warn('Não foi possível obter token de autenticação:', e);
-      }
-      
-      // Obter token da sessão do local storage, se existir
-      const sessionToken = localStorage.getItem('session_token');
-      if (sessionToken) {
-        headers['x-session-token'] = sessionToken;
-      }
-      
-      // Adicionar ID do usuário atual para ajudar na autenticação
-      if (user.uid) {
-        headers['x-session-user-id'] = user.uid;
+        // 1. Upload direto para o Firebase Storage
+        // Criar uma referência única no Storage
+        const timestamp = Date.now();
+        const randomId = uuidv4().substring(0, 8);
+        const fileExtension = mediaToUpload.name.split('.').pop() || (mediaType === 'image' ? 'jpg' : 'mp4');
+        const storagePath = `stories/${user.uid}/${timestamp}-${randomId}.${fileExtension}`;
+        const storageRef = ref(storage, storagePath);
         
-        // Adicionar dados básicos do usuário em um cabeçalho, para caso a sessão não esteja disponível
-        const userData = {
-          displayName: user.displayName || user.userName,
-          photoURL: user.photoURL,
-          isContentProducer: user.isContentProducer === true,
-          email: user.email || user.userEmail
+        console.log(`Fazendo upload direto para o Storage: ${storagePath}`);
+        
+        // Fazer upload do arquivo
+        await uploadBytes(storageRef, mediaToUpload);
+        setUploadProgress(90);
+        
+        // Obter a URL do arquivo
+        const downloadURL = await getDownloadURL(storageRef);
+        setUploadProgress(95);
+        
+        console.log(`Arquivo carregado com sucesso. URL: ${downloadURL}`);
+        
+        // 2. Enviar apenas a URL para a API
+        // Obter token do usuário atual, se disponível
+        let headers: Record<string, string> = {
+          'Content-Type': 'application/json',
         };
         
-        headers['x-user-data'] = JSON.stringify(userData);
-      }
-      
-      console.log('Enviando story com dados do usuário:', {
-        uid: user.uid,
-        displayName: user.displayName || user.userName,
-        isContentProducer: user.isContentProducer
-      });
-      
-      // Enviar para a API
-      const response = await fetch('/api/stories/create', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify(payload),
-        credentials: 'include'
-      });
-      
-      clearInterval(progressInterval);
-      
-      // Se o status não for ok, tentar analisar a resposta de texto antes
-      if (!response.ok) {
-        let errorMessage = "Erro ao publicar o story";
-        let errorDetails = "";
-        
+        // Se o Firebase Auth estiver disponível, adicionar token de autenticação
         try {
-          // Tentar obter como JSON primeiro
-          const errorData = await response.json();
-          errorMessage = errorData.error || errorMessage;
-          errorDetails = errorData.details || "";
-        } catch (e) {
-          // Se falhar, tentar obter como texto
-          try {
-            const textResponse = await response.clone().text();
-            errorDetails = `Resposta do servidor: ${textResponse.substring(0, 100)}...`;
-          } catch (textError) {
-            errorDetails = "Não foi possível ler a resposta do servidor";
+          if (user.getIdToken) {
+            const token = await user.getIdToken(true);
+            headers['Authorization'] = `Bearer ${token}`;
           }
+        } catch (e) {
+          console.warn('Não foi possível obter token de autenticação:', e);
         }
         
-        setError({
-          message: errorMessage,
-          details: errorDetails,
-          isFirebaseStorage: errorMessage.includes("Firebase Storage") || errorMessage.includes("upload da mídia")
+        // Obter token da sessão do local storage, se existir
+        const sessionToken = localStorage.getItem('session_token');
+        if (sessionToken) {
+          headers['x-session-token'] = sessionToken;
+        }
+        
+        // Adicionar ID do usuário atual para ajudar na autenticação
+        if (user.uid) {
+          headers['x-session-user-id'] = user.uid;
+          
+          // Adicionar dados básicos do usuário em um cabeçalho, para caso a sessão não esteja disponível
+          const userData = {
+            displayName: user.displayName || user.userName,
+            photoURL: user.photoURL,
+            isContentProducer: user.isContentProducer === true,
+            email: user.email || user.userEmail
+          };
+          
+          headers['x-user-data'] = JSON.stringify(userData);
+        }
+        
+        // Preparar payload para API (apenas com URL)
+        const payload = {
+          mediaUrl: downloadURL,
+          mediaType: mediaType,
+          establishmentId: selectedEstablishmentId || null,
+          durationDays: durationDays
+        };
+        
+        console.log('Enviando story com dados do usuário:', {
+          uid: user.uid,
+          displayName: user.displayName || user.userName,
+          isContentProducer: user.isContentProducer
         });
         
+        // Enviar para a API de create-from-url
+        const response = await fetch('/api/stories/create-from-url', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify(payload),
+          credentials: 'include'
+        });
+        
+        clearInterval(progressInterval);
+        
+        // Se o status não for ok, tentar analisar a resposta
+        if (!response.ok) {
+          let errorMessage = "Erro ao publicar o story";
+          let errorDetails = "";
+          
+          try {
+            // Tentar obter como JSON primeiro
+            const errorData = await response.json();
+            errorMessage = errorData.error || errorMessage;
+            errorDetails = errorData.details || "";
+          } catch (e) {
+            // Se falhar, tentar obter como texto
+            try {
+              const textResponse = await response.clone().text();
+              errorDetails = `Resposta do servidor: ${textResponse.substring(0, 100)}...`;
+            } catch (textError) {
+              errorDetails = "Não foi possível ler a resposta do servidor";
+            }
+          }
+          
+          setError({
+            message: errorMessage,
+            details: errorDetails,
+            isFirebaseStorage: errorMessage.includes("Firebase Storage") || errorMessage.includes("upload da mídia")
+          });
+          
+          setIsUploading(false);
+          return;
+        }
+        
+        // Se chegou aqui, a resposta foi bem-sucedida
+        setUploadProgress(100);
+        toast.success('Story publicado com sucesso!');
+        
+        // Chamar o callback de sucesso, se fornecido
+        if (onSuccess) {
+          onSuccess();
+        }
+        
+        setTimeout(() => {
+          setIsUploading(false);
+          onClose();
+        }, 500);
+      } catch (uploadError) {
+        clearInterval(progressInterval);
+        console.error('Erro ao fazer upload ou salvar story:', uploadError);
+        
+        // Verificar se é um erro específico de Firebase Storage
+        const isStorageError = uploadError.code && 
+                            (uploadError.code.startsWith('storage/') || 
+                             uploadError.code.includes('permission-denied') ||
+                             uploadError.code.includes('unauthorized'));
+        
+        if (isStorageError) {
+          setError({
+            message: "Erro de permissão no Firebase Storage",
+            details: "Não foi possível fazer upload do arquivo. Verifique as regras de segurança do seu bucket.",
+            isFirebaseStorage: true
+          });
+        } else {
+          setError({
+            message: "Erro ao publicar o story",
+            details: uploadError.message || "Ocorreu um erro durante o upload ou ao salvar o story",
+            isFirebaseStorage: false
+          });
+        }
+        
         setIsUploading(false);
-        return;
       }
-      
-      // Se chegou aqui, a resposta foi bem-sucedida e responseData já contém os dados JSON
-      setUploadProgress(100);
-      toast.success('Story publicado com sucesso!');
-      
-      // Chamar o callback de sucesso, se fornecido
-      if (onSuccess) {
-        onSuccess();
-      }
-      
-      setTimeout(() => {
-        setIsUploading(false);
-        onClose();
-      }, 500);
     } catch (error) {
-      console.error('Erro ao publicar story:', error);
-      toast.error(error instanceof Error ? error.message : 'Ocorreu um erro ao publicar o story');
+      console.error('Erro ao processar ou enviar story:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Ocorreu um erro ao processar ou publicar o story';
+      
+      // Verificar se a mensagem de erro está relacionada ao tamanho do conteúdo
+      if (errorMsg.includes("too large") || errorMsg.includes("tamanho") || 
+          errorMsg.includes("413") || errorMsg.includes("limit")) {
+        toast.error("Arquivo muito grande para upload. Tente reduzir o tamanho ou resolução.", {
+          duration: 8000,
+        });
+      } else {
+        toast.error(errorMsg);
+      }
+      
       setIsUploading(false);
+      setCompressingMedia(false);
     }
   }
   

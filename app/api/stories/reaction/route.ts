@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { NextRequest } from "next/server"
 import { db } from "@/lib/firebase"
-import { doc, getDoc, updateDoc, arrayUnion, arrayRemove, increment } from "firebase/firestore"
+import { doc, getDoc, updateDoc, increment } from "firebase/firestore"
 
 // Configurar cabeçalhos CORS
 const corsHeaders = {
@@ -131,21 +131,32 @@ export async function POST(request: NextRequest) {
     // Preparar atualizações
     const updates: any = {};
     
-    // Sempre incrementar a reação correspondente
-    const reactionField = `reactions.${reactionFields[reaction as keyof typeof reactionFields]}`;
-    updates[reactionField] = increment(1);
+    // Se o usuário já reagiu, decrementar a reação anterior
+    if (currentReaction && currentReaction !== reaction && reactionFields[currentReaction as keyof typeof reactionFields]) {
+      const previousReactionField = `reactions.${reactionFields[currentReaction as keyof typeof reactionFields]}`;
+      updates[previousReactionField] = increment(-1);
+      console.log(`Decrementando reação anterior: ${currentReaction}`);
+    }
+    
+    // Incrementar a nova reação apenas se for diferente da atual
+    if (!currentReaction || currentReaction !== reaction) {
+      const reactionField = `reactions.${reactionFields[reaction as keyof typeof reactionFields]}`;
+      updates[reactionField] = increment(1);
+      console.log(`Incrementando nova reação: ${reaction}`);
+    }
     
     // Atualizar a reação do usuário no registro para fins de UI
     updates[userReactionsKey] = reaction;
     
-    // Manter um registro de todas as reações
-    // Criar ou atualizar o array de reações por tipo
+    // Registrar a ação no histórico de reações
+    const timestamp = new Date();
     const reactionHistoryField = `reactionHistory.${reactionFields[reaction as keyof typeof reactionFields]}`;
+    
     if (!storyData.reactionHistory) {
       updates.reactionHistory = {
         [reactionFields[reaction as keyof typeof reactionFields]]: [{
           userId: safeUserId,
-          timestamp: new Date()
+          timestamp
         }]
       };
     } else {
@@ -153,7 +164,7 @@ export async function POST(request: NextRequest) {
       if (!storyData.reactionHistory[reactionFields[reaction as keyof typeof reactionFields]]) {
         updates[reactionHistoryField] = [{
           userId: safeUserId,
-          timestamp: new Date()
+          timestamp
         }];
       } else {
         const existingHistory = storyData.reactionHistory[reactionFields[reaction as keyof typeof reactionFields]] || [];
@@ -161,7 +172,7 @@ export async function POST(request: NextRequest) {
           ...existingHistory,
           {
             userId: safeUserId,
-            timestamp: new Date()
+            timestamp
           }
         ];
       }
@@ -173,10 +184,26 @@ export async function POST(request: NextRequest) {
     // Salvar no Firestore
     await updateDoc(storyRef, updates);
     
+    // Calcular contagens atualizadas para retornar
+    const updatedReactions = { ...storyData.reactions || {} };
+    
+    // Se havia uma reação anterior e foi mudada, decrementar
+    if (currentReaction && currentReaction !== reaction && reactionFields[currentReaction as keyof typeof reactionFields]) {
+      const field = reactionFields[currentReaction as keyof typeof reactionFields];
+      updatedReactions[field] = Math.max(0, (updatedReactions[field] || 0) - 1);
+    }
+    
+    // Se a nova reação é diferente da anterior, incrementar
+    if (!currentReaction || currentReaction !== reaction) {
+      const field = reactionFields[reaction as keyof typeof reactionFields];
+      updatedReactions[field] = (updatedReactions[field] || 0) + 1;
+    }
+    
     return NextResponse.json({
       success: true,
       reaction,
-      message: "Reação registrada com sucesso"
+      message: "Reação registrada com sucesso",
+      reactions: updatedReactions
     }, { headers: customCorsHeaders });
     
   } catch (error: any) {

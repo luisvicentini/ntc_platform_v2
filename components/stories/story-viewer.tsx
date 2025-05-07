@@ -214,6 +214,21 @@ export function StoryViewer({
   // Processar URL para vídeos (usar proxy)
   const mediaUrl = isVideo ? processVideoUrl(rawMediaUrl) : rawMediaUrl;
   
+  // Criar uma referência local para as contagens de reações que pode ser atualizada imediatamente
+  const [localReactions, setLocalReactions] = useState<Record<string, number>>({});
+  
+  // Usar o useEffect para atualizar localReactions quando o story muda
+  useEffect(() => {
+    if (currentStory?.reactions) {
+      setLocalReactions({
+        likes: currentStory.reactions.likes || 0,
+        dislikes: currentStory.reactions.dislikes || 0,
+        hearts: currentStory.reactions.hearts || 0,
+        fires: currentStory.reactions.fires || 0
+      });
+    }
+  }, [currentStoryIndex, currentStory?.reactions]);
+  
   // Obter dados de avatar com validação
   const avatarColorClass = getAvatarColorClass(currentStory?.userName);
   const userInitial = currentStory?.userName?.charAt(0)?.toUpperCase() || "U";
@@ -467,6 +482,19 @@ export function StoryViewer({
   
   // Funções para lidar com reações
   const getReactionCount = (reaction: string): number => {
+    // Mapear o nome da reação para o campo correspondente no objeto
+    const reactionField = 
+      reaction === 'like' ? 'likes' : 
+      reaction === 'dislike' ? 'dislikes' : 
+      reaction === 'heart' ? 'hearts' : 
+      reaction === 'fire' ? 'fires' : reaction;
+    
+    // Primeiro tentar obter do estado local (que é atualizado imediatamente)
+    if (localReactions && reactionField in localReactions) {
+      return localReactions[reactionField];
+    }
+    
+    // Se não estiver no estado local, obter do story
     switch (reaction) {
       case 'like': return currentStory?.reactions?.likes || 0;
       case 'dislike': return currentStory?.reactions?.dislikes || 0;
@@ -481,10 +509,47 @@ export function StoryViewer({
     return userReactions[storyId] || currentStory?.userReaction || null;
   };
   
-  // Enviar reação para o servidor
+  // Função para enviar reação para o servidor
   const sendReaction = async (reaction: string) => {
     try {
       setIsReacting(true);
+      
+      // Obter a reação atual antes da mudança
+      const currentUserReaction = hasUserReacted(currentStory?.id || '');
+      
+      // Atualizar imediatamente o estado local para feedback instantâneo ao usuário
+      // Mapear nomes de reações para campos no objeto reactions
+      const reactionFields: Record<string, string> = {
+        'like': 'likes',
+        'dislike': 'dislikes',
+        'heart': 'hearts',
+        'fire': 'fires'
+      };
+      
+      // Atualizar reações localmente (decrementar antiga e incrementar nova)
+      setLocalReactions(prev => {
+        const updated = { ...prev };
+        
+        // Se havia uma reação anterior e ela é diferente da nova, decrementar
+        if (currentUserReaction && currentUserReaction !== reaction && currentUserReaction in reactionFields) {
+          const prevField = reactionFields[currentUserReaction];
+          updated[prevField] = Math.max(0, (updated[prevField] || 0) - 1);
+        }
+        
+        // Incrementar a nova reação se for diferente da anterior
+        if (!currentUserReaction || currentUserReaction !== reaction) {
+          const newField = reactionFields[reaction];
+          updated[newField] = (updated[newField] || 0) + 1;
+        }
+        
+        return updated;
+      });
+      
+      // Atualizar o estado local de userReactions para feedback imediato
+      setUserReactions(prev => ({
+        ...prev,
+        [currentStory?.id || '']: reaction
+      }));
       
       const response = await fetch('/api/stories/reaction', {
         method: 'POST',
@@ -502,15 +567,45 @@ export function StoryViewer({
         throw new Error('Falha ao salvar reação');
       }
       
-      // Atualizar o estado local para refletir a reação do usuário mais recente
-      setUserReactions(prev => ({
-        ...prev,
-        [currentStory?.id || '']: reaction
-      }));
+      // Processar resposta da API para obter contagens atualizadas
+      const responseData = await response.json();
       
-      // Atualizar a contagem de reações (simulação otimista)
-      // Não atualizar diretamente stories porque é uma prop
-      // Mas atualizamos o userReaction acima
+      // Atualizar as contagens locais com os valores exatos do servidor
+      if (responseData.reactions) {
+        setLocalReactions({
+          likes: responseData.reactions.likes || 0,
+          dislikes: responseData.reactions.dislikes || 0,
+          hearts: responseData.reactions.hearts || 0,
+          fires: responseData.reactions.fires || 0
+        });
+      }
+      
+      // Atualizar a contagem de reações com os valores retornados pela API
+      if (responseData.reactions && currentStory) {
+        // Criar uma cópia do story atual com as contagens de reações atualizadas
+        const updatedStory = {
+          ...currentStory,
+          reactions: responseData.reactions,
+          userReaction: reaction
+        };
+        
+        // Atualizar a lista de stories com o story modificado
+        const updatedStories = validStories.map(story => 
+          story.id === currentStory.id ? updatedStory : story
+        );
+        
+        // Se tiver acesso a uma função para atualizar os stories, use-a
+        if (onRemoveStory && typeof window !== 'undefined') {
+          // Emitir evento para que o componente pai atualize as reações
+          const event = new CustomEvent('storyReactionUpdated', {
+            detail: {
+              storyId: currentStory.id,
+              reactions: responseData.reactions
+            }
+          });
+          window.dispatchEvent(event);
+        }
+      }
     } catch (error) {
       console.error('Erro ao salvar reação:', error);
       toast.error('Não foi possível salvar sua reação');
@@ -867,19 +962,6 @@ export function StoryViewer({
               <span className="text-xs mt-1 font-medium">{getReactionCount('like')}</span>
             </button>
             
-            {/* Botão Não Curtir */}
-            <button 
-              onClick={handleReactionClick('dislike')}
-              disabled={isReacting}
-              className={`flex flex-col items-center px-3 py-2 rounded-lg transition-colors ${
-                currentUserReaction === 'dislike' 
-                  ? 'bg-red-500/30 text-white' 
-                  : 'text-white/80 hover:bg-white/10'
-              }`}
-            >
-              <span className={`text-2xl ${currentUserReaction === 'dislike' ? 'text-red-400' : 'text-white/80'}`}>👎</span>
-              <span className="text-xs mt-1 font-medium">{getReactionCount('dislike')}</span>
-            </button>
             
             {/* Botão Coração */}
             <button 
@@ -891,7 +973,7 @@ export function StoryViewer({
                   : 'text-white/80 hover:bg-white/10'
               }`}
             >
-              <span className={`text-2xl ${currentUserReaction === 'heart' ? 'text-pink-400' : 'text-white/80'}`}>💖</span>
+              <span className={`text-2xl ${currentUserReaction === 'heart' ? 'text-pink-400' : 'text-white/80'}`}>🍔</span>
               <span className="text-xs mt-1 font-medium">{getReactionCount('heart')}</span>
             </button>
             
