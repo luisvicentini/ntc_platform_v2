@@ -2675,7 +2675,7 @@ const SubscribersReport = () => {
                     <TableHead>Expiração</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Vouchers</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    {/* <TableHead className="text-right">Ações</TableHead> */}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -2769,7 +2769,7 @@ const SubscribersReport = () => {
                               {subscription.metadata?.voucherCount || 0}
                             </Badge>
                           </TableCell>
-                          <TableCell className="text-right">
+                          {/* <TableCell className="text-right">
                             {isActive && !isInactive && (
                               <Button 
                                 variant="destructive"
@@ -2785,7 +2785,7 @@ const SubscribersReport = () => {
                                 )}
                               </Button>
                             )}
-                          </TableCell>
+                          </TableCell> */}
                         </TableRow>
                       );
                     })}
