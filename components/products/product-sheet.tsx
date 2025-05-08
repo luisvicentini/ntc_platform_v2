@@ -39,12 +39,42 @@ export function ProductSheet({ product, isOpen, onClose }: ProductSheetProps) {
       .then(() => {
         setCopied(true)
         toast.success("Código copiado para a área de transferência!")
+        
+        // Registrar o clique no banco de dados
+        registerProductClick(product.id)
+          .catch(error => {
+            console.error("Erro ao registrar clique:", error)
+            // Não exibimos erro ao usuário pois não afeta a funcionalidade principal
+          })
+        
         setTimeout(() => setCopied(false), 3000)
       })
       .catch(() => {
         toast.error("Erro ao copiar código. Tente novamente.")
       })
   }
+
+  // Função para registrar o clique na API
+  const registerProductClick = async (productId: string) => {
+    try {
+      const response = await fetch('/api/products/clicks', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ productId })
+      });
+
+      if (!response.ok) {
+        throw new Error('Falha ao registrar clique');
+      }
+
+      return await response.json();
+    } catch (error) {
+      console.error("Erro ao registrar clique:", error);
+      throw error;
+    }
+  };
 
   const handleOpenStore = () => {
     if (product.link) {

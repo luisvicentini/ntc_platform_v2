@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { db } from "@/lib/firebase"
-import { collection, query, getDocs, getDoc, doc } from "firebase/firestore"
+import { collection, query, getDocs, getDoc, doc, where, Timestamp } from "firebase/firestore"
 import { jwtDecode } from "jwt-decode"
 import type { SessionToken } from "@/types/session"
 
@@ -57,9 +57,16 @@ export async function GET(request: Request) {
       )
     }
 
-    // Buscar todos os vouchers sem filtro por estabelecimento
+    // Definir data de início (06/05/2025)
+    const startDate = new Date('2025-05-06T00:00:00.000Z')
+    const startTimestamp = Timestamp.fromDate(startDate)
+
+    // Buscar vouchers a partir da data especificada
     const vouchersRef = collection(db, "vouchers")
-    const vouchersQuery = query(vouchersRef)
+    const vouchersQuery = query(
+      vouchersRef,
+      where("createdAt", ">=", startTimestamp)
+    )
     const vouchersSnap = await getDocs(vouchersQuery)
     
     console.log(`[DEBUG] Total de vouchers encontrados: ${vouchersSnap.size}`)
@@ -136,4 +143,4 @@ export async function GET(request: Request) {
       { status: 500 }
     )
   }
-} 
+}
