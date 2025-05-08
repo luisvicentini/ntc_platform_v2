@@ -15,6 +15,7 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { 
   Calendar, 
   Filter, 
@@ -81,7 +82,7 @@ interface Voucher {
 // Interface para assinaturas
 interface Subscription {
   id: string
-  status: "active" | "canceled" | "expired" | "pending" | "trial"
+  status: "active" | "canceled" | "expired" | "pending" | "trial" | "inactive"
   startDate: string | FirebaseTimestamp
   endDate: string | FirebaseTimestamp
   member: Member
@@ -95,7 +96,21 @@ interface Subscription {
     isEngaged?: boolean // Se o assinante gerou vouchers ou clicou em produtos
     voucherCount?: number
     hasTransactions?: boolean
+    rawData?: string // Campo que pode conter "Abandoned_Cart"
   }
+}
+
+// Interface para carrinhos abandonados
+interface AbandonedCart {
+  id: string
+  userId: string
+  userName: string
+  userEmail?: string
+  userPhone?: string
+  createdAt: string | FirebaseTimestamp
+  rawData: string
+  transactionId?: string
+  status: string
 }
 
 interface FilterOptions {
@@ -1888,14 +1903,30 @@ const VoucherCard = ({ voucher, onClick }: { voucher: Voucher, onClick: () => vo
   );
 };
 
+// Função para extrair email do rawData
+const extractEmailFromRawData = (rawData: string): string => {
+  const emailRegex = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/;
+  const match = rawData.match(emailRegex);
+  return match ? match[0] : '';
+};
+
 // Atualizar o componente SubscribersReport para usar a API de assinaturas
 const SubscribersReport = () => {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
+  const [abandonedCarts, setAbandonedCarts] = useState<AbandonedCart[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAbandoned, setLoadingAbandoned] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [abandonedCartPage, setAbandonedCartPage] = useState(1);
   const [filteredSubscriptions, setFilteredSubscriptions] = useState<Subscription[]>([]);
+  const [filteredAbandonedCarts, setFilteredAbandonedCarts] = useState<AbandonedCart[]>([]);
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<string[]>([]);
+  const [selectedCarts, setSelectedCarts] = useState<string[]>([]);
+  const [selectedSubscriptions, setSelectedSubscriptions] = useState<string[]>([]);
+  const [processingBulkAction, setProcessingBulkAction] = useState(false);
+  const [processingBulkSubscriptionAction, setProcessingBulkSubscriptionAction] = useState(false);
+  const [deactivatingSubscription, setDeactivatingSubscription] = useState<string | null>(null);
   const { user } = useAuth();
   
   // Função para obter token de sessão para as requisições
@@ -1973,7 +2004,8 @@ const SubscribersReport = () => {
               nextPaymentDate: subscription.nextPaymentDate || subscription.nextPayment || null,
               isEngaged: subscription.isEngaged || false,
               voucherCount: subscription.voucherCount || 0,
-              hasTransactions: subscription.hasTransactions || false
+              hasTransactions: subscription.hasTransactions || false,
+              rawData: subscription.rawData || ''
             }
           }));
         
@@ -1991,8 +2023,109 @@ const SubscribersReport = () => {
       }
     };
     
+    // Função para buscar carrinhos abandonados
+    const fetchAbandonedCarts = async () => {
+      try {
+        setLoadingAbandoned(true);
+        console.log("Buscando dados de carrinhos abandonados...");
+        
+        const sessionToken = getSessionToken();
+        
+        // Usar a nova rota de API específica para carrinhos abandonados
+        const url = '/api/reports/abandoned-carts';
+        
+        const response = await fetch(url, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-session-token': sessionToken
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Falha ao buscar carrinhos abandonados: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log("Carrinhos abandonados recebidos:", data.length || 0, "registros");
+        
+        // Mapear os dados recebidos para o formato esperado pelo componente
+        const abandonedCartsData = data.map((cart: any) => ({
+          id: cart.id || '',
+          userId: cart.userId || '',
+          userName: cart.user?.displayName || cart.userName || 'Usuário',
+          userEmail: cart.user?.email || cart.userEmail || cart.extractedData?.email || '',
+          userPhone: cart.user?.phoneNumber || cart.userPhone || '',
+          createdAt: cart.createdAt || new Date().toISOString(),
+          rawData: cart.rawData || '',
+          transactionId: cart.id || '',
+          status: cart.status || 'pending'
+        }));
+        
+        setAbandonedCarts(abandonedCartsData);
+        setFilteredAbandonedCarts(abandonedCartsData);
+      } catch (error) {
+        console.error('Erro ao buscar carrinhos abandonados:', error);
+        toast.error('Não foi possível carregar os dados de carrinhos abandonados');
+        setAbandonedCarts([]);
+        setFilteredAbandonedCarts([]);
+      } finally {
+        setLoadingAbandoned(false);
+      }
+    };
+    
     fetchSubscriptions();
+    fetchAbandonedCarts();
   }, [user]);
+  
+  // Função para desativar uma assinatura (carrinho abandonado)
+  const handleDeactivateCart = async (cartId: string) => {
+    try {
+      console.log(`Desativando carrinho abandonado ID: ${cartId}`);
+      const sessionToken = getSessionToken();
+      
+      // Usar a nova rota PATCH específica para carrinhos abandonados
+      const response = await fetch('/api/reports/abandoned-carts', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-token': sessionToken
+        },
+        body: JSON.stringify({
+          id: cartId,
+          status: 'inactive'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Falha ao desativar carrinho: ${response.status}`);
+      }
+      
+      // Atualizar o estado local após a desativação bem-sucedida
+      toast.success('Carrinho abandonado desativado com sucesso!');
+      
+      // Atualizar lista de carrinhos abandonados
+      setAbandonedCarts(prev => 
+        prev.map(cart => 
+          cart.id === cartId 
+            ? { ...cart, status: 'inactive' } 
+            : cart
+        )
+      );
+      
+      setFilteredAbandonedCarts(prev => 
+        prev.map(cart => 
+          cart.id === cartId 
+            ? { ...cart, status: 'inactive' } 
+            : cart
+        )
+      );
+      
+    } catch (error) {
+      console.error('Erro ao desativar carrinho abandonado:', error);
+      toast.error('Não foi possível desativar o carrinho abandonado');
+    }
+  };
   
   // Função auxiliar para mapear status da assinatura
   const mapSubscriptionStatus = (status: string): "active" | "canceled" | "expired" | "pending" | "trial" => {
@@ -2079,6 +2212,317 @@ const SubscribersReport = () => {
     
     applyStatusFilter(newStatusFilter);
   };
+  
+  // Filtrar carrinhos abandonados por termo de pesquisa
+  const handleSearchAbandonedCarts = (term: string) => {
+    if (!term.trim()) {
+      setFilteredAbandonedCarts(abandonedCarts);
+      return;
+    }
+    
+    const lowercaseTerm = term.toLowerCase();
+    
+    const filtered = abandonedCarts.filter(cart => 
+      cart.userName.toLowerCase().includes(lowercaseTerm) ||
+      (cart.userEmail && cart.userEmail.toLowerCase().includes(lowercaseTerm)) ||
+      (cart.userPhone && cart.userPhone.toLowerCase().includes(lowercaseTerm)) ||
+      (cart.rawData && cart.rawData.toLowerCase().includes(lowercaseTerm))
+    );
+    
+    setFilteredAbandonedCarts(filtered);
+    setAbandonedCartPage(1);
+  };
+  
+  // Função para desativar múltiplos carrinhos abandonados de uma vez
+  const handleBulkDeactivateCarts = async () => {
+    if (selectedCarts.length === 0) return;
+    
+    try {
+      setProcessingBulkAction(true);
+      console.log(`Desativando ${selectedCarts.length} carrinhos abandonados`);
+      const sessionToken = getSessionToken();
+      
+      // Desativar cada carrinho sequencialmente
+      let successCount = 0;
+      let failCount = 0;
+      
+      for (const cartId of selectedCarts) {
+        try {
+          const response = await fetch('/api/reports/abandoned-carts', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-session-token': sessionToken
+            },
+            body: JSON.stringify({
+              id: cartId,
+              status: 'inactive'
+            })
+          });
+          
+          if (response.ok) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          console.error(`Erro ao desativar carrinho ${cartId}:`, error);
+          failCount++;
+        }
+      }
+      
+      // Atualizar o estado local após a desativação em lote
+      if (successCount > 0) {
+        // Atualizar status de carrinhos desativados com sucesso
+        setAbandonedCarts(prev => 
+          prev.map(cart => 
+            selectedCarts.includes(cart.id) 
+              ? { ...cart, status: 'inactive' } 
+              : cart
+          )
+        );
+        
+        setFilteredAbandonedCarts(prev => 
+          prev.map(cart => 
+            selectedCarts.includes(cart.id) 
+              ? { ...cart, status: 'inactive' } 
+              : cart
+          )
+        );
+        
+        // Mostrar mensagem de sucesso
+        if (successCount === selectedCarts.length) {
+          toast.success(`${successCount} carrinhos abandonados desativados com sucesso!`);
+        } else {
+          toast.success(`${successCount} de ${selectedCarts.length} carrinhos abandonados desativados com sucesso.`);
+        }
+      }
+      
+      if (failCount > 0) {
+        toast.error(`Falha ao desativar ${failCount} carrinhos abandonados.`);
+      }
+      
+      // Limpar seleção após a operação
+      setSelectedCarts([]);
+      
+    } catch (error) {
+      console.error('Erro ao desativar carrinhos abandonados em lote:', error);
+      toast.error('Ocorreu um erro ao desativar os carrinhos abandonados.');
+    } finally {
+      setProcessingBulkAction(false);
+    }
+  };
+  
+  // Função para selecionar/desselecionar todos os carrinhos
+  const toggleSelectAllCarts = (checked: boolean | 'indeterminate') => {
+    // Pegar todos os carrinhos filtrados que não estão desativados
+    const allSelectableItems = filteredAbandonedCarts
+      .filter(cart => cart.status !== 'inactive');
+    
+    const allSelectableItemIds = allSelectableItems.map(cart => cart.id);
+    
+    if (checked === true) {
+      // Selecionar todos os carrinhos filtrados
+      setSelectedCarts(allSelectableItemIds);
+    } else {
+      // Desselecionar todos
+      setSelectedCarts([]);
+    }
+  };
+  
+  // Função para alternar a seleção de um único carrinho
+  const toggleCartSelection = (checked: boolean | 'indeterminate', cartId: string) => {
+    if (checked === true) {
+      // Adicionar à seleção se não estiver já incluído
+      setSelectedCarts(prev => 
+        prev.includes(cartId) ? prev : [...prev, cartId]
+      );
+    } else {
+      // Remover da seleção
+      setSelectedCarts(prev => prev.filter(id => id !== cartId));
+    }
+  };
+  
+  // Verificar se todos os carrinhos filtrados estão selecionados
+  const isAllFilteredItemsSelected = () => {
+    const allSelectableItems = filteredAbandonedCarts
+      .filter(cart => cart.status !== 'inactive');
+    
+    return allSelectableItems.length > 0 && 
+           allSelectableItems.every(cart => selectedCarts.includes(cart.id));
+  };
+  
+  // Verificar se há pelo menos um item selecionado
+  const hasSelectedItems = selectedCarts.length > 0;
+  
+  // Função para desativar uma assinatura
+  const handleDeactivateSubscription = async (subscriptionId: string) => {
+    try {
+      setDeactivatingSubscription(subscriptionId);
+      console.log(`Desativando assinatura ID: ${subscriptionId}`);
+      const sessionToken = getSessionToken();
+      
+      // Usar a rota PATCH existente em /api/reports/subscriptions
+      const response = await fetch('/api/reports/subscriptions', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-token': sessionToken
+        },
+        body: JSON.stringify({
+          id: subscriptionId,
+          status: 'inactive'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Falha ao desativar assinatura: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log("Resposta da API de desativação:", result);
+      
+      // Atualizar o estado local após a desativação bem-sucedida
+      toast.success('Assinatura desativada com sucesso!');
+      
+      // Atualizar a lista de assinaturas localmente
+      setSubscriptions(prev => 
+        prev.map(subscription => 
+          subscription.id === subscriptionId 
+            ? { ...subscription, status: 'inactive' } 
+            : subscription
+        )
+      );
+      
+      setFilteredSubscriptions(prev => 
+        prev.map(subscription => 
+          subscription.id === subscriptionId 
+            ? { ...subscription, status: 'inactive' } 
+            : subscription
+        )
+      );
+      
+    } catch (error) {
+      console.error('Erro ao desativar assinatura:', error);
+      toast.error('Não foi possível desativar a assinatura');
+    } finally {
+      setDeactivatingSubscription(null);
+    }
+  };
+  
+  // Função para desativar múltiplas assinaturas de uma vez
+  const handleBulkDeactivateSubscriptions = async () => {
+    if (selectedSubscriptions.length === 0) return;
+    
+    try {
+      setProcessingBulkSubscriptionAction(true);
+      console.log(`Desativando ${selectedSubscriptions.length} assinaturas em lote`);
+      const sessionToken = getSessionToken();
+      
+      // Usar a nova API de operações em lote para assinaturas
+      const response = await fetch('/api/reports/subscriptions/bulk', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-session-token': sessionToken
+        },
+        body: JSON.stringify({
+          ids: selectedSubscriptions,
+          status: 'inactive'
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Falha na operação em lote: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      console.log("Resultado da operação em lote:", result);
+      
+      // Verificar o resultado da operação
+      if (result.success) {
+        // Atualizar assinaturas no estado local
+        if (result.successful && result.successful.length > 0) {
+          setSubscriptions(prev => 
+            prev.map(subscription => 
+              result.successful.includes(subscription.id)
+                ? { ...subscription, status: 'inactive' } 
+                : subscription
+            )
+          );
+          
+          setFilteredSubscriptions(prev => 
+            prev.map(subscription => 
+              result.successful.includes(subscription.id)
+                ? { ...subscription, status: 'inactive' } 
+                : subscription
+            )
+          );
+          
+          // Mostrar mensagem de sucesso
+          toast.success(`${result.successCount} assinaturas desativadas com sucesso`);
+        }
+        
+        // Mostrar mensagem se houver falhas
+        if (result.failCount > 0) {
+          toast.error(`Falha ao desativar ${result.failCount} assinaturas`);
+        }
+      } else {
+        toast.error('Falha ao processar desativação em lote');
+      }
+      
+      // Limpar seleção após a operação
+      setSelectedSubscriptions([]);
+      
+    } catch (error) {
+      console.error('Erro ao desativar assinaturas em lote:', error);
+      toast.error('Ocorreu um erro ao desativar as assinaturas');
+    } finally {
+      setProcessingBulkSubscriptionAction(false);
+    }
+  };
+  
+  // Função para selecionar/desselecionar todas as assinaturas
+  const toggleSelectAllSubscriptions = (checked: boolean | 'indeterminate') => {
+    // Pegar todas as assinaturas filtradas ativas (que podem ser desativadas)
+    const activeSubscriptions = filteredSubscriptions
+      .filter(sub => sub.status === 'active');
+    
+    const activeSubscriptionIds = activeSubscriptions.map(sub => sub.id);
+    
+    if (checked === true) {
+      // Selecionar todas as assinaturas ativas
+      setSelectedSubscriptions(activeSubscriptionIds);
+    } else {
+      // Desselecionar todas
+      setSelectedSubscriptions([]);
+    }
+  };
+  
+  // Função para alternar a seleção de uma única assinatura
+  const toggleSubscriptionSelection = (checked: boolean | 'indeterminate', subscriptionId: string) => {
+    if (checked === true) {
+      // Adicionar à seleção se não estiver já incluído
+      setSelectedSubscriptions(prev => 
+        prev.includes(subscriptionId) ? prev : [...prev, subscriptionId]
+      );
+    } else {
+      // Remover da seleção
+      setSelectedSubscriptions(prev => prev.filter(id => id !== subscriptionId));
+    }
+  };
+  
+  // Verificar se todas as assinaturas ativas estão selecionadas
+  const isAllActiveSubscriptionsSelected = () => {
+    const activeSubscriptions = filteredSubscriptions
+      .filter(sub => sub.status === 'active');
+    
+    return activeSubscriptions.length > 0 && 
+           activeSubscriptions.every(sub => selectedSubscriptions.includes(sub.id));
+  };
+  
+  // Verificar se há pelo menos uma assinatura selecionada
+  const hasSelectedSubscriptions = selectedSubscriptions.length > 0;
   
   // Renderizar o componente de relatório de assinantes
   return (
@@ -2185,9 +2629,44 @@ const SubscribersReport = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
+              <div className="mb-4 flex justify-between items-center">
+                {hasSelectedSubscriptions && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-zinc-500">
+                      {selectedSubscriptions.length} {selectedSubscriptions.length === 1 ? 'assinatura selecionada' : 'assinaturas selecionadas'}
+                    </span>
+                    <Button 
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleBulkDeactivateSubscriptions}
+                      disabled={processingBulkSubscriptionAction}
+                      className="whitespace-nowrap"
+                    >
+                      {processingBulkSubscriptionAction ? (
+                        <>
+                          <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                          Processando...
+                        </>
+                      ) : (
+                        'Desativar Selecionadas'
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[40px]">
+                      <div className="flex items-center">
+                        <Checkbox
+                          checked={isAllActiveSubscriptionsSelected()}
+                          onCheckedChange={toggleSelectAllSubscriptions}
+                          className="rounded border-zinc-300 text-primary focus:ring-primary"
+                        />
+                      </div>
+                    </TableHead>
                     <TableHead>Nome</TableHead>
                     <TableHead>Email / Telefone</TableHead>
                     <TableHead>Plano</TableHead>
@@ -2196,6 +2675,7 @@ const SubscribersReport = () => {
                     <TableHead>Expiração</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Vouchers</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -2205,9 +2685,20 @@ const SubscribersReport = () => {
                     .map((subscription) => {
                       const startDate = convertToDate(subscription.startDate);
                       const endDate = convertToDate(subscription.endDate);
+                      const isActive = subscription.status === 'active';
+                      const isInactive = subscription.status === 'inactive';
                       
                       return (
                         <TableRow key={subscription.id}>
+                          <TableCell>
+                            {isActive && !isInactive && (
+                              <Checkbox
+                                checked={selectedSubscriptions.includes(subscription.id)}
+                                onCheckedChange={(checked) => toggleSubscriptionSelection(checked, subscription.id)}
+                                className="rounded border-zinc-300 text-primary focus:ring-primary"
+                              />
+                            )}
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-3">
                               <Avatar className="h-8 w-8">
@@ -2263,18 +2754,37 @@ const SubscribersReport = () => {
                               ${subscription.status === 'expired' ? 'bg-zinc-100 text-zinc-700 border-zinc-200' : ''}
                               ${subscription.status === 'pending' ? 'bg-amber-100 text-amber-700 border-amber-200' : ''}
                               ${subscription.status === 'trial' ? 'bg-blue-100 text-blue-700 border-blue-200' : ''}
+                              ${subscription.status === 'inactive' ? 'bg-zinc-100 text-zinc-700 border-zinc-200' : ''}
                             `}>
                               {subscription.status === 'active' && 'Ativo'}
                               {subscription.status === 'canceled' && 'Cancelado'}
                               {subscription.status === 'expired' && 'Expirado'}
                               {subscription.status === 'pending' && 'Pendente'}
                               {subscription.status === 'trial' && 'Trial'}
+                              {subscription.status === 'inactive' && 'Inativo'}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline">
                               {subscription.metadata?.voucherCount || 0}
                             </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {isActive && !isInactive && (
+                              <Button 
+                                variant="destructive"
+                                size="sm"
+                                className="text-xs px-2 py-0 h-6"
+                                onClick={() => handleDeactivateSubscription(subscription.id)}
+                                disabled={deactivatingSubscription === subscription.id}
+                              >
+                                {deactivatingSubscription === subscription.id ? (
+                                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                ) : (
+                                  'Desativar'
+                                )}
+                              </Button>
+                            )}
                           </TableCell>
                         </TableRow>
                       );
@@ -2343,6 +2853,264 @@ const SubscribersReport = () => {
                           : Math.ceil(filteredSubscriptions.length / 10)
                       )}
                       disabled={currentPage >= Math.ceil(filteredSubscriptions.length / 10)}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Nova seção: Tabela de Carrinhos Abandonados */}
+      <Card className="shadow-sm mt-8">
+        <div className="p-6 border-b border-zinc-100">
+          <h3 className="text-lg font-medium flex items-center">
+            <svg className="mr-2 h-5 w-5 text-zinc-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+            </svg>
+            Carrinhos Abandonados
+          </h3>
+          <p className="text-sm text-zinc-500 mt-1">
+            Usuários que abandonaram o carrinho e não finalizaram a compra
+          </p>
+        </div>
+        
+        <div className="p-6">
+          {loadingAbandoned ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full"></div>
+            </div>
+          ) : filteredAbandonedCarts.length === 0 ? (
+            <div className="bg-white rounded-lg p-8 text-center">
+              <div className="mx-auto w-16 h-16 bg-zinc-100 rounded-full flex items-center justify-center mb-4">
+                <svg className="h-8 w-8 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium mb-2">Nenhum carrinho abandonado encontrado</h3>
+              <p className="text-zinc-500 mb-4">
+                Não há registros de carrinhos abandonados no momento.
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <div className="mb-4 flex justify-between items-center">
+                <div className="relative w-full max-w-sm">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 h-4 w-4" />
+                  <Input 
+                    className="pl-10 bg-white"
+                    placeholder="Buscar carrinho abandonado..."
+                    onChange={(e) => handleSearchAbandonedCarts(e.target.value)}
+                  />
+                </div>
+                
+                {hasSelectedItems && (
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-zinc-500">
+                      {selectedCarts.length} {selectedCarts.length === 1 ? 'item selecionado' : 'itens selecionados'}
+                    </span>
+                    <Button 
+                      variant="destructive"
+                      size="sm"
+                      onClick={handleBulkDeactivateCarts}
+                      disabled={processingBulkAction}
+                      className="whitespace-nowrap"
+                    >
+                      {processingBulkAction ? (
+                        <>
+                          <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                          Processando...
+                        </>
+                      ) : (
+                        'Desativar Selecionados'
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </div>
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[40px]">
+                      <div className="flex items-center">
+                        <Checkbox
+                          checked={isAllFilteredItemsSelected()}
+                          onCheckedChange={toggleSelectAllCarts}
+                          className="rounded border-zinc-300 text-primary focus:ring-primary"
+                        />
+                      </div>
+                    </TableHead>
+                    <TableHead>Usuário</TableHead>
+                    <TableHead>Email / Telefone</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Dados</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {/* Aplicar paginação */}
+                  {filteredAbandonedCarts
+                    .slice((abandonedCartPage - 1) * 10, abandonedCartPage * 10)
+                    .map((cart) => {
+                      const createdDate = convertToDate(cart.createdAt);
+                      // Extrair email do rawData se não estiver disponível
+                      const email = cart.userEmail || extractEmailFromRawData(cart.rawData);
+                      const isDisabled = cart.status === 'inactive';
+                      
+                      return (
+                        <TableRow key={cart.id} className={isDisabled ? 'opacity-60' : ''}>
+                          <TableCell>
+                            {!isDisabled && (
+                              <Checkbox
+                                checked={selectedCarts.includes(cart.id)}
+                                onCheckedChange={(checked) => toggleCartSelection(checked, cart.id)}
+                                className="rounded border-zinc-300 text-primary focus:ring-primary"
+                              />
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-3">
+                              <Avatar className="h-8 w-8">
+                                <AvatarFallback className="bg-red-100 text-red-500">
+                                  {cart.userName.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="font-medium">{cart.userName}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="text-sm">
+                              {email && (
+                                <div className="flex items-center">
+                                  <svg className="h-3 w-3 mr-1 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                  </svg>
+                                  {email}
+                                </div>
+                              )}
+                              {cart.userPhone && (
+                                <div className="flex items-center mt-1">
+                                  <svg className="h-3 w-3 mr-1 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                  </svg>
+                                  {cart.userPhone}
+                                </div>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="text-sm whitespace-nowrap">
+                              {format(createdDate, "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            <Badge className={`
+                              ${cart.status === 'inactive' 
+                                ? 'bg-red-100 text-red-700 border-red-200' 
+                                : 'bg-amber-100 text-amber-700 border-amber-200'}
+                            `}>
+                              {cart.status === 'inactive' ? 'Desativado' : 'Abandonado'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              className="text-xs px-2 py-0 h-6"
+                              onClick={() => {
+                                toast.info(cart.rawData.slice(0, 200) + (cart.rawData.length > 200 ? '...' : ''), {
+                                  duration: 5000,
+                                });
+                              }}
+                            >
+                              <Eye className="h-3 w-3 mr-1" />
+                              Visualizar
+                            </Button>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {cart.status !== 'inactive' && (
+                              <Button 
+                                variant="destructive"
+                                size="sm"
+                                className="text-xs px-2 py-0 h-6"
+                                onClick={() => handleDeactivateCart(cart.id)}
+                              >
+                                Desativar
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                </TableBody>
+              </Table>
+              
+              {/* Paginação para carrinhos abandonados */}
+              {filteredAbandonedCarts.length > 10 && (
+                <div className="flex justify-between items-center p-4 border-t">
+                  <div className="text-sm text-zinc-500">
+                    Mostrando {Math.min((abandonedCartPage - 1) * 10 + 1, filteredAbandonedCarts.length)}-
+                    {Math.min(abandonedCartPage * 10, filteredAbandonedCarts.length)} de {filteredAbandonedCarts.length}
+                  </div>
+                  <div className="flex space-x-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setAbandonedCartPage(abandonedCartPage > 1 ? abandonedCartPage - 1 : 1)}
+                      disabled={abandonedCartPage === 1}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    
+                    {Array.from(
+                      { length: Math.min(5, Math.ceil(filteredAbandonedCarts.length / 10)) },
+                      (_, i) => {
+                        // Calcular quais páginas mostrar, mostrando no máximo 5 páginas
+                        const totalPages = Math.ceil(filteredAbandonedCarts.length / 10);
+                        let pageNumber;
+                        
+                        if (totalPages <= 5) {
+                          pageNumber = i + 1;
+                        } else {
+                          // Mostrar páginas em torno da página atual
+                          const startPage = Math.max(1, abandonedCartPage - 2);
+                          const endPage = Math.min(totalPages, startPage + 4);
+                          pageNumber = startPage + i;
+                          
+                          // Ajustar se estiver perto do fim
+                          if (pageNumber > totalPages) {
+                            return null;
+                          }
+                        }
+                        
+                        return (
+                          <Button
+                            key={pageNumber}
+                            variant={abandonedCartPage === pageNumber ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setAbandonedCartPage(pageNumber)}
+                            className="w-8 h-8 p-0"
+                          >
+                            {pageNumber}
+                          </Button>
+                        );
+                      }
+                    ).filter(Boolean)}
+                    
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => setAbandonedCartPage(
+                        abandonedCartPage < Math.ceil(filteredAbandonedCarts.length / 10) 
+                          ? abandonedCartPage + 1 
+                          : Math.ceil(filteredAbandonedCarts.length / 10)
+                      )}
+                      disabled={abandonedCartPage >= Math.ceil(filteredAbandonedCarts.length / 10)}
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Button>
