@@ -562,7 +562,7 @@ const EstablishmentChart = ({ vouchers }: { vouchers: Voucher[] }) => {
     return groups;
   }, {});
 
-  // Ordenar estabelecimentos por quantidade de vouchers (top 5)
+  // Ordenar estabelecimentos por quantidade de vouchers (top 10)
   const topEstablishments = Object.entries(establishmentGroups)
     .map(([id, vouchers]) => ({
       id,
@@ -577,7 +577,7 @@ const EstablishmentChart = ({ vouchers }: { vouchers: Voucher[] }) => {
       }
     }))
     .sort((a, b) => b.count - a.count)
-    .slice(0, 5);
+    .slice(0, 10);
 
   const maxCount = Math.max(...topEstablishments.map(e => e.count), 1);
 
@@ -599,7 +599,7 @@ const EstablishmentChart = ({ vouchers }: { vouchers: Voucher[] }) => {
           Estabelecimentos com Mais Vouchers
         </h3>
         <p className="text-sm text-zinc-500 mt-1">
-          Top 5 estabelecimentos por volume de cupons gerados
+          Top 10 estabelecimentos por volume de cupons gerados
         </p>
       </div>
       
@@ -1668,12 +1668,6 @@ function MemberReportsPage() {
     <div className="container mx-auto max-w-7xl px-4 py-6 pb-24">
       <div className="flex flex-col md:flex-row items-center justify-between mb-6">
         <h1 className="text-2xl font-semibold">Relatório de Cupons</h1>
-        <div className="flex items-center space-x-3 mt-2 md:mt-0">
-          <DollarSign className="h-5 w-5 text-emerald-500" />
-          <span className="text-lg font-medium text-emerald-500">
-            Total: {filteredVouchers.length} cupons
-          </span>
-        </div>
       </div>
 
       {/* Toolbar com pesquisa e filtros - visível nas abas de vouchers */}

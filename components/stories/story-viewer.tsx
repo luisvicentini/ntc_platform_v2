@@ -834,14 +834,14 @@ export function StoryViewer({
                 }}
                 onStart={() => {
                   if (isMounted.current) {
-                    console.log("ReactPlayer - reprodução iniciada");
-                    setMediaLoading(false);
+                  console.log("ReactPlayer - reprodução iniciada");
+                  setMediaLoading(false);
                   }
                 }}
                 onPlay={() => {
                   if (isMounted.current) {
-                    console.log("ReactPlayer - reproduzindo");
-                    setMediaLoading(false);
+                  console.log("ReactPlayer - reproduzindo");
+                  setMediaLoading(false);
                   }
                 }}
                 onPause={() => {
@@ -849,20 +849,20 @@ export function StoryViewer({
                 }}
                 onBuffer={() => {
                   if (isMounted.current) {
-                    console.log("ReactPlayer - buffering");
-                    setMediaLoading(true);
+                  console.log("ReactPlayer - buffering");
+                  setMediaLoading(true);
                   }
                 }}
                 onBufferEnd={() => {
                   if (isMounted.current) {
-                    console.log("ReactPlayer - buffer concluído");
-                    setMediaLoading(false);
+                  console.log("ReactPlayer - buffer concluído");
+                  setMediaLoading(false);
                   }
                 }}
                 onReady={() => {
                   if (isMounted.current) {
-                    console.log("ReactPlayer - pronto");
-                    setMediaLoading(false);
+                  console.log("ReactPlayer - pronto");
+                  setMediaLoading(false);
                   }
                 }}
                 onDuration={(duration) => {

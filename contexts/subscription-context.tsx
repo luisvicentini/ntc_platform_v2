@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useState, useCallback } from "react"
 import { toast } from "sonner"
 import type { Subscription } from "@/types/subscription"
-import { collection, getDocs, query, where, addDoc, doc, deleteDoc, updateDoc, getDoc } from "firebase/firestore"
+import { collection, getDocs, query, where, addDoc, doc, deleteDoc, updateDoc, getDoc, setDoc } from "firebase/firestore"
 import { db } from "@/lib/firebase"
 
 interface SubscriptionContextData {
@@ -202,6 +202,14 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const addSubscriptions = useCallback(async (memberId: string, subscriptionsData: any[]) => {
     try {
       const subscriptionsRef = collection(db, "subscriptions")
+      const memberPartnersRef = collection(db, "memberPartners")
+      const now = new Date()
+      
+      // Buscar informações do usuário para obter o email
+      const userRef = doc(db, "users", memberId)
+      const userDoc = await getDoc(userRef)
+      const userData = userDoc.exists() ? userDoc.data() : {}
+      const userEmail = userData.email || ''
       
       // Buscar assinaturas existentes usando diretamente o Firestore
       const existingQuery = query(
@@ -233,21 +241,109 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           s => s.partnerId === subscription.partnerId
         )
         
+        // Buscar informações do parceiro
+        const partnerRef = doc(db, "users", subscription.partnerId)
+        const partnerDoc = await getDoc(partnerRef)
+        const partnerData = partnerDoc.exists() ? partnerDoc.data() : {}
+        const partnerName = partnerData.displayName || partnerData.name || "Parceiro não identificado"
+        const partnerEmail = partnerData.email || ""
+        
         if (existing) {
           // Atualizar existente
           await updateDoc(doc(db, "subscriptions", existing.id), {
             expiresAt: subscription.expiresAt,
-            updatedAt: new Date().toISOString()
+            updatedAt: now.toISOString(),
+            endDate: subscription.expiresAt,
+            partnerName,
+            partnerEmail
           })
+          
+          // Verificar se já existe em memberPartners
+          const mpQuery = query(
+            memberPartnersRef,
+            where("memberId", "==", memberId),
+            where("partnerId", "==", subscription.partnerId)
+          )
+          const mpSnapshot = await getDocs(mpQuery)
+          
+          if (!mpSnapshot.empty) {
+            // Atualizar memberPartners existente
+            await updateDoc(doc(memberPartnersRef, mpSnapshot.docs[0].id), {
+              expiresAt: subscription.expiresAt,
+              updatedAt: now.toISOString(),
+              status: "active"
+            })
+          } else {
+            // Criar novo em memberPartners
+            await addDoc(memberPartnersRef, {
+              memberId,
+              userId: memberId,
+              partnerId: subscription.partnerId,
+              status: "active",
+              createdAt: now.toISOString(),
+              updatedAt: now.toISOString(),
+              expiresAt: subscription.expiresAt,
+              userEmail: userEmail.toLowerCase(),
+              planName: "Plano Manual",
+              planInterval: "manual",
+              planIntervalCount: 1,
+              price: 0,
+              provider: "admin_panel",
+              type: "manual",
+              startDate: now.toISOString()
+            })
+          }
         } else {
-          // Criar nova
-          await addDoc(subscriptionsRef, {
+          // Criar nova assinatura
+          const newSubscriptionRef = doc(subscriptionsRef)
+          const subscriptionId = newSubscriptionRef.id
+          
+          // Dados completos para assinatura
+          const subscriptionData = {
+            id: subscriptionId,
+            userId: memberId,
             memberId,
             partnerId: subscription.partnerId,
+            partnerName,
+            partnerEmail,
+            transactionId: null,
+            planName: "Plano Manual",
+            planInterval: "manual",
+            planIntervalCount: 1,
+            price: 0,
+            startDate: now.toISOString(),
+            endDate: subscription.expiresAt,
             status: "active",
+            paymentMethod: "manual",
+            provider: "admin_panel",
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
+            type: "manual",
+            userEmail: userEmail.toLowerCase(),
+            expiresAt: subscription.expiresAt
+          }
+          
+          // Salvar assinatura
+          await setDoc(newSubscriptionRef, subscriptionData)
+          
+          // Criar memberPartners
+          await addDoc(memberPartnersRef, {
+            memberId,
+            userId: memberId,
+            partnerId: subscription.partnerId,
+            status: "active",
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
             expiresAt: subscription.expiresAt,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            userEmail: userEmail.toLowerCase(),
+            planName: "Plano Manual",
+            planInterval: "manual",
+            planIntervalCount: 1,
+            price: 0,
+            provider: "admin_panel",
+            type: "manual",
+            startDate: now.toISOString(),
+            subscriptionId
           })
         }
       }

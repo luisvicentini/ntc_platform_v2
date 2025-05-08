@@ -335,7 +335,7 @@ export function SubscriptionManagementModal({
           <Button
             onClick={handleSave}
             disabled={loading || newSubscriptions.length === 0}
-            className="bg-primary hover:bg-secondary text-white"
+            className="bg-primary hover:bg-red-700 text-white"
           >
             {loading ? "Salvando..." : "Salvar"}
           </Button>

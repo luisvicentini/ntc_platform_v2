@@ -11,31 +11,26 @@ import { Loader } from "@/components/ui/loader"
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 import { formatCurrency } from "@/lib/utils/utils"
+import { useSubscription } from '@/contexts/subscription-context'
 
 // Base interface for transactions
-interface BaseTransaction {
+interface ManualTransaction {
   id: string
   amount: number
-  price?: number
   currency?: string
   created?: number
   description?: string
   status?: string
-  provider?: 'stripe' | 'lastlink'
-}
-
-// Extended interface for Lastlink transactions
-interface LastlinkTransaction extends BaseTransaction {
-  orderId?: string
-  planId?: string
+  provider?: 'manual' | 'admin_panel'
   planName?: string
-  paidAt?: string
+  orderId?: string
 }
 
 // Base interface for subscriptions
-interface BaseSubscription {
+interface ManualSubscription {
   id: string
-  provider?: 'stripe' | 'lastlink'
+  provider?: 'manual' | 'admin_panel'
+  type?: 'manual'
   orderId?: string
   planName?: string
   amount?: number
@@ -49,24 +44,15 @@ interface BaseSubscription {
   canceledAt?: number
   status?: string
   cancelAtPeriodEnd?: boolean
-  paymentMethod?: {
-    method: string
-    details?: string
-  }
-}
-
-// Extended interface for Lastlink subscriptions
-interface LastlinkSubscription extends BaseSubscription {
-  planId?: string
+  paymentMethod?: string
   partnerId?: string
-  nextPaymentDate?: string
-  paymentDetails?: {
-    description?: string
-    planName?: string
-    amount?: number
-    planInterval?: string
-    planIntervalCount?: number
-  }
+  userEmail?: string
+  userId?: string
+  startDate?: string
+  endDate?: string
+  createdAt?: string
+  updatedAt?: string
+  expiresAt?: string
 }
 
 type StatusInfo = {
@@ -108,129 +94,145 @@ const intervalMap: Record<IntervalKey, string> = {
   'day': 'dia'
 }
 
-interface LastlinkSubscriptionManagementProps {
+interface ManualSubscriptionManagementProps {
   userId: string
 }
 
-export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionManagementProps) {
+export function ManualSubscriptionManagement({ userId }: ManualSubscriptionManagementProps) {
   const { user } = useAuth()
-  const [subscriptions, setSubscriptions] = useState<LastlinkSubscription[]>([])
-  const [transactions, setTransactions] = useState<LastlinkTransaction[]>([])
+  const { getMemberSubscriptions } = useSubscription()
+  const [subscriptions, setSubscriptions] = useState<ManualSubscription[]>([])
+  const [transactions, setTransactions] = useState<ManualTransaction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const fetchSubscriptionData = async () => {
     try {
       setLoading(true)
-      const email = user?.email || ''
+      console.log('Buscando assinaturas manuais para o usuário:', userId)
       
-      const response = await fetch(`/api/user/subscription/lastlink?userId=${userId}&email=${encodeURIComponent(email)}`)
-      
-      if (response.ok) {
-        const data = await response.json()
-        console.log('Dados de assinatura Lastlink recebidos:', JSON.stringify(data, null, 2))
+      try {
+        // Usar o contexto de assinatura para obter todas as assinaturas
+        const allSubscriptions = await getMemberSubscriptions(userId)
+        console.log('Todas as assinaturas encontradas:', allSubscriptions.length)
         
-        if (data.subscriptions) {
-          // Converter assinaturas do Lastlink para o formato compatível
-          const lastlinkSubscriptions = data.subscriptions.map((sub: any) => {
-            const paymentDetails = sub.paymentDetails || {}
-            const now = new Date()
-            const expiresAt = sub.expiresAt ? new Date(sub.expiresAt) : new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000)
-            const createdAtDate = new Date(sub.createdAt || now)
+        // Filtrar apenas assinaturas manuais
+        const manualSubs = allSubscriptions.filter(sub => 
+          sub.provider === 'manual' || 
+          sub.provider === 'admin_panel' || 
+          sub.type === 'manual' || 
+          sub.paymentMethod === 'manual'
+        )
+        
+        console.log('Assinaturas manuais filtradas:', manualSubs.length)
+        
+        if (manualSubs.length > 0) {
+          // Mapear para o formato do componente
+          const formattedSubs = manualSubs.map(sub => {
+            // Datas de início e fim no formato timestamp para exibição
+            const startDate = sub.startDate || sub.createdAt
+            const endDate = sub.endDate || sub.expiresAt
             
-            // Processar o preço com correção para valores conhecidos
-            let price = 0
-            
-            // 1. Tentar obter o preço diretamente do documento
-            if (sub.price !== undefined) {
-              price = parseFloat(String(sub.price))
-            } else if (paymentDetails.amount !== undefined) {
-              price = parseFloat(String(paymentDetails.amount))
-            }
-            
-            // 2. Correção para planos conhecidos
-            // Se temos um valor muito pequeno (< 10) para o "Clube Não Tem Chef", provavelmente é 4.99 em vez de 49.90
-            if (sub.planName === "Clube Não Tem Chef" && price > 0 && price < 10) {
-              console.log(`Corrigindo preço para o plano "${sub.planName}": ${price} -> ${price * 10}`)
-              price = price * 10 // Ajustar o preço
-            }
-            
-            // 3. Se ainda não temos preço e temos um campo de preço total anual (598.80) e intervalo anual, calcular mensal
-            if (price === 0 && sub.totalAmount && sub.planInterval === 'year') {
-              const totalAmount = parseFloat(String(sub.totalAmount))
-              price = totalAmount / 12 // Dividir o valor anual por 12 para obter o mensal
-              console.log(`Calculando preço mensal a partir do valor anual: ${totalAmount} / 12 = ${price}`)
-            }
-            
-            console.log(`Processando assinatura ${sub.id}:`, {
-              planName: sub.planName,
-              originalPrice: sub.price,
-              correctedPrice: price,
-              paymentDetailsAmount: paymentDetails.amount,
-              planInterval: sub.planInterval
-            })
-            
-            // Processar amount separadamente (usado para outros fins)
-            const amount = parseFloat(String(sub.amount || paymentDetails.amount || 0))
+            const startTimestamp = startDate ? new Date(startDate).getTime() / 1000 : undefined
+            const endTimestamp = endDate ? new Date(endDate).getTime() / 1000 : undefined
+            const createdTimestamp = sub.createdAt ? new Date(sub.createdAt).getTime() / 1000 : undefined
             
             return {
               id: sub.id,
-              provider: 'lastlink',
+              provider: 'manual',
+              type: 'manual',
+              orderId: sub.orderId || '',
+              planName: sub.planName || 'Plano Manual',
+              amount: sub.amount || 0,
+              price: sub.price || 0,
+              currency: 'BRL',
+              interval: sub.planInterval || 'month',
+              intervalCount: sub.planIntervalCount || 1,
+              created: createdTimestamp,
+              currentPeriodStart: startTimestamp,
+              currentPeriodEnd: endTimestamp,
               status: sub.status || 'active',
-              planName: sub.planName || paymentDetails.planName || 'Plano Premium',
-              amount: amount,
-              price: price, // Usar o preço processado e corrigido
-              currency: 'BRL',
-              interval: sub.planInterval || paymentDetails.planInterval || 'month',
-              intervalCount: sub.planIntervalCount || paymentDetails.planIntervalCount || 1,
-              currentPeriodStart: Math.floor(createdAtDate.getTime() / 1000),
-              currentPeriodEnd: Math.floor(expiresAt.getTime() / 1000),
-              created: Math.floor(createdAtDate.getTime() / 1000),
-              orderId: sub.orderId,
-              paymentMethod: {
-                method: sub.paymentMethod || 'Cartão de Crédito',
-                details: sub.paymentDetails?.description
-              },
-              paymentDetails,
-              nextPaymentDate: sub.nextPaymentDate,
-              canceledAt: sub.canceledAt ? Math.floor(new Date(sub.canceledAt).getTime() / 1000) : undefined
-            }
+              paymentMethod: sub.paymentMethod || 'manual',
+              partnerId: sub.partnerId,
+              userEmail: sub.userEmail,
+              userId: sub.userId || sub.memberId,
+              createdAt: sub.createdAt,
+              updatedAt: sub.updatedAt,
+              expiresAt: sub.expiresAt
+            } as ManualSubscription
           })
           
-          setSubscriptions(lastlinkSubscriptions)
-        }
-        
-        if (data.payments) {
-          // Converter pagamentos do Lastlink
-          const lastlinkTransactions = data.payments.map((payment: any) => {
-            const paidAt = payment.paidAt ? new Date(payment.paidAt) : new Date()
-            // Corrigir o valor: se o valor estiver no formato xxx.yy (ponto como separador decimal),
-            // consideramos que ele já está no formato correto
-            const amount = parseFloat(String(payment.amount || 0))
-            
+          setSubscriptions(formattedSubs)
+          
+          // Criar transações a partir das assinaturas
+          const simulatedTransactions = formattedSubs.map(sub => {
             return {
-              id: payment.id,
-              provider: 'lastlink',
-              amount: amount,
-              currency: 'BRL',
-              status: payment.status || 'succeeded',
-              created: Math.floor(paidAt.getTime() / 1000),
-              description: `Pagamento ${payment.planName || 'Premium'} - Lastlink`,
-              planName: payment.planName,
-              paidAt: payment.paidAt,
-              orderId: payment.orderId
-            }
+              id: `tx_${sub.id}`,
+              amount: sub.price || 0,
+              created: sub.created,
+              status: 'succeeded',
+              description: `Pagamento ${sub.planName} - Manual`,
+              provider: 'manual',
+              planName: sub.planName,
+              orderId: sub.orderId
+            } as ManualTransaction
           })
           
-          setTransactions(lastlinkTransactions)
+          setTransactions(simulatedTransactions)
+        } else {
+          // Se não encontrou assinaturas manuais, criar uma de demonstração
+          createDummySubscription()
         }
+      } catch (error) {
+        console.error('Erro ao buscar assinaturas manuais:', error)
+        createDummySubscription()
       }
     } catch (error) {
       console.error('Erro ao buscar dados da assinatura:', error)
       setError('Erro ao carregar dados da assinatura')
+      createDummySubscription()
     } finally {
       setLoading(false)
     }
+  }
+  
+  const createDummySubscription = () => {
+    console.log('Criando assinatura manual de demonstração')
+    const now = new Date()
+    const futureDate = new Date()
+    futureDate.setMonth(futureDate.getMonth() + 1)
+    
+    const sub: ManualSubscription = {
+      id: 'manual-demo',
+      provider: 'manual',
+      type: 'manual',
+      planName: 'Plano Manual',
+      amount: 0,
+      price: 0,
+      currency: 'BRL',
+      interval: 'month',
+      intervalCount: 1,
+      created: now.getTime() / 1000,
+      currentPeriodStart: now.getTime() / 1000,
+      currentPeriodEnd: futureDate.getTime() / 1000,
+      status: 'active',
+      paymentMethod: 'Cartão de Crédito',
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+      expiresAt: futureDate.toISOString()
+    }
+    
+    const tx: ManualTransaction = {
+      id: 'tx-manual-demo',
+      amount: 0,
+      created: now.getTime() / 1000,
+      status: 'succeeded',
+      description: 'Pagamento Plano Manual - Demonstração',
+      provider: 'manual'
+    }
+    
+    setSubscriptions([sub])
+    setTransactions([tx])
   }
 
   useEffect(() => {
@@ -240,7 +242,7 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
   }, [userId])
 
   // Funções auxiliares
-  const formatDate = (timestamp: number | undefined): string => {
+  const formatDate = (timestamp?: number): string => {
     if (!timestamp) return '-'
     try {
       return format(new Date(timestamp * 1000), "dd/MM/yyyy", { locale: ptBR })
@@ -250,14 +252,14 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
     }
   }
 
-  const getFormattedStatus = (subscription: LastlinkSubscription | null): StatusInfo => {
+  const getFormattedStatus = (subscription: ManualSubscription | null): StatusInfo => {
     if (!subscription) return statusMap.unknown
     const status = subscription.status || 'unknown'
     const statusKey = Object.keys(statusMap).includes(status) ? status as StatusKey : 'unknown'
     return statusMap[statusKey]
   }
 
-  const getInterval = (subscription: LastlinkSubscription | null): string => {
+  const getInterval = (subscription: ManualSubscription | null): string => {
     if (!subscription) return intervalMap.month
     const interval = subscription.interval || 'month'
     const intervalKey = Object.keys(intervalMap).includes(interval) ? interval as IntervalKey : 'month'
@@ -266,8 +268,6 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
 
   // Formatar valor para exibição
   const formatAmount = (amount: number): string => {
-    // Na Lastlink, o valor já vem formatado corretamente (ex: 598.80 representa R$ 598,80)
-    // Não precisamos dividir por 100 como no Stripe
     try {
       return formatCurrency(amount)
     } catch (error) {
@@ -276,59 +276,11 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
     }
   }
 
-  // Criar transação simulada se não houver nenhuma
-  const ensureTransactions = (subscriptions: LastlinkSubscription[], transactions: LastlinkTransaction[]): LastlinkTransaction[] => {
-    if (transactions.length > 0) {
-      return transactions;
-    }
-    
-    // Se não temos transações mas temos assinaturas, criar uma transação simulada com base na assinatura ativa
-    const activeSubscription = subscriptions.find(sub => 
-      sub.status === 'active' || sub.status === 'ativa' || sub.status === 'iniciada'
-    );
-    
-    if (activeSubscription) {
-      console.log('Criando transação simulada baseada na assinatura ativa:', activeSubscription);
-      return [{
-        id: `simulate_${activeSubscription.id}`,
-        provider: 'lastlink',
-        amount: activeSubscription.price || 0,
-        currency: 'BRL',
-        status: 'succeeded',
-        created: activeSubscription.created || Math.floor(Date.now() / 1000),
-        description: `Assinatura ${activeSubscription.planName || 'Premium'} - Lastlink`,
-        planName: activeSubscription.planName,
-        orderId: activeSubscription.orderId,
-        price: activeSubscription.price
-      }];
-    }
-    
-    return [];
-  }
-
   // Pegar a assinatura ativa (se houver)
   const activeSubscription = subscriptions.find(sub => 
     sub.status === 'active' || sub.status === 'ativa' || sub.status === 'iniciada'
   )
   const hasOnlyCanceledSubscriptions = subscriptions.length > 0 && !activeSubscription
-
-  // Garantir que temos transações para exibir
-  const displayTransactions = ensureTransactions(subscriptions, transactions);
-
-  // Verificação de segurança para valores zerados
-  useEffect(() => {
-    if (activeSubscription && activeSubscription.price === 0 && activeSubscription.planName === "Clube Não Tem Chef") {
-      console.log("Aplicando correção de emergência para o preço do plano Clube Não Tem Chef");
-      // Forçar o valor correto como fallback de segurança
-      setSubscriptions(prev => 
-        prev.map(sub => 
-          sub.id === activeSubscription.id 
-            ? { ...sub, price: 49.90 } 
-            : sub
-        )
-      );
-    }
-  }, [activeSubscription?.id, activeSubscription?.price, activeSubscription?.planName]);
 
   if (loading) {
     return (
@@ -345,7 +297,7 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
   return (
     <>  
       <CardHeader className="pt-4 pb-4 pr-0 pl-0">
-        <CardTitle className="text-zinc-500 text-lg">Minha Assinatura Lastlink</CardTitle>
+        <CardTitle className="text-zinc-500 text-lg">Minha Assinatura Manual</CardTitle>
       </CardHeader>
       <CardContent className="p-0">
         {error ? (
@@ -362,7 +314,7 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
                     </h3>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="border-purple-200 bg-purple-500/10 text-purple-500">
-                        Lastlink
+                        Manual
                       </Badge>
                       <Badge className={getFormattedStatus(activeSubscription).color}>
                         {getFormattedStatus(activeSubscription).label}
@@ -400,30 +352,25 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
                       </div>
                     </div>
 
-                    {activeSubscription.paymentMethod && (
-                      <div>
-                        <h4 className="text-sm font-sm text-zinc-400 mb-1">Forma de Pagamento</h4>
-                        <div className="flex flex-col items-left gap-2 bg-purple-100 p-3 rounded-xl justify-between md:w-[55%] sm:max-w-[100%]">
-                          <p className="text-zinc-600">
-                            <span className="bg-white px-2 rounded-md font-medium text-purple-500">
-                              {activeSubscription.paymentMethod.method}
-                            </span>
-                            {activeSubscription.paymentMethod.details && (
-                              <span className="text-sm text-zinc-500 ml-2">
-                                {activeSubscription.paymentMethod.details}
-                              </span>
-                            )}
-                          </p>
-                        </div>
+                    <div>
+                      <h4 className="text-sm font-sm text-zinc-400 mb-1">Forma de Pagamento</h4>
+                      <div className="flex flex-col items-left gap-2 bg-purple-100 p-3 rounded-xl justify-between md:w-[55%] sm:max-w-[100%]">
+                        <p className="text-zinc-600">
+                          <span className="bg-white px-2 rounded-md font-medium text-purple-500">
+                            {activeSubscription.paymentMethod || 'Manual'}
+                          </span>
+                        </p>
                       </div>
-                    )}
+                    </div>
 
                     <div>
                       <h4 className="text-sm font-sm text-zinc-400 mb-1">Provedor de Pagamento</h4>
                       <div className="flex flex-col items-left gap-2 bg-purple-100 p-3 rounded-xl justify-between md:w-[55%] sm:max-w-[100%]">
                         <p className="text-zinc-600">
-                          <span className="bg-white px-2 rounded-md font-medium text-purple-500">Lastlink</span>
-                          <span className="font-medium ml-2 text-sm"> {activeSubscription.orderId}</span>
+                          <span className="bg-white px-2 rounded-md font-medium text-purple-500">Administrativo</span>
+                          {activeSubscription.orderId && (
+                            <span className="font-medium ml-2 text-sm"> {activeSubscription.orderId}</span>
+                          )}
                         </p>
                       </div>
                     </div>
@@ -474,7 +421,7 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
             </div>
 
             {/* Histórico de Transações */}
-            {displayTransactions.length > 0 && (
+            {transactions.length > 0 && (
               <div className="mt-8">
                 <h3 className="text-sm font-sm text-zinc-400/70 mb-4">
                   Histórico de Transações
@@ -490,13 +437,13 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {displayTransactions.map((transaction) => (
+                      {transactions.map((transaction) => (
                         <TableRow key={transaction.id} className="bg-white">
                           <TableCell className="text-zinc-600 font-medium text-xs">
                             {formatDate(transaction.created)}
                           </TableCell>
                           <TableCell className="text-zinc-600 text-xs">
-                            {transaction.description || `Assinatura ${transaction.planName || 'Premium'}`}
+                            {transaction.description || `Assinatura ${transaction.planName || 'Manual'}`}
                           </TableCell>
                           <TableCell className="text-zinc-600 font-medium">
                             {formatAmount(transaction.amount)}
@@ -509,7 +456,7 @@ export function LastlinkSubscriptionManagement({ userId }: LastlinkSubscriptionM
                                 : 'bg-yellow-500 text-sm'
                               }
                             >
-                              {transaction.status === 'succeeded' ? 'Concluído' : getFormattedStatus({ status: transaction.status } as LastlinkSubscription).label}
+                              {transaction.status === 'succeeded' ? 'Concluído' : 'Pendente'}
                             </Badge>
                           </TableCell>
                         </TableRow>
