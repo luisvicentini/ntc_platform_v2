@@ -4,6 +4,25 @@ import { collection, addDoc, query, where, getDocs, doc, updateDoc, increment, s
 import { randomBytes } from "crypto"
 import { createTransport } from "nodemailer"
 
+/**
+ * Webhook para processamento de eventos da Lastlink
+ * 
+ * Tipos de eventos suportados:
+ * - Purchase_Order_Confirmed: Pagamento confirmado
+ * - Purchase_Request_Confirmed: Pedido confirmado, aguardando pagamento
+ * - Abandoned_Cart: Carrinho abandonado
+ * - Purchase_Request_Expired: Pedido expirado sem pagamento
+ * - Refund_Period_Over: Fim do período de reembolso
+ * - Recurrent_Payment: Pagamento recorrente confirmado
+ * - Payment_Refund: Reembolso efetuado
+ * - Payment_Chargeback: Estorno (chargeback)
+ * - Subscription_Canceled: Assinatura cancelada pelo cliente
+ * - Subscription_Expired: Assinatura expirada (não renovada)
+ * - Subscription_Renewal_Pending: Renovação de assinatura pendente
+ * - Product_access_started: Acesso ao produto iniciado
+ * - Product_access_ended: Acesso ao produto encerrado
+ */
+
 // Configurar o transporter para envio de emails
 const transporter = createTransport({
   host: process.env.SMTP_HOST,
@@ -161,7 +180,7 @@ export async function POST(request: Request) {
     }
     
     // Extrair tipo de evento
-    const eventType = actualData.Event || actualData.event || 'Purchase_Order_Confirmed'
+    const eventType = actualData.Event || actualData.event || 'unknown'
     console.log("Tipo de evento (extraído):", eventType)
     
     // Ignorar eventos de teste
@@ -183,7 +202,7 @@ export async function POST(request: Request) {
     console.log("- Assinaturas:", subscriptions)
     
     // Verificar dados críticos antes de continuar
-    if (!buyer) {
+    if (!buyer && (eventType === 'Purchase_Order_Confirmed' || eventType === 'Purchase_Request_Confirmed' || eventType === 'Abandoned_Cart')) {
       console.error("Dados do comprador não encontrados no webhook")
       return NextResponse.json({ status: 'error', message: 'Dados do comprador não encontrados' }, { status: 400 })
     }
@@ -205,79 +224,88 @@ export async function POST(request: Request) {
       // Aqui podemos adicionar lógica para rastrear origem via UTM
     }
     
-    const userEmail = buyer.Email
+    // Verificar se o usuário já existe pelo email
+    let userId: string | null = null
+    let userExists = false
+    const userEmail = buyer.Email || ''
     const userName = buyer.Name || ''
     const userPhone = buyer.PhoneNumber || ''
-    const userDocument = buyer.Document || ''
-    const userAddress = buyer.Address || null
     
-    if (!userEmail) {
-      console.error("Email do usuário não fornecido no webhook")
-      console.error("Estrutura do objeto buyer:", JSON.stringify(buyer))
-      console.error("Estrutura completa dos dados:", JSON.stringify(actualData))
-      return NextResponse.json({ status: 'error', message: 'Email do usuário não fornecido' }, { status: 400 })
-    }
-    
-    console.log("Dados para identificação:")
-    console.log("- partnerId:", partnerId)
-    console.log("- userEmail:", userEmail)
-    console.log("- userName:", userName)
-    console.log("- userDocument:", userDocument)
-    
-    // Verificar se o usuário já existe pelo email
-    let userId = null
-    let userExists = false
-    const usersRef = collection(db, 'users')
-    const q = query(usersRef, where('email', '==', userEmail.toLowerCase()))
-    const snapshot = await getDocs(q)
-    
-    if (!snapshot.empty) {
-      // Usuário já existe
-      userId = snapshot.docs[0].id
-      userExists = true
-      console.log(`Usuário já existe no sistema. ID: ${userId}`)
+    // Determinar se precisamos dos dados do usuário com base no tipo de evento
+    const needsUserData = eventType === 'Purchase_Order_Confirmed' || 
+                        eventType === 'Purchase_Request_Confirmed' || 
+                        eventType === 'Abandoned_Cart' ||
+                        eventType === 'Recurrent_Payment' ||
+                        eventType === 'Payment_Refund' ||
+                        eventType === 'Payment_Chargeback' ||
+                        eventType === 'Subscription_Canceled' ||
+                        eventType === 'Subscription_Expired' ||
+                        eventType === 'Subscription_Renewal_Pending' ||
+                        eventType === 'Product_access_ended';
+
+    // Se o evento necessitar de dados do usuário, verificar ou criar
+    if (needsUserData && userEmail) {
+      console.log("Verificando existência do usuário pelo email:", userEmail)
+      const usersRef = collection(db, 'users')
+      const q = query(usersRef, where('email', '==', userEmail.toLowerCase()))
+      const snapshot = await getDocs(q)
+      
+      if (!snapshot.empty) {
+        // Usuário já existe
+        userId = snapshot.docs[0].id
+        userExists = true
+        console.log(`Usuário já existe no sistema. ID: ${userId}`)
+      } else if (eventType === 'Purchase_Order_Confirmed') {
+        // Criar novo usuário APENAS se o evento for de compra confirmada
+        console.log("Criando novo usuário no sistema (evento de compra confirmada)")
+        
+        // Criar uma referência ao documento do novo usuário
+        const newUserRef = doc(usersRef)
+        const now = new Date()
+        
+        const newUserData = {
+          id: newUserRef.id,
+          uid: newUserRef.id, // Duplicando o ID para compatibilidade
+          email: userEmail.toLowerCase(),
+          displayName: userName,
+          phoneNumber: userPhone,
+          document: buyer.Document || '',
+          address: buyer.Address || null,
+          buyerId: buyer.Id || null, // ID do comprador na Lastlink
+          userType: 'member',
+          status: 'active', // Ativo imediatamente (não precisa de confirmação)
+          isActive: true,
+          emailVerified: false,
+          partnerId: partnerId,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+          // Campos adicionais específicos para controle
+          createdVia: 'lastlink-webhook',
+          lastlinkPurchaseId: purchase.PaymentId || null
+        }
+        
+        try {
+          // Usar setDoc em vez de addDoc, seguindo o padrão da rota de registro
+          console.log(`Tentando criar usuário com ID: ${newUserRef.id}`)
+          await setDoc(newUserRef, newUserData)
+          userId = newUserRef.id
+          console.log(`Novo usuário criado com sucesso. ID: ${userId}`)
+        } catch (error) {
+          console.error("Erro ao criar usuário:", error)
+          return NextResponse.json({ status: 'error', message: 'Erro ao criar usuário' }, { status: 500 })
+        }
+      } else {
+        console.log(`Evento ${eventType} recebido, mas usuário não existe. Não criando usuário.`)
+        // Para eventos que não sejam Purchase_Order_Confirmed e o usuário não existe, 
+        // registramos apenas a transação sem associar a um usuário
+        userId = null
+      }
     } else {
-      // Criar novo usuário
-      console.log("Criando novo usuário no sistema")
-      
-      // Criar uma referência ao documento do novo usuário
-      const newUserRef = doc(usersRef)
-      const now = new Date()
-      
-      const newUserData = {
-        id: newUserRef.id,
-        uid: newUserRef.id, // Duplicando o ID para compatibilidade
-        email: userEmail.toLowerCase(),
-        displayName: userName,
-        phoneNumber: userPhone,
-        document: userDocument,
-        address: userAddress,
-        buyerId: buyer.Id || null, // ID do comprador na Lastlink
-        userType: 'member',
-        status: 'active', // Ativo imediatamente (não precisa de confirmação)
-        isActive: true,
-        emailVerified: false,
-        partnerId: partnerId,
-        createdAt: now.toISOString(),
-        updatedAt: now.toISOString(),
-        // Campos adicionais específicos para controle
-        createdVia: 'lastlink-webhook',
-        lastlinkPurchaseId: purchase.PaymentId || null
-      }
-      
-      try {
-        // Usar setDoc em vez de addDoc, seguindo o padrão da rota de registro
-        console.log(`Tentando criar usuário com ID: ${newUserRef.id}`)
-        await setDoc(newUserRef, newUserData)
-        userId = newUserRef.id
-        console.log(`Novo usuário criado com sucesso. ID: ${userId}`)
-      } catch (error) {
-        console.error("Erro ao criar usuário:", error)
-        return NextResponse.json({ status: 'error', message: 'Erro ao criar usuário' }, { status: 500 })
-      }
+      console.log(`Evento ${eventType} não requer dados de usuário ou email não fornecido, continuando...`)
+      userId = null
     }
     
-    // Neste ponto, temos o userId (novo ou existente)
+    // Neste ponto, temos o userId (novo, existente ou null dependendo do evento)
     
     // Determinar dados do plano
     let planName = "Plano Premium"
@@ -320,22 +348,35 @@ export async function POST(request: Request) {
       }
     }
     
-    // Se já existe uma transação e não é um evento de confirmação, simplesmente atualizar
-    if (existingTransaction && eventType !== 'Purchase_Order_Confirmed' && eventType !== 'Purchase_Request_Confirmed') {
-      console.log("Transação já existe e evento não é de confirmação, apenas atualizando")
-      await updateDoc(doc(db, 'transactions', existingTransaction.id), {
-        userId: userId,
-        partnerId: partnerId,
-        partnerLinkId: partnerLinkId,
-        updatedAt: new Date().toISOString()
-      })
-      
-      return NextResponse.json({ 
-        status: 'success', 
-        message: 'Webhook processado, transação atualizada',
-        userId: userId,
-        transactionId: existingTransaction.id
-      })
+    // Determinar o status da transação com base no tipo de evento
+    let transactionStatus = 'active'; // Valor padrão
+    switch (eventType) {
+      case 'Purchase_Order_Confirmed':
+      case 'Recurrent_Payment':
+        transactionStatus = 'active';
+        break;
+      case 'Purchase_Request_Confirmed':
+        transactionStatus = 'pending';
+        break;
+      case 'Abandoned_Cart':
+      case 'Purchase_Request_Expired':
+        transactionStatus = 'abandoned';
+        break;
+      case 'Payment_Refund':
+      case 'Payment_Chargeback':
+        transactionStatus = 'refunded';
+        break;
+      case 'Subscription_Canceled':
+        transactionStatus = 'canceled';
+        break;
+      case 'Subscription_Expired':
+        transactionStatus = 'expired';
+        break;
+      case 'Subscription_Renewal_Pending':
+        transactionStatus = 'renewal_pending';
+        break;
+      default:
+        console.log(`Tipo de evento não mapeado: ${eventType}, usando status padrão 'active'`);
     }
     
     // Criar objeto da transação
@@ -353,11 +394,11 @@ export async function POST(request: Request) {
       planInterval,
       planIntervalCount,
       userId,
-      userEmail,
+      userEmail: buyer.Email || '',
       userName: buyer.Name || '',
       partnerId,
       partnerLinkId,
-      status: 'active',
+      status: transactionStatus,
       type: 'lastlink',
       provider: 'lastlink',
       rawData: JSON.stringify(text), // Convertendo para string para evitar problemas
@@ -365,6 +406,7 @@ export async function POST(request: Request) {
       affiliateId: purchase.Affiliate?.Id || null,
       affiliateEmail: purchase.Affiliate?.Email || null,
       subscriptionIds: subscriptions.map((sub: LastlinkSubscription) => sub.Id) || [],
+      eventType, // Adicionamos o tipo de evento para referência
       // Verificar se utmParams existe antes de adicioná-lo
       ...(actualData.Utm ? { utmParams: actualData.Utm } : {})
     }
@@ -394,41 +436,104 @@ export async function POST(request: Request) {
       console.log(`Nova transação criada: ${transactionId}`)
     }
     
-    // Verificar se o usuário já tem uma assinatura ativa com este parceiro
+    // Se o usuário não existe (e não foi criado), não proceder com assinatura
+    if (!userId) {
+      console.log("Usuário não existe, não criando assinatura.")
+      return NextResponse.json({ 
+        status: 'success', 
+        message: 'Webhook processado, transação registrada sem usuário',
+        transactionId: transactionId,
+        eventType: eventType
+      })
+    }
+    
+    // Verificar se o usuário já tem uma assinatura com este parceiro
     const subscriptionsRef = collection(db, 'subscriptions')
     const subscriptionQuery = query(
       subscriptionsRef,
       where('userId', '==', userId),
-      where('partnerId', '==', partnerId),
-      where('status', '==', 'active')
+      where('partnerId', '==', partnerId)
     )
     const subscriptionSnapshot = await getDocs(subscriptionQuery)
     
     let subscriptionId
+    let subscriptionData: any = {}
+    
+    // Determinar status da assinatura com base no tipo de evento
+    let subscriptionStatus = 'active'; // Valor padrão
+    switch (eventType) {
+      case 'Purchase_Order_Confirmed':
+      case 'Recurrent_Payment':
+      case 'Product_access_started':
+        subscriptionStatus = 'active';
+        break;
+      case 'Subscription_Canceled':
+      case 'Payment_Chargeback':
+        subscriptionStatus = 'canceled';
+        break;
+      case 'Subscription_Expired':
+      case 'Product_access_ended':
+        subscriptionStatus = 'expired';
+        break;
+      case 'Subscription_Renewal_Pending':
+        subscriptionStatus = 'pending';
+        break;
+      default:
+        // Para outros eventos, manter o status atual se existir
+        if (!subscriptionSnapshot.empty) {
+          const currentStatus = subscriptionSnapshot.docs[0].data().status;
+          subscriptionStatus = currentStatus;
+        }
+    }
+    
     if (!subscriptionSnapshot.empty) {
       // Atualizar assinatura existente
       subscriptionId = subscriptionSnapshot.docs[0].id
       const subscriptionRef = doc(db, 'subscriptions', subscriptionId)
       
-      await updateDoc(subscriptionRef, {
+      subscriptionData = {
         transactionId,
         updatedAt: now.toISOString(),
-        planName,
-        planInterval,
-        planIntervalCount,
-        price: purchase.Price?.Value || 0,
-        paymentMethod: purchase.Payment?.PaymentMethod || 'pix',
-        provider: 'lastlink',
-        lastlinkSubscriptionIds: subscriptions.map((sub: LastlinkSubscription) => sub.Id) || [],
-        lastlinkBuyerId: buyer.Id || null
-      })
+        status: subscriptionStatus, // Atualizar o status com base no evento
+        lastEventType: eventType, // Adicionar o último tipo de evento
+        lastEventDate: now.toISOString()
+      }
       
+      // Adicionar campos específicos dependendo do evento
+      if (eventType === 'Purchase_Order_Confirmed' || eventType === 'Recurrent_Payment') {
+        // Para eventos de pagamento, atualizar plano e informações de pagamento
+        subscriptionData = {
+          ...subscriptionData,
+          planName,
+          planInterval,
+          planIntervalCount,
+          price: purchase.Price?.Value || 0,
+          paymentMethod: purchase.Payment?.PaymentMethod || 'pix',
+          provider: 'lastlink',
+          lastlinkSubscriptionIds: subscriptions.map((sub: LastlinkSubscription) => sub.Id) || [],
+          lastlinkBuyerId: buyer.Id || null
+        }
+      } else if (eventType === 'Subscription_Renewal_Pending') {
+        // Adicionar data de aviso para renovação
+        subscriptionData.renewalWarningDate = now.toISOString();
+        subscriptionData.renewalWarningShown = false; // Indicador de que o aviso ainda não foi mostrado
+      } else if (eventType === 'Subscription_Canceled' || eventType === 'Payment_Chargeback') {
+        // Para cancelamentos, adicionar data e motivo
+        subscriptionData.canceledAt = now.toISOString();
+        subscriptionData.cancellationReason = eventType === 'Payment_Chargeback' ? 'chargeback' : 'user_canceled';
+      } else if (eventType === 'Subscription_Expired' || eventType === 'Product_access_ended') {
+        // Para expiração, adicionar data
+        subscriptionData.expiredAt = now.toISOString();
+      }
+      
+      await updateDoc(subscriptionRef, subscriptionData)
       console.log(`Assinatura existente atualizada: ${subscriptionId}`)
-    } else {
-      // Criar nova assinatura
+      console.log("Dados atualizados:", subscriptionData)
+    } else if (eventType === 'Purchase_Order_Confirmed' || eventType === 'Product_access_started') {
+      // Criar nova assinatura apenas para eventos que justifiquem isso
       const newSubscriptionRef = doc(subscriptionsRef)
       
-      const subscriptionData = {
+      subscriptionData = {
         id: newSubscriptionRef.id,
         userId,
         memberId: userId,
@@ -441,15 +546,17 @@ export async function POST(request: Request) {
         price: purchase.Price?.Value || 0,
         startDate: now.toISOString(),
         endDate: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 ano
-        status: 'active',
+        status: subscriptionStatus,
         paymentMethod: purchase.Payment?.PaymentMethod || 'pix',
         provider: 'lastlink',
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
         type: 'lastlink',
-        userEmail: userEmail,
+        userEmail: buyer.Email || '',
         lastlinkSubscriptionIds: subscriptions.map((sub: LastlinkSubscription) => sub.Id) || [],
-        lastlinkBuyerId: buyer.Id || null
+        lastlinkBuyerId: buyer.Id || null,
+        lastEventType: eventType,
+        lastEventDate: now.toISOString()
       }
       
       await setDoc(newSubscriptionRef, subscriptionData)
@@ -469,103 +576,132 @@ export async function POST(request: Request) {
           console.error("Erro ao incrementar conversões do link:", error)
         }
       }
+    } else {
+      console.log(`Evento ${eventType} recebido, mas não justifica criar uma nova assinatura sem uma existente.`)
     }
     
     // Atualizar o usuário para garantir que o partnerId está correto
-    if (userExists) {
-      await updateDoc(doc(db, 'users', userId), {
+    // Só fazer isso se userId existir e não for um evento de abandono/expiração de carrinho
+    if (userId && eventType !== 'Abandoned_Cart' && eventType !== 'Purchase_Request_Expired') {
+      const updateData: any = {
         partnerId: partnerId,
-        updatedAt: now.toISOString()
-      })
-      console.log(`Usuário ${userId} atualizado com partnerId ${partnerId}`)
+        updatedAt: now.toISOString(),
+        lastEventType: eventType,
+        lastEventDate: now.toISOString()
+      }
+      
+      // Adicionar campos específicos dependendo do evento
+      if (eventType === 'Subscription_Renewal_Pending') {
+        updateData.renewalPending = true;
+        updateData.renewalPendingDate = now.toISOString();
+      }
+      
+      await updateDoc(doc(db, 'users', userId), updateData)
+      console.log(`Usuário ${userId} atualizado com partnerId ${partnerId} e informações do evento ${eventType}`)
     }
     
     // ADICIONADO: Criar ou atualizar registro na coleção memberPartners
-    try {
-      console.log("Verificando registro existente em memberPartners...")
-      const memberPartnersRef = collection(db, "memberPartners")
-      const mpQuery = query(
-        memberPartnersRef,
-        where("memberId", "==", userId),
-        where("partnerId", "==", partnerId)
-      )
-      
-      const mpSnapshot = await getDocs(mpQuery)
-      
-      if (mpSnapshot.empty) {
-        console.log("Criando novo registro em memberPartners")
-        // Criar novo registro
-        const memberPartnerData = {
-          memberId: userId,
-          userId: userId, // Adicionando userId também para ter os dois campos
-          partnerId: partnerId,
-          status: "active",
-          createdAt: now.toISOString(),
-          updatedAt: now.toISOString(),
-          expiresAt: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 ano
-          transactionId: transactionId,
-          userEmail: userEmail.toLowerCase(),
-          planName: planName,
-          planInterval: planInterval,
-          planIntervalCount: planIntervalCount,
-          price: purchase.Price?.Value || 0,
-          provider: 'lastlink',
-          type: 'lastlink',
-          startDate: now.toISOString()
-        }
+    // Só fazer para eventos que justifiquem isso (não para abandono/expiração de carrinho)
+    if (userId && eventType !== 'Abandoned_Cart' && eventType !== 'Purchase_Request_Expired') {
+      try {
+        console.log("Verificando registro existente em memberPartners...")
+        const memberPartnersRef = collection(db, "memberPartners")
+        const mpQuery = query(
+          memberPartnersRef,
+          where("memberId", "==", userId),
+          where("partnerId", "==", partnerId)
+        )
         
-        await addDoc(memberPartnersRef, memberPartnerData)
-        console.log("Registro criado em memberPartners com sucesso")
-      } else {
-        console.log("Atualizando registro existente em memberPartners")
-        // Atualizar registro existente
-        const mpDoc = mpSnapshot.docs[0]
-        await updateDoc(doc(memberPartnersRef, mpDoc.id), {
-          status: "active",
-          updatedAt: now.toISOString(),
-          expiresAt: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(),
-          transactionId: transactionId
-        })
-        console.log("Registro atualizado em memberPartners com sucesso")
+        const mpSnapshot = await getDocs(mpQuery)
+        
+        if (mpSnapshot.empty && (eventType === 'Purchase_Order_Confirmed' || eventType === 'Product_access_started')) {
+          console.log("Criando novo registro em memberPartners")
+          // Criar novo registro apenas para eventos de compra confirmada ou acesso iniciado
+          const memberPartnerData = {
+            memberId: userId,
+            userId: userId, // Adicionando userId também para ter os dois campos
+            partnerId: partnerId,
+            status: subscriptionStatus,
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
+            expiresAt: new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 ano
+            transactionId: transactionId,
+            userEmail: buyer.Email?.toLowerCase() || '',
+            planName: planName,
+            planInterval: planInterval,
+            planIntervalCount: planIntervalCount,
+            price: purchase.Price?.Value || 0,
+            provider: 'lastlink',
+            type: 'lastlink',
+            startDate: now.toISOString(),
+            lastEventType: eventType,
+            lastEventDate: now.toISOString()
+          }
+          
+          await addDoc(memberPartnersRef, memberPartnerData)
+          console.log("Registro criado em memberPartners com sucesso")
+        } else if (!mpSnapshot.empty) {
+          console.log("Atualizando registro existente em memberPartners")
+          // Atualizar registro existente
+          const mpDoc = mpSnapshot.docs[0]
+          
+          const mpUpdateData: any = {
+            status: subscriptionStatus,
+            updatedAt: now.toISOString(),
+            transactionId: transactionId,
+            lastEventType: eventType,
+            lastEventDate: now.toISOString()
+          }
+          
+          // Ajustar data de expiração para eventos específicos
+          if (eventType === 'Purchase_Order_Confirmed' || eventType === 'Recurrent_Payment') {
+            mpUpdateData.expiresAt = new Date(now.getTime() + 365 * 24 * 60 * 60 * 1000).toISOString()
+          }
+          
+          await updateDoc(doc(memberPartnersRef, mpDoc.id), mpUpdateData)
+          console.log("Registro atualizado em memberPartners com sucesso")
+        }
+      } catch (error) {
+        console.error("Erro ao criar/atualizar registro em memberPartners:", error)
+        // Não interrompe o fluxo principal em caso de erro
       }
-    } catch (error) {
-      console.error("Erro ao criar/atualizar registro em memberPartners:", error)
-      // Não interrompe o fluxo principal em caso de erro
     }
     
-    // ADICIONADO: Enviar email de ativação para o usuário
-    try {
-      console.log("Preparando para enviar email de ativação para o usuário:", userEmail)
-      
-      // Gerar token de ativação
-      const resetToken = randomBytes(32).toString("hex")
-      const expiresAt = new Date()
-      expiresAt.setHours(expiresAt.getHours() + 24) // Token válido por 24h
-      
-      // Atualizar o documento do usuário com o token
-      await updateDoc(doc(db, 'users', userId), {
-        resetPasswordToken: resetToken,
-        resetPasswordTokenExpiresAt: expiresAt.toISOString(),
-        updatedAt: now.toISOString()
-      })
-      
-      console.log("Token de ativação gerado:", resetToken.substring(0, 10) + "...")
-      
-      // Enviar o email com o token
-      const emailSent = await sendActivationEmail(
-        userEmail,
-        userName || "Usuário",
-        resetToken
-      )
-      
-      if (emailSent) {
-        console.log("Email de ativação enviado com sucesso para:", userEmail)
-      } else {
-        console.warn("Falha ao enviar email de ativação para:", userEmail)
+    // ADICIONADO: Enviar email de ativação para o usuário, apenas para compra confirmada e usuário novo
+    if (eventType === 'Purchase_Order_Confirmed' && userId && !userExists && userEmail) {
+      try {
+        console.log("Preparando para enviar email de ativação para o usuário:", userEmail)
+        
+        // Gerar token de ativação
+        const resetToken = randomBytes(32).toString("hex")
+        const expiresAt = new Date()
+        expiresAt.setHours(expiresAt.getHours() + 24) // Token válido por 24h
+        
+        // Atualizar o documento do usuário com o token
+        await updateDoc(doc(db, 'users', userId), {
+          resetPasswordToken: resetToken,
+          resetPasswordTokenExpiresAt: expiresAt.toISOString(),
+          updatedAt: now.toISOString()
+        })
+        
+        console.log("Token de ativação gerado:", resetToken.substring(0, 10) + "...")
+        
+        // Enviar o email com o token
+        const emailSent = await sendActivationEmail(
+          userEmail,
+          userName || "Usuário",
+          resetToken
+        )
+        
+        if (emailSent) {
+          console.log("Email de ativação enviado com sucesso para:", userEmail)
+        } else {
+          console.warn("Falha ao enviar email de ativação para:", userEmail)
+        }
+      } catch (emailError) {
+        console.error("Erro ao processar envio de email de ativação:", emailError)
+        // Não interrompe o fluxo principal em caso de erro no email
       }
-    } catch (emailError) {
-      console.error("Erro ao processar envio de email de ativação:", emailError)
-      // Não interrompe o fluxo principal em caso de erro no email
     }
     
     console.log("========= FIM DO PROCESSAMENTO DO WEBHOOK =========")
@@ -574,9 +710,10 @@ export async function POST(request: Request) {
       status: 'success', 
       message: 'Webhook processado com sucesso',
       userId: userId,
-      userCreated: !userExists,
+      userCreated: userId && !userExists,
       transactionId: transactionId,
-      subscriptionId: subscriptionId
+      subscriptionId: subscriptionId || null,
+      eventType: eventType
     })
   } catch (error) {
     console.error("Erro ao processar webhook:", error)
