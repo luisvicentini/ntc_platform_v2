@@ -75,6 +75,7 @@ export default function Hero() {
           src="https://player-vz-f47b157e-3fb.tv.pandavideo.com.br/embed/?v=e8dc1524-3915-4cae-a779-e385c902a9f0" 
           style={{border: "none", position: "absolute", top: "0", left: "0"}} 
           allow="accelerometer;gyroscope;autoplay;encrypted-media;picture-in-picture" 
+          fetchpriority="high"
           allowFullScreen={true} 
           width="100%" 
           height="100%" 

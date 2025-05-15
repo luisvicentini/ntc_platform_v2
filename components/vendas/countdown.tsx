@@ -51,7 +51,7 @@ export default function Countdown({ initialMinutes, initialSeconds }: CountdownP
       
         <div className="flex w-3/4 sm:w-2/3 justify-end gap-2 items-center">
           <p className="text-sm sm:text-base md:text-lg font-semibold line-height-1">
-            Essa oferta de lançamento vai expirar em:
+            Essa oferta vai expirar em:
           </p>
           <div className="flex items-center gap-2 bg-black/20 px-4 py-1 rounded-lg">
             <Clock className="w-4 h-4" />

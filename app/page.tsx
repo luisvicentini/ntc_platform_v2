@@ -73,7 +73,7 @@ export default function HomePage() {
       <Restaurants />
       
       {/* Seção de bônus */}
-      <Bonus />
+      {/* <Bonus /> */}
       
       {/* Calculadora de Economia */}
       <SavingsCalculator />
