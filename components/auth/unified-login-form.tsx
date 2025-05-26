@@ -65,7 +65,7 @@ const ErrorMessage = ({ message, showWhatsAppSupport }: { message: string, showW
           <div className="mt-2">
             <p className="mb-2">Entre em contato com o suporte:</p>
             <a 
-              href="https://wa.me/5519982240767?text=Olá,%20preciso%20de%20suporte%20pois%20estou%20com%20problemas%20para%20acessar%20minha%20conta."
+              href="https://wa.me/5519996148651?text=Olá,%20preciso%20de%20suporte%20pois%20estou%20com%20problemas%20para%20acessar%20minha%20conta."
               target="_blank"
               rel="noopener noreferrer"
               className="text-red-600 hover:text-red-700 underline flex items-center"

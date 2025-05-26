@@ -216,7 +216,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const querySnapshot = await getDocs(emailQuery)
 
       if (querySnapshot.empty) {
-        throw new Error(`Usuário não encontrado no banco de dados. Entre em contato com o suporte através do WhatsApp: <a href="https://wa.me/5519982240767?text=Olá,%20preciso%20de%20suporte%20pois%20minha%20conta%20não%20está%20sendo%20encontrada%20no%20banco%20de%20dados." target="_blank">+55 (19) 98224-0767</a>`)
+        throw new Error(`Usuário não encontrado no banco de dados. Entre em contato com o suporte através do WhatsApp: <a href="https://wa.me/5519996148651?text=Olá,%20preciso%20de%20suporte%20pois%20minha%20conta%20não%20está%20sendo%20encontrada%20no%20banco%20de%20dados." target="_blank">+55 (19) 98224-0767</a>`)
       }
 
       // Verificar o status do usuário antes da autenticação
@@ -332,7 +332,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const querySnapshot = await getDocs(emailQuery)
 
       if (querySnapshot.empty) {
-        throw new Error(`Usuário não encontrado no banco de dados. Entre em contato com o suporte através do WhatsApp: <a href="https://wa.me/5519982240767?text=Olá,%20preciso%20de%20suporte%20pois%20minha%20conta%20não%20está%20sendo%20encontrada%20no%20banco%20de%20dados." target="_blank">+55 (19) 98224-0767</a>`)
+        throw new Error(`Usuário não encontrado no banco de dados. Entre em contato com o suporte através do WhatsApp: <a href="https://wa.me/5519996148651?text=Olá,%20preciso%20de%20suporte%20pois%20minha%20conta%20não%20está%20sendo%20encontrada%20no%20banco%20de%20dados." target="_blank">+55 (19) 98224-0767</a>`)
       }
 
       // Pegar o primeiro documento encontrado
@@ -409,7 +409,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const querySnapshot = await getDocs(emailQuery)
 
       if (querySnapshot.empty) {
-        throw new Error(`Usuário não encontrado no banco de dados. Entre em contato com o suporte através do WhatsApp: <a href="https://wa.me/5519982240767?text=Olá,%20preciso%20de%20suporte%20pois%20minha%20conta%20não%20está%20sendo%20encontrada%20no%20banco%20de%20dados." target="_blank">+55 (19) 98224-0767</a>`)
+        throw new Error(`Usuário não encontrado no banco de dados. Entre em contato com o suporte através do WhatsApp: <a href="https://wa.me/5519996148651?text=Olá,%20preciso%20de%20suporte%20pois%20minha%20conta%20não%20está%20sendo%20encontrada%20no%20banco%20de%20dados." target="_blank">+55 (19) 98224-0767</a>`)
       }
 
       // Pegar o primeiro documento encontrado
@@ -497,7 +497,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const querySnapshot = await getDocs(emailQuery)
 
       if (querySnapshot.empty) {
-        throw new Error(`Usuário não encontrado no banco de dados. Entre em contato com o suporte através do WhatsApp: <a href="https://wa.me/5519982240767?text=Olá,%20preciso%20de%20suporte%20pois%20minha%20conta%20não%20está%20sendo%20encontrada%20no%20banco%20de%20dados." target="_blank">+55 (19) 98224-0767</a>`)
+        throw new Error(`Usuário não encontrado no banco de dados. Entre em contato com o suporte através do WhatsApp: <a href="https://wa.me/5519996148651?text=Olá,%20preciso%20de%20suporte%20pois%20minha%20conta%20não%20está%20sendo%20encontrada%20no%20banco%20de%20dados." target="_blank">+55 (19) 98224-0767</a>`)
       }
 
       // Pegar o primeiro documento encontrado

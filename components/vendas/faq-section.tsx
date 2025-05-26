@@ -111,7 +111,7 @@ export default function FAQSection() {
         >
           <p className="text-zinc-400">
             Não encontrou a resposta para sua pergunta?{" "}
-            <a href="https://wa.me/5519982240767?text=Ol%C3%A1,%20gostaria%20de%20saber%20mais%20sobre%20o%20N%C3%A3o%20Tem%20Chef." className="text-[#F24957] font-bold">
+            <a href="https://wa.me/5519996148651?text=Ol%C3%A1,%20gostaria%20de%20saber%20mais%20sobre%20o%20N%C3%A3o%20Tem%20Chef." className="text-[#F24957] font-bold">
               Entre em contato
             </a>
           </p>

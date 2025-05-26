@@ -40,7 +40,7 @@ export default function MasterLayout({ children }: { children: React.ReactNode }
             
             {/* Botão flutuante de suporte via WhatsApp - para comunicação interna */}
             <WhatsAppSupportButton 
-              phoneNumber="5519982240767" 
+              phoneNumber="5519996148651" 
               message="Olá! Preciso de ajuda interna com o sistema." 
             />
           </div>

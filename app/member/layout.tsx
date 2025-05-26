@@ -79,7 +79,7 @@ function MemberLayoutContent({ children }: { children: React.ReactNode }) {
       
       {/* Botão flutuante de suporte via WhatsApp */}
       <WhatsAppSupportButton 
-        phoneNumber="5519982240767" 
+        phoneNumber="5519996148651" 
         message={`Olá! Sou o usuário *${user?.displayName}* no Clube Não Tem Chef e preciso de ajuda com a plataforma. Meu email é *${user?.email}*`} 
       />
     </div>

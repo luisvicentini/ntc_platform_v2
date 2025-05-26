@@ -10,7 +10,7 @@ interface WhatsAppSupportButtonProps {
 }
 
 export function WhatsAppSupportButton({ 
-  phoneNumber = "5519982240767", // Substitua pelo número real de suporte
+  phoneNumber = "5519996148651", // Substitua pelo número real de suporte
   message = "Olá, preciso de ajuda com o Clube Não Tem Chef."
 }: WhatsAppSupportButtonProps) {
   const { user } = useAuth()
