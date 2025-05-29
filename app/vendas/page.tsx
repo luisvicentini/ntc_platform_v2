@@ -41,7 +41,7 @@ export default function VendasPage() {
       <Restaurants />
       
       {/* Seção de bônus */}
-      <Bonus />
+      {/* <Bonus /> */}
       
       {/* Calculadora de Economia */}
       <SavingsCalculator />
