@@ -1,0 +1,295 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 356 83% 52%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+
+    --zinc-100: 210 17% 98%;
+    --zinc-200: 240 5% 93%;
+    --zinc-300: 208 11% 71%;
+    --zinc-400: 210 6% 37%;
+
+    --highlight-color: 159 100% 30%;
+
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 356 83% 52%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 0.5rem;
+
+    --zinc-100: 210 17% 98%;
+    --zinc-200: 240 5% 93%;
+    --zinc-300: 208 11% 71%;
+    --zinc-400: 210 6% 37%;
+
+    --highlight-color: 159 100% 30%;
+
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+.PhoneInput {
+  /* Container */
+  --PhoneInputCountryFlag-height: 15px;
+  --PhoneInputCountrySelectArrow-width: 8px;
+  --PhoneInputCountrySelect-marginRight: 0.3em;
+}
+
+.PhoneInputCountry {
+  /* País selecionado */
+  background: transparent;
+  padding: 4px;
+  border: none;
+}
+
+.PhoneInputCountrySelect {
+  /* Select do país */
+  background: transparent;
+  border: none;
+}
+
+.PhoneInputCountryIcon {
+  /* Ícone da bandeira */
+  opacity: 0.8;
+  border: none;
+}
+
+.PhoneInputInput {
+  /* Input do telefone */
+  background: transparent !important;
+  border: none !important;
+  padding-left: 8px !important;
+  outline: none !important;
+}
+
+.PhoneInputInput::placeholder {
+  color: #7a7b9f;
+}
+
+.PhoneInputInput:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Estilos para o formulário de pré-reserva */
+.bume-form {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.bume-form-field {
+  margin-bottom: 16px;
+}
+
+.bume-form-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: 14px;
+  color: #333;
+}
+
+.bume-form-field input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 1px solid #ddd;
+  border-radius: 10px;
+  box-sizing: border-box;
+  color: #333;
+}
+
+.bume-phone-input {
+  position: relative;
+}
+
+.bume-form-button {
+  margin-top: 20px;
+}
+
+.bume-form-button button {
+  background-color: #4caf4f;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  transition: background-color 0.2s;
+}
+
+.bume-form-button button:hover {
+  background-color: #45a049;
+}
+
+.bume-form-success {
+  text-align: center;
+  padding: 20px;
+}
+
+.bume-form-success p {
+  font-size: 18px;
+  color: #059669;
+  font-weight: 500;
+}
+
+.bume-hidden-field {
+  display: none;
+}
+
+.iti {
+  width: 100%;
+}
+
+/* Ajustes para o tema escuro do modal */
+.bume-form-field input {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: #666;
+  color: #333;
+}
+
+/* Ajustes para o intl-tel-input no tema escuro */
+.iti__flag-container {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: #666;
+}
+
+.iti__selected-flag {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.iti__country-list {
+  background-color: #2A2A2A;
+  border-color: #666;
+}
+
+.iti__country:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.iti__highlight {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Animação de marquee para scroll infinito */
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-marquee {
+  animation: marquee 20s linear infinite;
+  display: flex;
+  width: 200%;
+}
+
+.animate-marquee-reverse {
+  animation: marquee 20s linear infinite reverse;
+  display: flex;
+  width: 200%;
+}
+
+/* Ajustes para mobile */
+@media (max-width: 768px) {
+  .animate-marquee, .animate-marquee-reverse {
+    animation-duration: 15s;
+  }
+}
