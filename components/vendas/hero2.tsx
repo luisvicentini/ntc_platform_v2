@@ -54,7 +54,7 @@ export default function Hero({ showPriceBlock = true, backgroundImages = default
   return (
     <section
       ref={headerRef}
-      className="relative pt-[40vh] pb-12 px-4 md:px-8 lg:px-16 overflow-hidden bg-zinc-100 "
+      className="relative pt-[30vh] pb-12 px-4 md:px-8 lg:px-16 overflow-hidden bg-zinc-100 "
     >
       {/* Bloco de background com carrossel */}
       <div className="absolute inset-0 z-0">
@@ -81,19 +81,19 @@ export default function Hero({ showPriceBlock = true, backgroundImages = default
 
       {/* Bloco de título principal */}
       <motion.div
-        className="relative text-center mb-4 max-md:w-[80%] max-sm:w-[100%] mx-auto max-w-[900px] z-20" // z-20 para ficar acima do overlay
+        className="relative text-center mb-4 max-md:w-[80%] max-sm:w-[100%] mx-auto max-w-[900px] z-20 pt-12" // z-20 para ficar acima do overlay
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.2, duration: 0.7 }}
       >
-        <div className="flex items-center justify-center px-3 py-2 mb-4 mx-auto relative -mt-18 mb-18">
+        <div className="flex items-center justify-center px-3 py-2 mb-3 mx-auto relative">
           <Image src="/homepage/selo-do-michelin-ao-podrao.png" alt="Logo" width={300} height={100} className="object-contain h-auto max-sm:w-[240px]" />
         </div>
-        <h1 className={`${fontPrimaryNTC.className} font-bold leading-[1.2] text-4xl max-sm:text-[1.4rem] lg:text-3xl mb-2 text-zinc-800 mt-8`}>
+        <h1 className={`${fontPrimaryNTC.className} font-bold leading-[1.2] text-4xl max-sm:text-[1.1rem] lg:text-3xl mb-2 text-zinc-800 mt-3`}>
           O único clube de vantagens que te dá <span className="text-[#F24957] px-2">descontos e experiências nos melhores restaurantes de São Paulo</span> avaliados pelo Léo Corvo
         </h1>
 
-      <div className="flex flex-col items-center justify-center w-full gap-2 mt-8">
+      <div className="flex flex-col items-center justify-center w-full gap-2 mt-6">
         {/* Bloco de preco */}
         {showPriceBlock && (
           <div className="flex items-center justify-center gap-4 w-full">
