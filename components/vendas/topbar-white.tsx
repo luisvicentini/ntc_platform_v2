@@ -10,7 +10,7 @@ import { Button } from "../ui/button"
 // Definição dos itens do menu fora do componente para melhor performance
 const menuItems = [
   { label: "Início", href: "#hero-section", action: "scroll" }, // Adicionado ID para scroll
-  { label: "Ver todos os Restaurantes", href: "", action: "openRestaurantsModal" }, 
+  // { label: "Ver todos os Restaurantes", href: "", action: "openRestaurantsModal" }, 
   { label: "Calculadora de economia", href: "", action: "openCalculatorModal" },
   { label: "Planos", href: "#plans", action: "scroll" }, // Adicionado ID para scroll
   { label: "Benefícios e vantagens", href: "#benefits", action: "scroll" }, // Adicionado ID para scroll
